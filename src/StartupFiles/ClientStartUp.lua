@@ -3,14 +3,10 @@ local ClientStartUp = {}
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
-local GuiUtils = require(script.Parent.Gui.GuiUtils)
-local CommonTypes = require(script.Parent.CommonTypes)
+local GuiUtils = require(script.Parent.Parent.Gui.GuiUtils)
+local CommonTypes = require(script.Parent.Parent.Types.CommonTypes)
+local GameDetails = require(script.Parent.Parent.Globals.GameDetails)
 
-
-
--- Passed in from outside.
--- Describes the games available.
-local gameConfigs: {CommonTypes.GameConfig}
 
 -- Global UI elements we care about.
 local screenGui: ScreenGui?
@@ -39,16 +35,6 @@ local uiModeFromServer: UIMode = UIModes.TableSelection
 
 local currentTableDescription: CommonTypes.TableDescription = nil
 
--- utility to get game config from id.
-local function getGameConfig(gameConfigId)
-    for _, gameConfig in gameConfigs.games do
-        if gameConfig.id == gameConfigId then
-            return gameConfig
-        end
-    end
-    return nil
-end
-
 -- 3d avatar is irrelevant for this game.
 local function turnOffPlayerControls()
     local localPlayer = game.Players.LocalPlayer
@@ -58,7 +44,31 @@ local function turnOffPlayerControls()
     humanoid.JumpPower = 0
 end
 
-function showSelectGameDialog(onGameIdSelected)
+local function addGameButton(row: Frame, gameId: CommonTypes.GameId, gameDetails: CommonTypes.GameDetails, onGameIdSelected: (gameId: CommonTypes.GameId) -> nil)
+    local button = Instance.new("TextButton")
+    button.Parent = row
+    button.Size = UDim2.new(0, 0, 1, 0)
+    button.AutomaticSize = Enum.AutomaticSize.XY
+    button.Position = UDim2.new(0, 0, 0, 0)
+    button.Text = ""
+    button.TextSize = 14
+    button.LayoutOrder = GuiUtils.getLayoutOrder(row)
+    button.MouseButton1Click:Connect(onGameIdSelected)
+    button.BorderSizePixel = 3
+    
+    local uiCorner = Instance.new("UICorner")
+    uiCorner.Parent = button
+    uiCorner.CornerRadius = UDim.new(0, 4)
+
+    local imageLabel = Instance.new("ImageLabel")
+    imageLabel.Image = gameDetails.GameImage
+
+    return button
+
+end
+
+
+local function showSelectGameDialog(onGameIdSelected: (gameId: CommonTypes.GameId) -> nil)
     -- Create a dialog to select the game.
     local dialog = Instance.new("Frame")
     dialog.Size = UDim2.new(0.5, 0, 0.5, 0)
@@ -67,54 +77,48 @@ function showSelectGameDialog(onGameIdSelected)
     dialog.Parent = screenGui
     GuiUtils.addLayoutOrderTracking(dialog)
 
-    local rowIndex = 0
-    local row, rowIndex = GuiUtils.addRowWithLabel(dialog, "Select Game")
-    local label = addLabel(row, "Select Game")
-    label.TextSize = 24
+    local row = GuiUtils.addRowWithLabel(dialog, "Select Game")
 
-    for gameId, gameDetails in ipairs(gameConfigs.gameDetailsList) do
-        local row, rowIndex = addRow(dialog, rowIndex)
-        addButton(row, gameDetails.name, function()
-            dialog:Destroy()
-            onGameIdSelected(gameId)
-        end)
+    local allGameDetails = GameDetails.getAllGameDetails()
+    for _, gameDetails in ipairs(allGameDetails) do
+        addGameButton(row, gameDetails, onGameIdSelected)
     end
 end
 
-function getGameId(onGameIdSelected)
+local function promptForGameId(onGameIdSelected: (gameId: CommonTypes.GameId) -> nil)
     -- If more than one game, ask...
-    if #gameConfigs.games > 1 then
-        showSelectGameDialog(function(selectedGameId)
+    local allGameDetails = GameDetails.getAllGameDetails()
+    if #allGameDetails.games > 1 then
+        showSelectGameDialog(function(selectedGameId: CommonTypes.GameId)
             onGameIdSelected(selectedGameId)
         end)
     else
-        onGameIdSelected(gameConfigs.games[1].id)
+        onGameIdSelected(allGameDetails[1].gameId)
     end
 end
 
-function getPublicOrPrivate(onPublicSelected)
+local function getPublicOrPrivate(onPublicSelected)
     -- Create a dialog to select Public or Private.
-    local dialog = Instance.new("Frame")
-    dialog.Size = UDim2.new(0.5, 0, 0.5, 0)
-    dialog.Position = UDim2.new(0.25, 0, 0.25, 0)
-    dialog.BackgroundColor3 = Color3.new(0.5, 0.5, 0.5)
-    dialog.Parent = screenGui
+    local dialogConfig: CommonTypes.DialogConfig = {
+        title = "Public or Private?", 
+        description = "Anyone in experience can join a public game.  Only invited players can join a private game.", 
+        buttons = {
+            {
+                text = "Public", 
+                callback = function() 
+                    onPublicSelected(true) 
+                end
+            } :: CommonTypes.DialogButtonConfig,
+            {
+                text = "Private", 
+                callback = function() 
+                    onPublicSelected(false) 
+                end
+            } :: CommonTypes.DialogButtonConfig,
+        } :: {CommonTypes.DialogConfig},
+    }
 
-    local row = addRow(dialog)
-    local label = addLabel(row, "Public or Private")
-    label.TextSize = 24
-
-    local row = addRow(dialog)
-    local button = addButton(row, "Public", function()
-        dialog:Destroy()
-        onPublicSelected(true)
-    end)
-
-    local row = addRow(dialog)
-    local button = addButton(row, "Private", function()
-        dialog:Destroy()
-        onPublicSelected(false)
-    end)
+    GuiUtils.makeDialog(screenGui, dialogConfig)
 end
 
 -- Which table buttons have no description?
@@ -124,7 +128,7 @@ local function getTableButtonContainersOut(tableButtonContainers, tableDescripti
         local tableId = tableButtonContainer.TableId.Value
         local tableButtonInDescs = false
         for _, tableDescription in tableDescriptions do            
-            if tableDescription.id == tableId then
+            if tableDescription.tableId == tableId then
                 tableButtonInDescs = true
                 break
             end
@@ -140,7 +144,7 @@ end
 local function getTableDescriptionsIn(tableButtonContainers, tableDescriptions)
     local tableDescriptionsIn = {}
     for _, tableDescription in tableDescriptions do
-        local tableId = tableDescription.TableId
+        local tableId = tableDescription.tableId
         local tableDescInButtons = false
         for _, tableButtonContainer in tableButtonContainers do            
             if tableId == tableButtonContainer.TableId.Value then
@@ -194,13 +198,13 @@ local function updateTableRow(tableRow:Instance, tableDescriptions:{CommonTypes.
 end
 
 local function updateInvitedTables()
-    local invitedTablesRow = contentFrame:FindFirstDescendant("InvitedTablesRow")
+    local invitedTablesRow = contentFrame:FindFirstChild("InvitedTablesRow", true)
     assert(invitedTablesRow, "Should have an invitedTablesRow")
     updateTableRow(invitedTablesRow, invitedTables)
 end
 
 local function updatePublicTables()
-    local publicTablesRow = contentFrame:FindFirstDescendant("PublicTablesRow")
+    local publicTablesRow = contentFrame:FindFirstChild("PublicTablesRow", true)
     assert(publicTablesRow, "Should have an publicTablesRow")
     updateTableRow(publicTablesRow, publicTables)
 end
@@ -222,14 +226,14 @@ local makeMakeFrameAndContentFrame = function(): Instance
 end
 
 local function makeCreateTableRow()
-    local makeTableRow = GuiUtils.addRowWithLabel(contentFrame, nil)
+    local makeTableRow = GuiUtils.addRow(contentFrame)
     makeTableRow.Name = "MakeTablesRow"
     GuiUtils.addButton(makeTableRow, "Host a new Table", function()
-        getGameId(function(gameConfigId) 
+        promptForGameId(function(gameId) 
             getPublicOrPrivate(function(public)
                 -- Send the event to the server.
                 local event = ReplicatedStorage.TableEvents.CreateNewGameTable
-                event:FireServer(gameConfigId, public)
+                event:FireServer(gameId, public)
             end)
         end)
     end)
@@ -270,12 +274,9 @@ end
 
 local function hasEnoughPlayers() 
     assert(currentTableDescription, "Should have a currentTableDescription")
-    local gameConfig = getGameConfig(currentTableDescription.GameConfigId)
-    return #currentTableDescription.MemberPlayerIds >= gameConfig.minPlayers
+    local gameDetails = getGameDetails(currentTableDescription.gameId)
+    return #currentTableDescription.memberPlayerIds >= gameDetails.minPlayers
 end
-
-    GuiUtils.addLabel(row, "Waiting for more minimum number of players to join.")
-elseif roomForMorePlayer() then
 
 -- build ui elements for the when players are waiting at a table for game to start.
 local buildTableWaitingUI = function()
@@ -293,15 +294,15 @@ local buildTableWaitingUI = function()
 
     row  = GuiUtils.addRowWithLabel(contentFrame, "Host")
     row.Name = "Host"
-    GuiUtils.addPersonWidget(row, currentTableDescription.HostPlayerId)
+    GuiUtils.addPersonWidget(row, currentTableDescription.hostPlayerId)
     
     row = GuiUtils.addRowWithLabel(contentFrame, "Guests")
-    for _, memberPlayerId in currentTableDescription.MemberPlayerIds do
+    for _, memberPlayerId in currentTableDescription.memberPlayerIds do
         GuiUtils.addPersonWidget(row, memberPlayerId)
     end
 
     row = GuiUtils.addRowWithLabel(contentFrame, "Status")
-    if localPlayerId == currentTableDescription.HostPlayerId then
+    if localPlayerId == currentTableDescription.hostPlayerId then
         if not hasEnoughPlayers() then
             GuiUtils.addLabel(row, "Waiting for more minimum number of players to join.")
         elseif roomForMorePlayer() then
@@ -315,7 +316,7 @@ local buildTableWaitingUI = function()
 
     row = GuiUtils.addRowWithLabel(contentFrame, "Controls")
 
-    if localPlayerId == currentTableDescription.HostPlayerId then
+    if localPlayerId == currentTableDescription.hostPlayerId then
         GuiUtils.addButton(row, "Start Game", function()
             print("FIXME: start game")
         end)
@@ -370,8 +371,11 @@ local function listenToServerEvents()
     end)
 end
 
-ClientStartUp.StartUp = function(_screenGui: ScreenGui, _gameConfigs: {CommonTypes.GameConfig})
-    gameConfigs = _gameConfigs
+ClientStartUp.StartUp = function(_screenGui: ScreenGui, _allGameDetails: {CommonTypes.GameDetails})
+    -- must be at least one.
+    assert(#_allGameDetails > 0, "Should have at least one game")
+    GameDetails.setAllGameDetails(_allGameDetails)
+
     screenGui = _screenGui
     localPlayerId = game.Players.LocalPlayer.UserId
 

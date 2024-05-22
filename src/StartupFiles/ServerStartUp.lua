@@ -3,7 +3,9 @@
 -- Creates events, listens for them.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local GameTable = require(script.Parent:WaitForChild("GameTable"))
+local CommonTypes = require(script.Parent.Parent.Types.CommonTypes)
+local GameTable = require(script.Parent.Parent.Classes.GameTable)
+local GameDetails =  require(script.Parent.Parent.Globals.GameDetails)
 
 local ServerStartUp = {}
 local gameDetailsList = {}
@@ -121,8 +123,8 @@ function createRemoteEvents()
     createServerToClientEvents()
 end
 
-function ServerStartUp.StartUp(config)
-    gameDetailsList = config.gameDetailsList
+function ServerStartUp.StartUp(_allGameDetails: {CommonTypes.GameDetails}): nil
+    GameDetails.setAllGameDetails(_allGameDetails)
     createRemoteEvents()
 end
 

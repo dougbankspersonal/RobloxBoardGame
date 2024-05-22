@@ -1,18 +1,50 @@
+--[[
+    Server-concept only.
+    Class for a game table.
+]]
+
+local CommonTypes = require(script.Parent.Parent.Types.CommonTypes)
+local GameInstance = require(script.Parent.GameInstance)
+
 local GameTable = {}
 local gameTables = {}
 
 GameTable.__index = GameTable
 
-local nextGameTableId = 0
+local nextGameTableId: CommonTypes.TableId = 0
+
+export type GameTableState = number
+export type GameTableStates = {WaitingForPlayers: GameTableState, Playing: GameTableState, Finished: GameTableState}
 
 GameTable.GameTableStates = {
 	WaitingForPlayers = 0,
 	Playing = 1,
 	Finished = 2
+} :: GameTableStates
+
+export type GameTable = {
+	id: CommonTypes.TableId,
+	hostPlayerId: CommonTypes.UserId,
+	gameTableState: GameTableState,
+	members: {CommonTypes.UserId},
+	invited: {CommonTypes.UserId},
+	gameDetails: CommonTypes.GameDetails,
+	gameInstance: GameInstance?,
+	public: boolean,
+
+	new: (hostPlayerId: CommonTypes.UserId, gameDetails: CommonTypes.GameDetails, public: boolean) -> GameTable,
+	getGameTable: (tableId: CommonTypes.TableId) -> GameTable,
+	createNewTable: (hostPlayerId: CommonTypes.UserId, public: boolean) -> GameTable,
+	destroy: (self: GameTable, playerId: CommonTypes.UserId) -> boolean,
+
+	join: (self: GameTable, playerId: CommonTypes.UserId) -> boolean,
+	invite: (self: GameTable, playerId: CommonTypes.UserId, inviteeId: CommonTypes.UserId) -> boolean,
+	leave: (self: GameTable, playerId: CommonTypes.UserId) -> boolean,
+	startGame: (self: GameTable, playerId: CommonTypes.UserId) -> boolean,
+	endGame: (self: GameTable, playerId: CommonTypes.UserId) -> boolean,
 }
 
-
-function GameTable.new(hostPlayerId, gameDetails, public)
+function GameTable.new(hostPlayerId: CommonTypes.UserId, gameDetails: CommonTypes.GameDetails, public: boolean): GameTable
 	local gameTable = {}
 	setmetatable(gameTable, GameTable)
 	
@@ -39,7 +71,7 @@ function GameTable.getGameTable(tableId): GameTable
 end
 
 -- Return the table iff the table can be created.
-function GameTable.createNewTable(hostPlayerId, public): GameTable
+function GameTable.createNewTable(hostPlayerId: CommonTypes.UserId, public): GameTable
 	-- You cannot create a new table while you are joined to a table.
 	for _, gameTable in pairs(gameTables) do
 		if gameTable.members[hostPlayerId] then
@@ -85,7 +117,7 @@ function GameTable:join(playerId): boolean
 	end
 
 	-- too many players already, no.
-	if self.gameDetails.maxPlayers == #self.members then
+	if self.gameDetails.MaxPlayers == #self.members then
 		return false
 	end
 
@@ -144,16 +176,16 @@ function GameTable:startGame(playerId): boolean
 
 	-- Right number of players?
 	local numPlayers = #gameTable.members
-	if numPlayers < self.gameDetails.minPlayers then 
+	if numPlayers < self.gameDetails.MinPlayers then 
 		return false
 	end
-	if numPlayers > self.gameDetails.maxPlayers then 
+	if numPlayers > self.gameDetails.MaxPlayers then 
 		return false
 	end
 
-	assert(self.gameInstance == nil)
+	assert(self.gameInstance == nil, "Game instance already exists"	)
 	self.gameTableState = GameTable.GameTableStates.Playing
-	self.gameInstance = self.gameDetails.makeGameInstance(gameTable)
+	self.gameInstance = GameInstance.new(self.id, self.gameDetails.gameId)
 
 	return true
 end

@@ -1,8 +1,9 @@
 local GuiUtils = {}
+local CommonTypes = require(script.Parent.Parent.Types.CommonTypes)
 
 local globalLayoutOrder = 0
 
-local function getLayoutOrder(parent:Instance, opt_layoutOrder: number?): number
+GuiUtils.getLayoutOrder = function(parent:Instance, opt_layoutOrder: number?): number
     local layoutOrder
     if opt_layoutOrder then
         layoutOrder = opt_layoutOrder
@@ -34,7 +35,7 @@ GuiUtils.addRowWithLabel = function(parent:Instance, text: string?, opt_layoutOr
     uiListLayout.FillDirection = Enum.FillDirection.Horizontal
     uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     uiListLayout.Padding = UDim.new(5, 5)   
-    row.LayoutOrder = getLayoutOrder(parent, opt_layoutOrder)
+    row.LayoutOrder = GuiUtils.getLayoutOrder(parent, opt_layoutOrder)
     row.Name = "Row" .. tostring(row.LayoutOrder)
     row.AutomaticSize = Enum.AutomaticSize.Y
     local bgColor
@@ -85,6 +86,10 @@ GuiUtils.addRowWithLabel = function(parent:Instance, text: string?, opt_layoutOr
     return rowContent
 end
 
+GuiUtils.addRow = function(parent:Instance, opt_layoutOrder: number?): Instance
+    return GuiUtils.addRowWithLabel(parent, nil, opt_layoutOrder)
+end
+
 GuiUtils.addButton = function(parent: Instance, text: string, callback: () -> (), opt_layoutOrder: number?): Instance
     local button = Instance.new("TextButton")
     button.Parent = parent
@@ -93,7 +98,7 @@ GuiUtils.addButton = function(parent: Instance, text: string, callback: () -> ()
     button.Position = UDim2.new(0, 0, 0, 0)
     button.Text = text
     button.TextSize = 14
-    button.LayoutOrder = getLayoutOrder(parent, opt_layoutOrder)
+    button.LayoutOrder = GuiUtils.getLayoutOrder(parent, opt_layoutOrder)
     parent.NextLayoutOrder.Value = parent.NextLayoutOrder.Value + 1
     button.MouseButton1Click:Connect(function()
         if not button.Active then 
@@ -108,6 +113,24 @@ GuiUtils.addButton = function(parent: Instance, text: string, callback: () -> ()
     uiCorner.CornerRadius = UDim.new(0, 4)
 
     return button
+end
+
+GuiUtils.makeDialog = function(screenGui: ScreenGui, dialogConfig: CommonTypes.DialogConfig)
+    local dialog = Instance.new("Frame")
+    dialog.Size = UDim2.new(0.5, 0, 0.5, 0)
+    dialog.Position = UDim2.new(0.25, 0, 0.25, 0)
+    dialog.BackgroundColor3 = Color3.new(0.5, 0.5, 0.5)
+    dialog.Parent = screenGui
+
+    GuiUtils.addRowWithLabel(dialog, dialogConfig.title)
+    GuiUtils.addRowWithLabel(dialog, dialogConfig.description)
+    local row = GuiUtils.addRow(dialog)
+
+    for _, buttonConfig in ipairs(dialogConfig.buttons) do
+        GuiUtils.addButton(row, buttonConfig.text, buttonConfig.callback)
+    end
+
+    return dialog
 end
 
 return GuiUtils
