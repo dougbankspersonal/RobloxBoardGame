@@ -1,5 +1,10 @@
 local GuiUtils = {}
-local CommonTypes = require(script.Parent.Parent.Types.CommonTypes)
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
+
+local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 
 local globalLayoutOrder = 0
 
@@ -7,12 +12,15 @@ GuiUtils.getLayoutOrder = function(parent:Instance, opt_layoutOrder: number?): n
     local layoutOrder
     if opt_layoutOrder then
         layoutOrder = opt_layoutOrder
-    elseif parent.NextLayoutOrder then
-        layoutOrder = parent.NextLayoutOrder.Value
-        parent.NextLayoutOrder.Value = parent.NextLayoutOrder.Value + 1
     else
-        layoutOrder = globalLayoutOrder
-        globalLayoutOrder = globalLayoutOrder + 1
+        local nextLayourOrder = parent:FindFirstChild("NextLayoutOrder")
+        if nextLayourOrder then
+            layoutOrder = nextLayourOrder.Value
+            nextLayourOrder.Value = nextLayourOrder.Value + 1
+        else
+            layoutOrder = globalLayoutOrder
+            globalLayoutOrder = globalLayoutOrder + 1
+        end
     end
     return layoutOrder
 end
@@ -29,6 +37,7 @@ GuiUtils.addRowWithLabel = function(parent:Instance, text: string?, opt_layoutOr
     row.Parent = parent
     row.Size = UDim2.new(1, 0, 0, 0)
     row.Position = UDim2.new(0, 0, 0, 0)
+    row.BorderSizePixel = 0
 
     local uiListLayout = Instance.new("UIListLayout")
     uiListLayout.Parent = row
@@ -48,9 +57,10 @@ GuiUtils.addRowWithLabel = function(parent:Instance, text: string?, opt_layoutOr
 
     if text then 
         local label = Instance.new("TextLabel")
+        label.Name = "LabelInRow"
         label.Parent = row
-        label.Size = UDim2.new(0, 0, 1, 0)
-        label.AutomaticSize = Enum.AutomaticSize.X
+        label.Size = UDim2.new(0, 0, 0, 0)
+        label.AutomaticSize = Enum.AutomaticSize.XY
         label.Position = UDim2.new(0, 0, 0, 0)
         label.Text = text
         label.TextSize = 14
@@ -58,7 +68,7 @@ GuiUtils.addRowWithLabel = function(parent:Instance, text: string?, opt_layoutOr
         label.TextYAlignment = Enum.TextYAlignment.Center
         label.BackgroundTransparency = 1
         label.BorderSizePixel = 0
-        label.layoutOrder = 1
+        label.LayoutOrder = 1
     end
     
     local rowContent = Instance.new("Frame")
@@ -78,10 +88,7 @@ GuiUtils.addRowWithLabel = function(parent:Instance, text: string?, opt_layoutOr
     uiGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
     uiGridLayout.CellSize = UDim2.new(0, 200, 0, 30)
 
-    local intValue = Instance.new("IntValue")
-    intValue.Parent = rowContent
-    intValue.Value = 0
-    intValue.Name = "NextLayoutOrder"
+    GuiUtils.addLayoutOrderTracking(rowContent)
 
     return rowContent
 end
@@ -131,6 +138,46 @@ GuiUtils.makeDialog = function(screenGui: ScreenGui, dialogConfig: CommonTypes.D
     end
 
     return dialog
+end
+
+GuiUtils.getPlayerName = function(playerId: CommonTypes.UserId): string?
+    local player = game.Players:GetPlayerByUserId(playerId)
+    if player then
+        return player.Name
+    else
+        return nil
+    end
+end
+
+GuiUtils.getGameName = function(gameId: CommonTypes.GameId): string?
+    local gameDetails = GameDetails.getGameDetails(gameId)
+    if gameDetails then
+        return gameDetails.name
+    else
+        return nil
+    end
+end
+--[[
+    Make a clickable button representing a game table.
+    ]]
+GuiUtils.makeTableButton = function(tableButtonContainer: Instance, tableDescription: CommonTypes.TableDescription, onButtonCiicked: () -> nil)
+    local tableButton = Instance.new("TextButton")
+    tableButton.Parent = tableButtonContainer
+    tableButton.Size = UDim2.new(1, 0, 1, 0)
+    tableButton.Position = UDim2.new(0, 0, 0, 0)
+
+    -- FIXME(dbanks)
+    -- Add a nice image of the game, the host, other metadata.
+    -- FOr now just host name and game name.
+    local hostName = GuiUtils.getPlayerName(tableDescription.hostPlayerId)
+    local gameName = GuiUtils.getGameName(tableDescription.gameId)
+    assert(hostName, "No host name for " .. tableDescription.hostPlayerId)
+    assert(gameName, "No game name for " .. tableDescription.gameId)
+
+    tableButton.Text = "\"" .. gameName .. "\" hosted by " .. hostName
+    tableButton.TextSize = 14
+    tableButton.BorderSizePixel = 0
+    tableButton.MouseButton1Click:Connect(onButtonCiicked)
 end
 
 return GuiUtils

@@ -1,0 +1,12 @@
+{
+  "name": "RobloxBoardGameClient",
+  "tree": {
+    "$className": "Folder",
+    "Gui": {
+      "$path": "Gui"
+    },
+    "StartupFiles": {
+      "$path": "StartupFiles"
+    }  
+  }
+}

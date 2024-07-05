@@ -1,0 +1,15 @@
+{
+  "name": "RobloxBoardGameShared",
+  "tree": {
+    "$className": "Folder",
+    "Globals": {
+      "$path": "Globals"
+    },
+    "Types": {
+      "$path": "Types"
+    },
+    "Analytics": {
+      "$path": "Analytics"
+    }
+  }
+}

@@ -28,6 +28,7 @@ export type TableDescription = {
 }
 
 -- Everything you need to know about a game.
+-- Available on both client and server.
 export type GameDetails = {
     gameId: GameId,
     gameImage: AssetId,
@@ -35,7 +36,15 @@ export type GameDetails = {
     description: string,
     maxPlayers: number,
     minPlayers: number,
-    makeGameInstance: (tableId: TableId) -> any,
+}
+
+-- Meta-level functions to start, stop, exit a game instance.
+-- Defined by client of this library.
+-- Available on server only.
+export type GameInstanceFunctions = {
+    onPlay: () -> nil,
+    onEnd: () -> nil,
+    onPlayerLeft: (playerId: UserId) -> nil,
 }
 
 -- How to configure a dialog.

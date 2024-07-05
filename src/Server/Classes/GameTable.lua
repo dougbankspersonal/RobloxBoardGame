@@ -3,8 +3,14 @@
     Class for a game table.
 ]]
 
-local CommonTypes = require(script.Parent.Parent.Types.CommonTypes)
-local GameInstance = require(script.Parent.GameInstance)
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
+local RobloxBoardGameServer = script.Parent.Parent
+
+local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
+local GameInstance = require(RobloxBoardGameServer.Classes.GameInstance)
 
 local GameTable = {}
 local gameTables = {}
@@ -24,40 +30,40 @@ GameTable.GameTableStates = {
 
 export type GameTable = {
 	id: CommonTypes.TableId,
-	hostPlayerId: CommonTypes.UserId,
+	hostUserId: CommonTypes.UserId,
 	gameTableState: GameTableState,
-	members: {CommonTypes.UserId},
-	invited: {CommonTypes.UserId},
+	memberUserIds: {CommonTypes.UserId},
+	invitedUserIds: {CommonTypes.UserId},
 	gameDetails: CommonTypes.GameDetails,
-	gameInstance: GameInstance?,
+	gameInstance: GameInstance.GameInstance?,
 	public: boolean,
 
-	new: (hostPlayerId: CommonTypes.UserId, gameDetails: CommonTypes.GameDetails, public: boolean) -> GameTable,
+	new: (hostUserId: CommonTypes.UserId, gameDetails: CommonTypes.GameDetails, public: boolean) -> GameTable,
 	getGameTable: (tableId: CommonTypes.TableId) -> GameTable,
-	createNewTable: (hostPlayerId: CommonTypes.UserId, public: boolean) -> GameTable,
-	destroy: (self: GameTable, playerId: CommonTypes.UserId) -> boolean,
+	createNewTable: (hostUserId: CommonTypes.UserId, public: boolean) -> GameTable,
+	destroy: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
 
-	join: (self: GameTable, playerId: CommonTypes.UserId) -> boolean,
-	invite: (self: GameTable, playerId: CommonTypes.UserId, inviteeId: CommonTypes.UserId) -> boolean,
-	leave: (self: GameTable, playerId: CommonTypes.UserId) -> boolean,
-	startGame: (self: GameTable, playerId: CommonTypes.UserId) -> boolean,
-	endGame: (self: GameTable, playerId: CommonTypes.UserId) -> boolean,
+	join: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
+	invite: (self: GameTable, userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId) -> boolean,
+	leave: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
+	startGame: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
+	endGame: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
 }
 
-function GameTable.new(hostPlayerId: CommonTypes.UserId, gameDetails: CommonTypes.GameDetails, public: boolean): GameTable
+function GameTable.new(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, public: boolean): GameTable
 	local gameTable = {}
 	setmetatable(gameTable, GameTable)
 	
 	gameTable.id = nextGameTableId
 	nextGameTableId = nextGameTableId + 1
 
-	gameTable.hostPlayerId = hostPlayerId
+	gameTable.hostUserId = hostUserId
 	gameTable.gameTableState = GameTable.GameTableStates.WaitingForPlayers
 	gameTable.members = {
-		[hostPlayerId] = true,
+		[hostUserId] = true,
 	}
 	gameTable.invited = {}
-	gameTable.gameDetails = gameDetails
+	gameTable.gameDetails = GameDetails.getGameDetails(gameId)
 	gameTable.gameInstance = nil
 	gameTable.public = public
 
@@ -71,21 +77,21 @@ function GameTable.getGameTable(tableId): GameTable
 end
 
 -- Return the table iff the table can be created.
-function GameTable.createNewTable(hostPlayerId: CommonTypes.UserId, public): GameTable
+function GameTable.createNewTable(hostUserId: CommonTypes.UserId, public): GameTable
 	-- You cannot create a new table while you are joined to a table.
 	for _, gameTable in pairs(gameTables) do
-		if gameTable.members[hostPlayerId] then
+		if gameTable.members[hostUserId] then
 			return nil
 		end
 	end
 
-	local newGameTable = GameTable.new(hostPlayerId, public)
+	local newGameTable = GameTable.new(hostUserId, public)
 	return newGameTable
 end
 
-function GameTable:destroy(playerId): boolean
+function GameTable:destroy(userId): boolean
 	-- Not host, no.
-	if self.hostPlayerId ~= playerId then
+	if self.hostUserId ~= userId then
 		return false
 	end
 
@@ -100,19 +106,19 @@ function GameTable:destroy(playerId): boolean
 	return true
 end
 
-function GameTable:join(playerId): boolean
+function GameTable:join(userId): boolean
 	-- Game already started, no.
 	if self.gameTableState ~= GameTable.GameTableStates.WaitingForPlayers then
 		return false
 	end
 
 	-- Already a member, no.
-	if self.members[playerId] then
+	if self.members[userId] then
 		return false
 	end
 
 	-- not public, not invited: no.
-	if not self.public and not self.invited[playerId] then
+	if not self.public and not self.invited[userId] then
 		return false
 	end
 
@@ -122,19 +128,19 @@ function GameTable:join(playerId): boolean
 	end
 
 
-	self.members[playerId] = true
+	self.members[userId] = true
 	return true
 end
 	
 -- True iff player can be invited to table.
-function GameTable:invite(playerId, inviteeId): boolean
+function GameTable:invite(userId, inviteeId): boolean
 	-- Game already started, no.
 	if self.gameTableState ~= GameTable.GameTableStates.WaitingForPlayers then
 		return false
 	end
 
 	-- Already a member, no.
-	if self.members[playerId] then
+	if self.members[userId] then
 		return false
 	end
 
@@ -147,25 +153,25 @@ function GameTable:invite(playerId, inviteeId): boolean
 	return true
 end
 
-function GameTable:leave(playerId): boolean
+function GameTable:leave(userId): boolean
 	-- Not a member, no.
-	if not self.members[playerId] then
+	if not self.members[userId] then
 		return false
 	end
 
-	self.members[playerId] = nil
+	self.members[userId] = nil
 
 	-- Let the game deal with any fallout from the player leaving.
 	if self.gameInstance then
-		self.gameInstance:playerLeft(playerId)
+		self.gameInstance:playerLeft(userId)
 	end
 
 	return true
 end
 
-function GameTable:startGame(playerId): boolean
+function GameTable:startGame(userId: CommonTypes.UserId): boolean
 	-- Not the host, no.
-	if self.hostPlayerId ~= playerId then
+	if self.hostUserId ~= userId then
 		return false
 	end
 
@@ -175,7 +181,7 @@ function GameTable:startGame(playerId): boolean
 	end
 
 	-- Right number of players?
-	local numPlayers = #gameTable.members
+	local numPlayers = #self.members
 	if numPlayers < self.gameDetails.MinPlayers then 
 		return false
 	end
@@ -190,9 +196,9 @@ function GameTable:startGame(playerId): boolean
 	return true
 end
 
-function GameTable:endGame(playerId, tableId): boolean
+function GameTable:endGame(userId: CommonTypes.UserId): boolean
 	-- Not the host, no.
-	if self.hostPlayerId ~= playerId then
+	if self.hostUserId ~= userId then
 		return false
 	end
 

@@ -1,0 +1,15 @@
+{
+  "name": "RobloxBoardGameServer",
+  "tree": {
+    "$className": "Folder",
+    "Classes": {
+      "$path": "Classes"
+    },
+    "Globals": {
+      "$path": "Globals"
+    },
+    "StartupFiles": {
+      "$path": "StartupFiles"
+    }
+  }
+}

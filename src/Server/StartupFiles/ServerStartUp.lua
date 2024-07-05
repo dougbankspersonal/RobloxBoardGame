@@ -1,19 +1,18 @@
 -- Main function to call when starting your board game.
 -- Call from a Server script ASAP.
 -- Creates events, listens for them.
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CommonTypes = require(script.Parent.Parent.Types.CommonTypes)
-local GameTable = require(script.Parent.Parent.Classes.GameTable)
-local GameDetails =  require(script.Parent.Parent.Globals.GameDetails)
+local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
+local RobloxBoardGameServer = script.Parent.Parent
+
+local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
+local GameInstanceFunctions = require(RobloxBoardGameServer.Globals.GameInstanceFunctions)
+local GameTable = require(RobloxBoardGameServer.Classes.GameTable)
 
 local ServerStartUp = {}
-local gameDetailsList = {}
 
 function createRemoteEvent(parentFolderName, eventName, onServerEvent)
-    print("Doug: createRemoteEvent")
-    print("Doug: parentFolderName = ", parentFolderName)
-    print("Doug: eventName = ", eventName)
     local folder = ReplicatedStorage:FindFirstChild(parentFolderName)
     if not folder then 
         folder = Instance.new("Folder")
@@ -52,7 +51,7 @@ function createClientToServerEvents()
     -- events sent from client to server.
     createRemoteEvent("TableEvents", "CreateNewGameTable", function(player, gameId, public)
         -- Does the game exist?
-        local gameDetails = gameDetailsList[gameId]
+        local gameDetails = GameDetails.getGameDetails(gameId)
         if not gameDetails then
             return
         end
@@ -60,7 +59,7 @@ function createClientToServerEvents()
         -- Player can host a table?
         local gameTable = GameTable.createNewTable(player.UserId, gameDetails, public)
         if not gameTable then 
-            return 
+            return
         end
 
         -- Broadcast the new table to all players
@@ -123,8 +122,9 @@ function createRemoteEvents()
     createServerToClientEvents()
 end
 
-function ServerStartUp.StartUp(_allGameDetails: {CommonTypes.GameDetails}): nil
-    GameDetails.setAllGameDetails(_allGameDetails)
+function ServerStartUp.StartUp(allGameDetails: {CommonTypes.GameDetails}, gameInstanceFunctions: {CommonTypes.GameInstanceFunctiona}): nil
+    GameDetails.setAllGameDetails(allGameDetails)
+    GameInstanceFunctions.setAllGameInstanceFunctions(gameInstanceFunctions)
     createRemoteEvents()
 end
 

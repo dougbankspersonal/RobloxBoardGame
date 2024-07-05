@@ -1,12 +1,14 @@
 local ClientStartUp = {}
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
-local GuiUtils = require(script.Parent.Parent.Gui.GuiUtils)
-local CommonTypes = require(script.Parent.Parent.Types.CommonTypes)
-local GameDetails = require(script.Parent.Parent.Globals.GameDetails)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
+local RobloxBoardGameClient = script.Parent.Parent
 
+local GuiUtils = require(RobloxBoardGameClient.Gui.GuiUtils)
+local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 
 -- Global UI elements we care about.
 local screenGui: ScreenGui?
@@ -25,12 +27,13 @@ type UIMode = {
 }
 
 local UIModes = {    
+    None = "None",
     TableSelection = "UIModes",
     TableWaiting = "TableWaiting",
     TablePlaying = "TablePlaying",
 }
 
-local currentUIMode: UIMode = UIModes.TableSelection
+local currentUIMode: UIMode = UIModes.None
 local uiModeFromServer: UIMode = UIModes.TableSelection
 
 local currentTableDescription: CommonTypes.TableDescription = nil
@@ -44,45 +47,13 @@ local function turnOffPlayerControls()
     humanoid.JumpPower = 0
 end
 
-local function addGameButton(row: Frame, gameId: CommonTypes.GameId, gameDetails: CommonTypes.GameDetails, onGameIdSelected: (gameId: CommonTypes.GameId) -> nil)
-    local button = Instance.new("TextButton")
-    button.Parent = row
-    button.Size = UDim2.new(0, 0, 1, 0)
-    button.AutomaticSize = Enum.AutomaticSize.XY
-    button.Position = UDim2.new(0, 0, 0, 0)
-    button.Text = ""
-    button.TextSize = 14
-    button.LayoutOrder = GuiUtils.getLayoutOrder(row)
-    button.MouseButton1Click:Connect(onGameIdSelected)
-    button.BorderSizePixel = 3
-    
-    local uiCorner = Instance.new("UICorner")
-    uiCorner.Parent = button
-    uiCorner.CornerRadius = UDim.new(0, 4)
-
-    local imageLabel = Instance.new("ImageLabel")
-    imageLabel.Image = gameDetails.GameImage
-
-    return button
-
-end
-
-
+-- A user has opted to create a new table.
+-- If there's more than one game in GameDetails, then user needs to select which game to 
+-- play.
+-- FIXME(dbanks): for now I know I just have one game: this will never be called.
 local function showSelectGameDialog(onGameIdSelected: (gameId: CommonTypes.GameId) -> nil)
-    -- Create a dialog to select the game.
-    local dialog = Instance.new("Frame")
-    dialog.Size = UDim2.new(0.5, 0, 0.5, 0)
-    dialog.Position = UDim2.new(0.25, 0, 0.25, 0)
-    dialog.BackgroundColor3 = Color3.new(0.5, 0.5, 0.5)
-    dialog.Parent = screenGui
-    GuiUtils.addLayoutOrderTracking(dialog)
-
-    local row = GuiUtils.addRowWithLabel(dialog, "Select Game")
-
-    local allGameDetails = GameDetails.getAllGameDetails()
-    for _, gameDetails in ipairs(allGameDetails) do
-        addGameButton(row, gameDetails, onGameIdSelected)
-    end
+    assert(onGameIdSelected, "Should have onGameIdSelected")
+    assert(false, "FIXME showSelectGameDialog")
 end
 
 local function promptForGameId(onGameIdSelected: (gameId: CommonTypes.GameId) -> nil)
@@ -159,11 +130,27 @@ local function getTableDescriptionsIn(tableButtonContainers, tableDescriptions)
     return tableDescriptionsIn
 end
 
+local function makeTableButtonContainer(parent: Instance, tableDescription: CommonTypes.TableDescription): Instance
+    local tableButtonContainer = Instance.new("Frame")
+    tableButtonContainer.Parent = parent
+    tableButtonContainer.Size = UDim2.new(0, 200, 0, 30)
+    tableButtonContainer.BackgroundColor3 = Color3.new(0.8, 0.8, 0.8)
+    tableButtonContainer.BorderSizePixel = 0
+    tableButtonContainer.Name = "TableButtonContainer"
+    tableButtonContainer.TableId = Instance.new("IntValue")
+    tableButtonContainer.TableId.Value = tableDescription.tableId
+
+    GuiUtils.makeTableButton(tableButtonContainer, tableDescription, function()
+    end)
+
+    return tableButtonContainer
+end
+
 local function updateTableRow(tableRow:Instance, tableDescriptions:{CommonTypes.TableDescription})
     local allKids = tableRow:GetChildren()
     local tableButtonContainers = {}
     for _, kid in allKids do
-        if kid:IsA("Frame") then
+        if kid.Name == "TableButtonContainer" then
             table.insert(tableButtonContainers, kid)
         end
     end
@@ -215,13 +202,20 @@ local makeMakeFrameAndContentFrame = function(): Instance
     mainFrame.BackgroundColor3 = Color3.new(0.458823, 0.509803, 0.733333)
     mainFrame.Parent = screenGui
     mainFrame.ZIndex = 1
+    mainFrame.Name = "main"
+    mainFrame.BorderSizePixel= 0
 
     contentFrame = Instance.new("Frame")   
     contentFrame.Size = UDim2.new(1, 0, 0, 0)
-    contentFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    
     contentFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
     contentFrame.Parent = mainFrame
     contentFrame.Name = "content"
+    contentFrame.BorderSizePixel= 0
+    contentFrame.AutomaticSize = Enum.AutomaticSize.Y
+    task.wait()
+    contentFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+
     GuiUtils.addLayoutOrderTracking(contentFrame)
 end
 
@@ -272,10 +266,19 @@ local updateTableSelectionUI = function()
     updatePublicTables()
 end
 
-local function hasEnoughPlayers() 
+local function hasEnoughPlayers() : boolean
     assert(currentTableDescription, "Should have a currentTableDescription")
-    local gameDetails = getGameDetails(currentTableDescription.gameId)
+    local gameDetails = GameDetails.getGameDetails(currentTableDescription.gameId)
     return #currentTableDescription.memberPlayerIds >= gameDetails.minPlayers
+end
+
+local function roomForMorePlayers() : boolean
+    assert(currentTableDescription, "Should have a currentTableDescription")
+    local gameDetails = GameDetails.getGameDetails(currentTableDescription.gameId)
+    assert(gameDetails.maxPlayers, "GameDetails should have a maxPlayers")
+    assert(gameDetails.maxPlayers > 0, "GameDetails should have non-zero maxPlayers")
+    assert(gameDetails.maxPlayers >= #currentTableDescription.memberPlayerIds, "GameDetails.maxPlayers should be >= #currentTableDescription.memberPlayerIds")
+    return #currentTableDescription.memberPlayerIds < gameDetails.maxPlayers
 end
 
 -- build ui elements for the when players are waiting at a table for game to start.
@@ -305,7 +308,7 @@ local buildTableWaitingUI = function()
     if localPlayerId == currentTableDescription.hostPlayerId then
         if not hasEnoughPlayers() then
             GuiUtils.addLabel(row, "Waiting for more minimum number of players to join.")
-        elseif roomForMorePlayer() then
+        elseif roomForMorePlayers() then
             GuiUtils.addLabel(row, "Press start when ready, or wait for more players to join.")
         else
             GuiUtils.addLabel(row, "Press start when ready.")
@@ -328,6 +331,15 @@ local buildTableWaitingUI = function()
             print("FIXME: leave table")
         end)
     end
+end
+
+local function buildTablePlayingUI()
+    assert(currentTableDescription, "Should have a currentTableDescription")
+    assert(currentTableDescription.gameId, "Should have a currentTableDescription.gameId")
+
+    local gameUI = GameUI.getGameUI(currentTableDescription.gameId)
+    assert(gameUI, "Should have a gameUI")
+    gameUI.buildUI(contentFrame, currentTableDescription)
 end
 
 local function updateUI()
@@ -373,6 +385,7 @@ end
 
 ClientStartUp.StartUp = function(_screenGui: ScreenGui, _allGameDetails: {CommonTypes.GameDetails})
     -- must be at least one.
+    assert(_allGameDetails ~= nil, "Should have non=nil game details")
     assert(#_allGameDetails > 0, "Should have at least one game")
     GameDetails.setAllGameDetails(_allGameDetails)
 
