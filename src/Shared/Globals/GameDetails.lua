@@ -17,23 +17,23 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 
 local GameDetails = {} 
 
-local _allGameDetails = {} :: {CommonTypes.GameDetails}
+local gameDetailsByGameId = {} :: CommonTypes.GameDetailsByGameId
 
-GameDetails.setAllGameDetails = function(allGameDetails: {CommonTypes.GameDetails}): nil
-    _allGameDetails = allGameDetails
+GameDetails.setAllGameDetails = function(_gameDetailsByGameId: CommonTypes.GameDetailsByGameId): nil
+    gameDetailsByGameId = _gameDetailsByGameId
 end
 
 GameDetails.getGameDetails = function(gameId: CommonTypes.GameId): CommonTypes.GameDetails?
-    for _, gameDetails in ipairs(_allGameDetails) do
-        if gameDetails.gameId == gameId then
+    for gId, gameDetails in gameDetailsByGameId do
+        if gId == gameId then
             return gameDetails
         end
     end
     return nil
 end
 
-GameDetails.getAllGameDetails = function(): {CommonTypes.GameDetails}
-    return _allGameDetails
+GameDetails.getAllGameDetails = function(): CommonTypes.GameDetailsByGameId
+    return gameDetailsByGameId
 end 
 
 return GameDetails

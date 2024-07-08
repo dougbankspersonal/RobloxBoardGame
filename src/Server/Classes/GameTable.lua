@@ -19,24 +19,18 @@ GameTable.__index = GameTable
 
 local nextGameTableId: CommonTypes.TableId = 0
 
-export type GameTableState = number
-export type GameTableStates = {WaitingForPlayers: GameTableState, Playing: GameTableState, Finished: GameTableState}
-
-GameTable.GameTableStates = {
+GameTable.GameTableStates : CommonTypes.GameTableStates = {
 	WaitingForPlayers = 0,
 	Playing = 1,
 	Finished = 2
-} :: GameTableStates
+} :: CommonTypes.GameTableStates
 
 export type GameTable = {
-	id: CommonTypes.TableId,
-	hostUserId: CommonTypes.UserId,
 	gameTableState: GameTableState,
-	memberUserIds: {CommonTypes.UserId},
-	invitedUserIds: {CommonTypes.UserId},
 	gameDetails: CommonTypes.GameDetails,
 	gameInstance: GameInstance.GameInstance?,
-	public: boolean,
+
+	tableDescription: CommonTypes.TableDescription,
 
 	new: (hostUserId: CommonTypes.UserId, gameDetails: CommonTypes.GameDetails, public: boolean) -> GameTable,
 	getGameTable: (tableId: CommonTypes.TableId) -> GameTable,
@@ -51,25 +45,25 @@ export type GameTable = {
 }
 
 function GameTable.new(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, public: boolean): GameTable
-	local gameTable = {}
-	setmetatable(gameTable, GameTable)
+	local self = {}
+	setmetatable(self, GameTable)
 	
-	gameTable.id = nextGameTableId
+	self.tableDescription.tableId = nextGameTableId
 	nextGameTableId = nextGameTableId + 1
 
-	gameTable.hostUserId = hostUserId
-	gameTable.gameTableState = GameTable.GameTableStates.WaitingForPlayers
-	gameTable.members = {
+	self.tableDescription.hostUserId = hostUserId
+	self.tableDescription.gameTableState = GameTable.GameTableStates.WaitingForPlayers
+	self.tableDescription.members = {
 		[hostUserId] = true,
 	}
-	gameTable.invited = {}
-	gameTable.gameDetails = GameDetails.getGameDetails(gameId)
-	gameTable.gameInstance = nil
-	gameTable.public = public
+	self.invited = {}
+	self.gameDetails = GameDetails.getGameDetails(gameId)
+	self.gameInstance = nil
+	self.public = public
 
-	gameTables[GameTable.id] = gameTable
+	gameTables[GameTable.id] = self
 
-	return gameTable
+	return self
 end
 
 function GameTable.getGameTable(tableId): GameTable

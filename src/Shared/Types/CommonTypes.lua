@@ -18,6 +18,7 @@ export type UserId = number
 export type AssetId = number
 
 -- Everything you need to know about a table.
+-- A summary passed to clients so they know what's going on.
 export type TableDescription = {
     tableId: TableId,
 	hostPlayerId: UserId,
@@ -38,6 +39,10 @@ export type GameDetails = {
     minPlayers: number,
 }
 
+export type GameDetailsByGameId = {
+    [GameId]: GameDetails,
+}
+
 -- Meta-level functions to start, stop, exit a game instance.
 -- Defined by client of this library.
 -- Available on server only.
@@ -45,6 +50,10 @@ export type GameInstanceFunctions = {
     onPlay: () -> nil,
     onEnd: () -> nil,
     onPlayerLeft: (playerId: UserId) -> nil,
+}
+
+export type GameInstanceFunctionsByGameId = {
+    [GameId]: GameInstanceFunctions,
 }
 
 -- How to configure a dialog.
@@ -57,6 +66,29 @@ export type DialogConfig = {
     title: string,
     description: string,
     buttons: {DialogButtonConfig},
+}
+
+export type GameTableState = number
+export type GameTableStates = {
+	WaitingForPlayers: GameTableState, 
+	Playing: GameTableState, 
+	Finished: GameTableState,
+}
+
+export type UIMode = number
+export type UIModes = {
+	None: UIMode, 
+	TableSelection: UIMode, 
+	TableWaiting: UIMode,
+    TablePlaying: UIMode,
+}
+
+export type GameUI = {
+
+}
+
+export type GameUIs = {
+    [GameId]: GameUI,
 }
 
 return nil

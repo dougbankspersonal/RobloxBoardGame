@@ -21,15 +21,15 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 
 local GameInstanceFunctions = {}
 
-local _allGameInstanceFunctions = {} :: {CommonTypes.GameInstanceFunctions}
+local gameInstanceFunctionsByGameId = {} :: CommonTypes.GameInstanceFunctionsByGameId
 
-GameInstanceFunctions.setAllGameInstanceFunctions = function(allGameInstanceFunctions: {CommonTypes.GameInstanceFunctions}): nil
-  _allGameInstanceFunctions = allGameInstanceFunctions
+GameInstanceFunctions.setAllGameInstanceFunctions = function(_gameInstanceFunctionsByGameId: CommonTypes.GameInstanceFunctionsByGameId): nil
+  gameInstanceFunctionsByGameId = _gameInstanceFunctionsByGameId
 end
 
 GameInstanceFunctions.getGameInstanceFunctions = function(gameId: CommonTypes.GameId): CommonTypes.GameInstanceFunctions?
-    for _, gameInstanceFunctions in ipairs(_allGameInstanceFunctions) do
-        if gameInstanceFunctions.gameId == gameId then
+    for gId, gameInstanceFunctions in ipairs(gameInstanceFunctionsByGameId) do
+        if gId == gameId then
             return gameInstanceFunctions
         end
     end
