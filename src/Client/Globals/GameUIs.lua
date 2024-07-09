@@ -21,19 +21,18 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 
 local GameUIs = {}
 
-local allGameUIs = {} :: CommonTypes.GameUIs
+local gameUIsByGameId = {} :: CommonTypes.GameUIsByGameId
 
-GameUIs.setAllGameUIs = function(_allGameUIs: CommonTypes.GameUIs): nil
-    allGameUIs = _allGameUIs
+GameUIs.setAllGameUIs = function(_gameUIsByGameId: CommonTypes.GameUIsByGameId): nil
+    gameUIsByGameId = _gameUIsByGameId
 end
 
 GameUIs.getGameUI = function(gameId: CommonTypes.GameId): CommonTypes.GameUI?
-    for gId, gameUI in ipairs(allGameUIs) do
-        if gId == gameId then
-            return gameUI
-        end
-    end
+  if gameUIsByGameId[gameId] then
+    return gameUIsByGameId[gameId]
+  else
     return nil
+  end
 end
 
 return GameUIs

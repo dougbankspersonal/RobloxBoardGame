@@ -9,13 +9,4 @@ local UIModes: {string: CommonTypes.UIMode} = {
     TablePlaying = "TablePlaying",
 } :: {string: CommonTypes.UIMode}
 
-
-local UIModes = {}
-
-UIModes.GameTableStates = {
-	WaitingForPlayers = 0,
-	Playing = 1,
-	Finished = 2
-} :: GameTableStates
-
 return UIModes

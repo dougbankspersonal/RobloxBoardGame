@@ -24,12 +24,11 @@ GameDetails.setAllGameDetails = function(_gameDetailsByGameId: CommonTypes.GameD
 end
 
 GameDetails.getGameDetails = function(gameId: CommonTypes.GameId): CommonTypes.GameDetails?
-    for gId, gameDetails in gameDetailsByGameId do
-        if gId == gameId then
-            return gameDetails
-        end
+    if gameDetailsByGameId[gameId] then
+        return gameDetailsByGameId[gameId]
+    else
+        return nil
     end
-    return nil
 end
 
 GameDetails.getAllGameDetails = function(): CommonTypes.GameDetailsByGameId

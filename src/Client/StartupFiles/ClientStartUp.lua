@@ -1,23 +1,22 @@
 local ClientStartUp = {}
 
+local RobloxBoardGameClient = script.Parent.Parent
+local GuiMain = require(RobloxBoardGameClient.Gui.GuiMain)
+local GameUIs = require(RobloxBoardGameClient.Globals.GameUIs)
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
-local RobloxBoardGameClient = script.Parent.Parent
-
-local GuiMain = require(RobloxBoardGameClient.Gui.GuiMain)
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
-
--- Global UI elements we care about.
-local screenGui: ScreenGui?
+local Utils = require(RobloxBoardGameShared.Utils.Utils)
 
 -- 3d avatar is irrelevant for this game.
 local function turnOffPlayerControls()
     local localPlayer = game.Players.LocalPlayer
-    local character = localPlayer.Character or localPlayer.CharacterAdded:Wait()
-    local humanoid = character:WaitForChild("Humanoid")
-    humanoid.WalkSpeed = 0
-    humanoid.JumpPower = 0
+    assert(localPlayer, "localPlayer not found")
+    local controls = require(localPlayer.PlayerScripts:WaitForChild("PlayerModule")):GetControls()
+    assert(controls, "controls not found")
+    controls:Disable()
 end
 
 local function listenToServerEvents()
@@ -39,17 +38,22 @@ local function listenToServerEvents()
     end)
 end
 
-ClientStartUp.StartUp = function(_screenGui: ScreenGui, _allGameDetails: {CommonTypes.GameDetails})
+ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, gameUIsByGameId: CommonTypes.GameUIsByGameId)
     -- must be at least one.
-    assert(_allGameDetails ~= nil, "Should have non=nil game details")
-    assert(#_allGameDetails > 0, "Should have at least one game")
-    GameDetails.setAllGameDetails(_allGameDetails)
+    assert(#gameDetailsByGameId > 0, "Should have at least one game")
+    -- Sanity checks.
+    assert(gameDetailsByGameId ~= nil, "Should have non=nil gameDetailsByGameIds")
+    assert(gameUIsByGameId ~= nil, "Should have non=nil gameUIsByGameId")
+    assert(Utils.tablesHaveSameKeys(gameDetailsByGameId, gameUIsByGameId), "tables should have same keys")
+    assert(#gameDetailsByGameId > 0, "Should have at least one game")
 
-    screenGui = _screenGui
+    GameDetails.setAllGameDetails(gameDetailsByGameId)
+    GameUIs.setAllGameUIs(gameUIsByGameId)
 
     screenGui.IgnoreGuiInset = true
     turnOffPlayerControls()
     GuiMain.makeMakeFrameAndContentFrame(screenGui)
+    print("Doug: calling updateUI")
     GuiMain.updateUI()
     listenToServerEvents()
 end

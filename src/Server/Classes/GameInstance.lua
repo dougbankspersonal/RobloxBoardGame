@@ -17,45 +17,45 @@ GameInstance.__index = GameInstance
 
 export type GameInstance = {
     tableId: CommonTypes.TableId,
-	gameId: CommonTypes.GameId,
+    gameId: CommonTypes.GameId,
 
-	new: (tableId: CommonTypes.TableId, gameId: CommonTypes.GameId) -> GameInstance,
+    new: (tableId: CommonTypes.TableId, gameId: CommonTypes.GameId) -> GameInstance,
 
-	playGame: (self:GameInstance) -> nil,
-	endGame: (self:GameInstance) -> nil,
+    playGame: (self:GameInstance) -> nil,
+    endGame: (self:GameInstance) -> nil,
     playerLeft: (self:GameInstance, userId: CommonTypes.UserId) -> nil,
-	destroy: (self:GameInstance) -> nil,
+    destroy: (self:GameInstance) -> nil,
 }
 
 function GameInstance.new(tableId: CommonTypes.TableId, gameId: CommonTypes.GameId): GameInstance
-	local self = {}
-	setmetatable(self, GameInstance)
-	
-	self.tableId = tableId
+    local self = {}
+    setmetatable(self, GameInstance)
+    
+    self.tableId = tableId
     self.gameId = gameId
 
-	return self
+    return self
 end
 
 function GameInstance:playGame()
     local gameInstanceFunctions = GameInstanceFunctions.getGameInstanceFunctions(self.gameId)
     assert(gameInstanceFunctions, "GameInstanceFunctions not found for gameId: " .. self.gameId)
     assert(gameInstanceFunctions.onPlay, "onPlay is required")
-	return gameInstanceFunctions.onPlay()
+    return gameInstanceFunctions.onPlay()
 end
 
 function GameInstance:endGame()
     local gameInstanceFunctions = GameInstanceFunctions.getGameInstanceFunctions(self.gameId)
     assert(gameInstanceFunctions, "GameInstanceFunctions not found for gameId: " .. self.gameId)
     assert(gameInstanceFunctions.onEnd, "onEnd is required")
-	return gameInstanceFunctions.onEnd()
+    return gameInstanceFunctions.onEnd()
 end
 
 function GameInstance:playerLeft(userId: CommonTypes.UserId)
     local gameInstanceFunctions = GameInstanceFunctions.getGameInstanceFunctions(self.gameId)
     assert(gameInstanceFunctions, "GameInstanceFunctions not found for gameId: " .. self.gameId)
     assert(gameInstanceFunctions.onPlayerLeft, "onPlayerLeft is required")
-	return gameInstanceFunctions.onPlayerLeft(userId)
+    return gameInstanceFunctions.onPlayerLeft(userId)
 end
 
 function GameInstance:destroy()

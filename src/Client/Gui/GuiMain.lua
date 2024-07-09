@@ -18,6 +18,8 @@ local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 -- Client...
 local RobloxBoardGameClient = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameClient.Gui.GuiUtils)
+local GameUIs = require(RobloxBoardGameClient.Globals.GameUIs)
+local ClientEventManagement = require(RobloxBoardGameClient.Gui.ClientEventManagement)
 
 -- Globals
 local localPlayerId = Players.LocalPlayer.UserId
@@ -28,7 +30,6 @@ local contentFrame: Frame?
 local screenGui: ScreenGui?
 
 local currentUIMode: CommonTypes.UIMode = UIModes.None
-local uiModeFromServer: CommonTypes.UIMode = UIModes.None
 
 local publicTables: {CommonTypes.TableDescription} = {}
 local invitedTables: {CommonTypes.TableDescription} = {}
@@ -42,6 +43,8 @@ local currentTableDescription: CommonTypes.TableDescription = nil
     @returns: nil
 ]]
 GuiMain.makeMakeFrameAndContentFrame = function(_screenGui: ScreenGui)
+    screenGui = _screenGui
+    print("Doug: makeMakeFrameAndContentFrame screenGui = ", screenGui)   
     mainFrame = Instance.new("Frame")
     mainFrame.Size = UDim2.new(1, 0, 1, 0)
     mainFrame.BackgroundColor3 = Color3.new(0.458823, 0.509803, 0.733333)
@@ -153,13 +156,20 @@ end
     Build ui elements for the table creation/selection ui.
 ]]
 local buildTableSelectionUI = function()
+    print("Doug: buildTableSelectionUI 001")
+    print("Doug: contentFrame = ", contentFrame)
+
     local uiListLayout = Instance.new("UIListLayout")
     uiListLayout.FillDirection = Enum.FillDirection.Vertical
     uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     uiListLayout.Parent = contentFrame
 
+    print("Doug: buildTableSelectionUI 002")
+
     -- Row to add a new table.
     makeCreateTableRow()
+
+    print("Doug: buildTableSelectionUI 003")
 
     -- Row to show tables you are invited to.
     local invitedTablesRow = GuiUtils.addRowWithLabel(contentFrame, "Your invitations")
@@ -237,11 +247,11 @@ local buildTableWaitingUI = function()
     end
 end
 
-local function buildTablePlayingUI()
+local function buildTablePlayingUI(): nil
     assert(currentTableDescription, "Should have a currentTableDescription")
     assert(currentTableDescription.gameId, "Should have a currentTableDescription.gameId")
 
-    local gameUI = GameUI.getGameUI(currentTableDescription.gameId)
+    local gameUI = GameUIs.getGameUI(currentTableDescription.gameId)
     assert(gameUI, "Should have a gameUI")
     gameUI.buildUI(contentFrame, currentTableDescription)
 end
@@ -372,15 +382,20 @@ end
     Updates UI to reflect current state.
 ]]
 GuiMain.updateUI = function()
-    if currentUIMode ~= uiModeFromServer then
+    print("Doug: in updateUI")
+    print("Doug: in updateUI")
+    print("Doug: currentUIMode == ", currentUIMode)
+    print("Doug: ClientEventManagement.uiModeFromServer == ", ClientEventManagement.uiModeFromServer)
+    if currentUIMode ~= ClientEventManagement.uiModeFromServer then
         cleanupCurrentUI()
-        currentUIMode = uiModeFromServer
+        currentUIMode = ClientEventManagement.uiModeFromServer
+        print("Doug: currentUIMode == ", currentUIMode)
         if currentUIMode == UIModes.TableSelection then
+            print("Doug: table selection")
             buildTableSelectionUI()
         elseif currentUIMode == UIModes.TableWaiting then
             buildTableWaitingUI()
-        else
-            assert(currentUIMode == UIModes.TablePlaying, "Should be playing")
+        elseif currentUIMode == UIModes.TablePlaying then
             buildTablePlayingUI()
         end
     end
@@ -389,8 +404,7 @@ GuiMain.updateUI = function()
         updateTableSelectionUI()
     elseif currentUIMode == UIModes.TableWaiting then
         updateTableWaitingUI()
-    else
-        assert(currentUIMode == UIModes.TablePlaying, "Should be playing")
+    elseif currentUIMode == UIModes.TablePlaying then
         updateTablePlayingUI()
     end
 end

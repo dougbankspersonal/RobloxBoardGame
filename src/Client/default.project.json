@@ -5,6 +5,9 @@
     "Gui": {
       "$path": "Gui"
     },
+    "Globals": {
+      "$path": "Globals"
+    },
     "StartupFiles": {
       "$path": "StartupFiles"
     }  

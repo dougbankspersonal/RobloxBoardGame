@@ -3,10 +3,11 @@
 -- Creates events, listens for them.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
-local RobloxBoardGameServer = script.Parent.Parent
-
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+local Utils = require(RobloxBoardGameShared.Utils.Utils)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
+
+local RobloxBoardGameServer = script.Parent.Parent
 local GameInstanceFunctions = require(RobloxBoardGameServer.Globals.GameInstanceFunctions)
 local GameTable = require(RobloxBoardGameServer.Classes.GameTable)
 
@@ -122,9 +123,15 @@ function createRemoteEvents()
     createServerToClientEvents()
 end
 
-function ServerStartUp.StartUp(allGameDetails: {CommonTypes.GameDetails}, gameInstanceFunctions: {CommonTypes.GameInstanceFunctiona}): nil
-    GameDetails.setAllGameDetails(allGameDetails)
-    GameInstanceFunctions.setAllGameInstanceFunctions(gameInstanceFunctions)
+function ServerStartUp.ServerStartUp(gameDetailsByGameId: CommonTypes.GameDetailsByGameId, gameInstanceFunctionsByGameId: CommonTypes.GameInstanceFunctionsByGameId): nil
+    -- Sanity checks.
+    assert(gameDetailsByGameId, "gameDetailsByGameId is nil")
+    assert(gameInstanceFunctionsByGameId, "gameInstanceFunctionsByGameId is nil")
+    assert(Utils.tablesHaveSameKeys(gameDetailsByGameId, gameInstanceFunctionsByGameId), "tables should have same keys")
+    assert(#gameDetailsByGameId > 0, "Should have at least one game")
+
+    GameDetails.setAllGameDetails(gameDetailsByGameId)
+    GameInstanceFunctions.setAllGameInstanceFunctions(gameInstanceFunctionsByGameId)
     createRemoteEvents()
 end
 
