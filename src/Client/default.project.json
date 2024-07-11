@@ -2,8 +2,8 @@
   "name": "RobloxBoardGameClient",
   "tree": {
     "$className": "Folder",
-    "Gui": {
-      "$path": "Gui"
+    "Modules": {
+      "$path": "Modules"
     },
     "Globals": {
       "$path": "Globals"

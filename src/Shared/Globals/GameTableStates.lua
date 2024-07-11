@@ -2,12 +2,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 
-local UIModes: CommonTypes.UIModes = {
-    Loading = 0,
-    TableSelection = 1,
-    TableWaiting = 2,
-    TablePlaying = 3,
-    None = 4,
-} :: CommonTypes.UIModes
+local GameTableStates: CommonTypes.GameTableStates = {    
+    WaitingForPlayers = 0,
+    Playing = 1,
+    Finished = 2,
+} :: CommonTypes.GameTableStates
 
-return UIModes
+return GameTableStates

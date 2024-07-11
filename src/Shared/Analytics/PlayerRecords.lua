@@ -13,8 +13,8 @@ module.GetPlayerRecord = function(userId)
         return playerHistory:GetAsync(userId)
     end)
     if getSuccess then
-        print("Doug: playerHistory:GetAsync success currentHistory = ", currentHistory)
-    else 
+        print("it worked")
+    else
         currentHistory = {}
     end
 end

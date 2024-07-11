@@ -1,14 +1,18 @@
 local ClientStartUp = {}
 
+-- Client
 local RobloxBoardGameClient = script.Parent.Parent
-local GuiMain = require(RobloxBoardGameClient.Gui.GuiMain)
+local GuiMain = require(RobloxBoardGameClient.Modules.GuiMain)
+local ClientEventManagement = require(RobloxBoardGameClient.Modules.ClientEventManagement)
 local GameUIs = require(RobloxBoardGameClient.Globals.GameUIs)
+local TableDescriptions = require(RobloxBoardGameClient.Modules.TableDescriptions)
 
+-- Shared
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
-local Utils = require(RobloxBoardGameShared.Utils.Utils)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- 3d avatar is irrelevant for this game.
 local function turnOffPlayerControls()
@@ -17,25 +21,6 @@ local function turnOffPlayerControls()
     local controls = require(localPlayer.PlayerScripts:WaitForChild("PlayerModule")):GetControls()
     assert(controls, "controls not found")
     controls:Disable()
-end
-
-local function listenToServerEvents()
-    local event
-    
-    event = ReplicatedStorage.TableEvents:WaitForChild("TableCreated")
-    event.OnClientEvent:Connect(function(gameTableSummary)
-        -- New Table Was Created.
-    end)
-
-    event = ReplicatedStorage.TableEvents:WaitForChild("TableDestroyed")
-    event.OnClientEvent:Connect(function(gameTableId)
-        -- Table was destroyed
-    end)
-
-    event = ReplicatedStorage.TableEvents:WaitForChild("TableUpdated")
-    event.OnClientEvent:Connect(function(gameTableSummary)
-        -- Table was updated
-    end)
 end
 
 ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, gameUIsByGameId: CommonTypes.GameUIsByGameId)
@@ -52,10 +37,24 @@ ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId
 
     screenGui.IgnoreGuiInset = true
     turnOffPlayerControls()
-    GuiMain.makeMakeFrameAndContentFrame(screenGui)
-    print("Doug: calling updateUI")
+    GuiMain.makeMainFrame(screenGui)
+
+    -- Show a loading screen while we fetch data from backend.
     GuiMain.updateUI()
-    listenToServerEvents()
+
+    -- Do this before we fetch all tables (just so there's no squirreliness where:
+    -- a) we ask for all tables
+    -- b) server replies
+    -- c) server updates tables and broadcasts updates
+    -- d) we get the updates
+
+    ClientEventManagement.listenToServerEvents(GuiMain.onTableCreated, GuiMain.onTableDestroyed, GuiMain.onTableUpdated)
+
+    -- Fetch table descriptions from server.  Async, takes non-zero time.
+    local allTableDescriptions = ClientEventManagement.fetchTableDescriptionsByTableIdAsync()
+    TableDescriptions.setTableDescriptions(allTableDescriptions)
+
+    GuiMain.updateUI()
 end
 
 return ClientStartUp

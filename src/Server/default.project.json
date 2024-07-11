@@ -8,6 +8,9 @@
     "Globals": {
       "$path": "Globals"
     },
+    "Modules": {
+      "$path": "Modules"
+    },
     "StartupFiles": {
       "$path": "StartupFiles"
     }

@@ -11,8 +11,8 @@
     "Types": {
       "$path": "Types"
     },
-    "Utils": {
-      "$path": "Utils"
+    "Modules": {
+      "$path": "Modules"
     }
   }
 }

@@ -1,3 +1,13 @@
+--[[
+    GuiUtils is a collection of utility functions for creating common/consistent GUI elements.
+    It is used by the client to create the UI for the game.
+
+    FIXME(dbanks) Right now these elements are fugly/bare bones functional.  We want to go thru
+    and make them nice.
+    Also I expect there will be a lot of custom/shared widgets here, so we might want to split this
+    into multiple files, add a subdir for "common gui elements" and dump it all in there, etc.
+]]
+
 local GuiUtils = {}
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -43,19 +53,19 @@ GuiUtils.addRowWithLabel = function(parent:Instance, text: string?, opt_layoutOr
     uiListLayout.Parent = row
     uiListLayout.FillDirection = Enum.FillDirection.Horizontal
     uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    uiListLayout.Padding = UDim.new(5, 5)   
+    uiListLayout.Padding = UDim.new(5, 5)
     row.LayoutOrder = GuiUtils.getLayoutOrder(parent, opt_layoutOrder)
     row.Name = "Row" .. tostring(row.LayoutOrder)
     row.AutomaticSize = Enum.AutomaticSize.Y
     local bgColor
-    if row.LayoutOrder%2 == 0 then 
-        bgColor = Color3.fromHex("f0f0f0") 
+    if row.LayoutOrder%2 == 0 then
+        bgColor = Color3.fromHex("f0f0f0")
     else
         bgColor = Color3.fromHex("e0e0e0")
     end
     row.BackgroundColor3 = bgColor
 
-    if text then 
+    if text then
         local label = Instance.new("TextLabel")
         label.Name = "LabelInRow"
         label.Parent = row
@@ -70,9 +80,9 @@ GuiUtils.addRowWithLabel = function(parent:Instance, text: string?, opt_layoutOr
         label.BorderSizePixel = 0
         label.LayoutOrder = 1
     end
-    
+
     local rowContent = Instance.new("Frame")
-    rowContent.Parent = row 
+    rowContent.Parent = row
     rowContent.Size = UDim2.new(0, 0, 0, 0)
     rowContent.AutomaticSize = Enum.AutomaticSize.XY
     rowContent.Position = UDim2.new(0, 0, 0, 0)
@@ -108,13 +118,13 @@ GuiUtils.addButton = function(parent: Instance, text: string, callback: () -> ()
     button.LayoutOrder = GuiUtils.getLayoutOrder(parent, opt_layoutOrder)
     parent.NextLayoutOrder.Value = parent.NextLayoutOrder.Value + 1
     button.MouseButton1Click:Connect(function()
-        if not button.Active then 
+        if not button.Active then
             return
         end
         callback()
     end)
     button.BorderSizePixel = 3
-    
+
     local uiCorner = Instance.new("UICorner")
     uiCorner.Parent = button
     uiCorner.CornerRadius = UDim.new(0, 4)

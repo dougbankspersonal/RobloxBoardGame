@@ -1,5 +1,22 @@
 -- Common types
 
+-- Some enumerated types.
+export type GameTableState = number
+export type GameTableStates = {
+    WaitingForPlayers: GameTableState,
+    Playing: GameTableState,
+    Finished: GameTableState,
+}
+
+export type UIMode = number
+export type UIModes = {
+    Loading: UIMode,
+    TableSelection: UIMode,
+    TableWaiting: UIMode,
+    TablePlaying: UIMode,
+    None: UIMode,
+}
+
 -- A user creates a table to host a game.
 -- User other players join table, then host launches table, creating the game.
 -- This id uniquely identifies a table within the experience.
@@ -17,17 +34,6 @@ export type UserId = number
 -- Standard Roblox asset
 export type AssetId = number
 
--- Everything you need to know about a table.
--- A summary passed to clients so they know what's going on.
-export type TableDescription = {
-    tableId: TableId,
-    hostPlayerId: UserId,
-    memberPlayerIds: {UserId},
-    isPublic: boolean,
-    invitedPlayerIds: {UserId},
-    gameId: GameId,
-}
-
 -- How to configure a dialog.
 export type DialogButtonConfig = {
     text: string,
@@ -40,37 +46,48 @@ export type DialogConfig = {
     buttons: {DialogButtonConfig},
 }
 
-export type GameTableState = number
-export type GameTableStates = {
-    WaitingForPlayers: GameTableState, 
-    Playing: GameTableState, 
-    Finished: GameTableState,
+-- Everything a client needs to know about a created table so it can be
+-- properly rendered/described.
+export type TableDescription = {
+    tableId: TableId,
+    hostPlayerId: UserId,
+    isPublic: boolean,
+    -- Maps from user Id to true.  Basically a set.
+    -- For all the functions we are dealing with when checking/modifying, set works better than array.
+    -- Only drawback in on server when we render, we may wind up with inconsistent ordering.
+    -- Solution: sort by player name.
+    memberPlayerIds: {
+        [UserId]: boolean,
+    },
+    invitedPlayerIds: {
+        [UserId]: boolean,
+    },
+    gameId: GameId,
+    gameTableState: GameTableState,
 }
 
-export type UIMode = number
-export type UIModes = {
-    None: UIMode, 
-    TableSelection: UIMode, 
-    TableWaiting: UIMode,
-    TablePlaying: UIMode,
+-- We tend to keep these in a table indexed on tableId so it's easy
+-- to find/remove.
+export type TableDescriptionsByTableId = {
+    [TableId]: TableDescription,
 }
 
 --[[
 Descriptors for games.
 
-General idea: 
+General idea:
 RobloxBoardGame library allows you to create an experience with multiple board games (imagine a "board game library")
-Players create a table to play games, and in creating a table they select one of the games from the library: they are 
+Players create a table to play games, and in creating a table they select one of the games from the library: they are
 hosting this game at this table.
 
 So to use RBB library, an experience needs to pass in some data/functions descrbing the library.
 
-Instead of one monolithic table for each game, we've split it into multiple blocks: 
+Instead of one monolithic table for each game, we've split it into multiple blocks:
 
-GameDetails: 
-    Metadata about the game (name, images, description, min/max players, etc). 
+GameDetails:
+    Metadata about the game (name, images, description, min/max players, etc).
     Available on both client and server.
-GameInstanceFunctions: 
+GameInstanceFunctions:
     Functions used to start, stop, remove players from the game.
     Available only on server.
 GameUIs
