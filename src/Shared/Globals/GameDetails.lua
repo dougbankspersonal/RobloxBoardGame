@@ -4,18 +4,20 @@
     Game details are stored in a table, and can be accessed by their gameId.
 
     For parties using the RobloxBoardGame library: server and all clients:
-    * Declare a table of hard-coded game details (CommonTypes.GameDetails) describing 
+    * Declare a table of hard-coded game details (CommonTypes.GameDetails) describing
       each board game in your Roblox experience.
     * This declaration should be in shared storage, available to both client and server.
-    * Very early in both client and server lifespan, call GameDetails.setAllGameDetails, 
+    * Very early in both client and server lifespan, call GameDetails.setAllGameDetails,
       passing in the table of game details.
     * Later, when you need to know about a game, call GameDetails.getGameDetails, passing in the gameId.
 ]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 
-local GameDetails = {} 
+local GameDetails = {}
 
 local gameDetailsByGameId = {} :: CommonTypes.GameDetailsByGameId
 
@@ -33,6 +35,6 @@ end
 
 GameDetails.getAllGameDetails = function(): CommonTypes.GameDetailsByGameId
     return gameDetailsByGameId
-end 
+end
 
 return GameDetails

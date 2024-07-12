@@ -11,10 +11,19 @@
 local GuiUtils = {}
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
+local TweenService = game:GetService("TweenService")
+local SocialService = game:GetService("SocialService")
+local Players = game:GetService("Players")
 
+-- Shared
+local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
+
+-- Client
+local RobloxBoardGameClient = script.Parent.Parent
+local TableDescriptions = require(RobloxBoardGameClient.Modules.TableDescriptions)
+local ClientEventManagement = require(RobloxBoardGameClient.Modules.ClientEventManagement)
 
 local globalLayoutOrder = 0
 
@@ -179,15 +188,157 @@ GuiUtils.makeTableButton = function(tableButtonContainer: Instance, tableDescrip
     -- FIXME(dbanks)
     -- Add a nice image of the game, the host, other metadata.
     -- FOr now just host name and game name.
-    local hostName = GuiUtils.getPlayerName(tableDescription.hostPlayerId)
+    local hostName = GuiUtils.getPlayerName(tableDescription.hostUserId)
     local gameName = GuiUtils.getGameName(tableDescription.gameId)
-    assert(hostName, "No host name for " .. tableDescription.hostPlayerId)
+    assert(hostName, "No host name for " .. tableDescription.hostUserId)
     assert(gameName, "No game name for " .. tableDescription.gameId)
 
     tableButton.Text = "\"" .. gameName .. "\" hosted by " .. hostName
     tableButton.TextSize = 14
     tableButton.BorderSizePixel = 0
     tableButton.MouseButton1Click:Connect(onButtonCiicked)
+end
+
+-- Which table buttons have no description?
+local function getWidgetContainersOut(widetContainers: {Instance}, itemIds: {number}): {Instance}
+    local widgetContainersOut = {} :: {Instance}
+    for _, widetContainer in widetContainers do
+        local widgetItemId = widetContainer.ItemId.Value
+        local widgetInItems = false
+        for _, itemId in itemIds do
+            if widgetItemId == itemId then
+                widgetInItems = true
+                break
+            end
+        end
+        if not widgetInItems then
+            table.insert(widgetContainersOut, widetContainer)
+        end
+    end
+    return widgetContainersOut
+end
+
+-- Which table descriptions have no buttons?
+local function getItemIdsIn(widetContainers: {Instance}, itemIds: {number}): {number}
+    local itemIdsIn = {}
+    for _, itemId in itemIds do
+        local itemInWidgets = false
+        for _, widetContainer in widetContainers do
+            if itemId == widetContainer.ItemId.Value then
+                itemInWidgets = true
+                break
+            end
+        end
+        if not itemInWidgets then
+            table.insert(itemIdsIn, itemId)
+        end
+    end
+    return itemIdsIn
+end
+
+-- we have a row which is a frame containing one widget for each of a list of things (tables,
+-- users, whatever).
+-- These things all have some unique id, call it itemId (a number).
+-- We have a new/updated list of these things which may or may not match the existing list of
+-- widgets.
+-- Make update the row to remove/add widgets so the widgets match the incoming list of things.
+GuiUtils.updateRowOfWidgets = function(row:Instance, itemIds:{number}, makeWidgetContainer: (Instance, number) -> Instance): nil
+    local allKids = row:GetChildren()
+
+    -- Get all the existing widgets.
+    local widgetContainers = {}
+    for _, kid in allKids do
+        if kid.Name == "WidgetContainer" then
+            table.insert(widgetContainers, kid)
+        end
+    end
+
+    -- Figure out which widgets need to go, and what new widgets we need.
+    local widgetContainersOut = getWidgetContainersOut(widgetContainers, itemIds)
+    local itemIdsIn = getItemIdsIn(widgetContainers, itemIds)
+
+    -- Just for giggles, instead of stuff just popping in/out, make it a nice tween.
+    local tweenInfo = TweenInfo.new(0.5)
+
+    -- Tween out unused widgets.
+    for _, widgetContainer in widgetContainersOut do
+        local uiScale = widgetContainer:FindFirstChild("UIScale")
+        if not uiScale then
+            uiScale = Instance.new("UIScale")
+            uiScale.Name = "UIScale"
+            uiScale.Parent = widgetContainer
+            uiScale.Scale = 1
+        end
+        local tween = TweenService:Create(uiScale, tweenInfo, {Scale = 0})
+        tween.Completed:Connect(function(_)
+            widgetContainer:Destroy()
+        end)
+        tween:Play()
+    end
+
+    -- Tween in new widgets.
+    for _, itemId in itemIdsIn do
+        local widgetContainer = makeWidgetContainer(row, itemId)
+        -- It is required that the widget container has an int value child with
+        -- name "ItemId" and value equal to itemId.
+        assert(widgetContainer.ItemId, "WidgetContainer should have an ItemId")
+        assert(widgetContainer.ItemId.Value == itemId, "WidgetContainer.ItemId.Value should be itemId")
+
+        local uiScale = Instance.new("UIScale")
+        uiScale.Name = "UIScale"
+        uiScale.Parent = widgetContainer
+        uiScale.Scale = 0
+
+        local tween = TweenService:Create(widgetContainer.UIScale, tweenInfo, {Scale = 1})
+        tween:Play()
+    end
+end
+
+-- Make a button describing a table.
+-- When button is clicked, user joins this table.
+GuiUtils.makeTableButtonContainer = function(parent: Instance, tableId: number): Instance
+    local tableDescription = TableDescriptions.getTableDescription(tableId)
+    -- Should exist.
+    assert(tableDescription, "Should have a tableDescription"
+)
+    local tableButtonContainer = Instance.new("Frame")
+    tableButtonContainer.Parent = parent
+    tableButtonContainer.Size = UDim2.new(0, 200, 0, 30)
+    tableButtonContainer.BackgroundColor3 = Color3.new(0.8, 0.8, 0.8)
+    tableButtonContainer.BorderSizePixel = 0
+    tableButtonContainer.Name = "WidgetContainer"
+
+    local intValue = Instance.new("IntValue")
+    intValue.Value = tableId
+    intValue.Parent = tableButtonContainer
+    intValue.Name = "ItemId"
+
+    GuiUtils.makeTableButton(tableButtonContainer, tableDescription, function()
+        ClientEventManagement.joinTable(tableId)
+    end)
+
+    return tableButtonContainer
+end
+
+-- Function to check whether the player can send an invite
+local function canSendGameInvite(sendingPlayer)
+	local success, canSend = pcall(function()
+		return SocialService:CanSendGameInviteAsync(sendingPlayer)
+	end)
+	return success and canSend
+end
+
+GuiUtils.selectFriend = function(screenGui, onFriendSelected: (userId: CommonTypes.UserId)
+    -> nil)
+    local player = Players.LocalPlayer
+    local canInvite = canSendGameInvite(player)
+
+    -- Before we put up the prompt, hook into the "all done" function.
+
+
+    if canInvite then
+        SocialService:PromptGameInvite(player)
+    end
 end
 
 return GuiUtils

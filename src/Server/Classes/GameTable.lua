@@ -7,13 +7,15 @@
 
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 
+-- Shared
+local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
+-- Server
 local RobloxBoardGameServer = script.Parent.Parent
 local GameInstance = require(RobloxBoardGameServer.Classes.GameInstance)
 
@@ -45,11 +47,11 @@ export type GameTable = {
     endGame: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
 }
 
-function GameTable.getAllGameTables(): { [CommonTypes.TableId]: GameTable }
+GameTable.getAllGameTables = function(): { [CommonTypes.TableId]: GameTable }
     return gameTables
 end
 
-function GameTable.new(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): GameTable
+GameTable.new = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): GameTable
     local self = {}
     setmetatable(self, GameTable)
 
@@ -59,12 +61,12 @@ function GameTable.new(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameI
     -- Fill in table description.
     self.tableDescription = {
         tableId = tableId,
-        memberPlayerIds = {
+        memberUserIds = {
             [hostUserId] = true,
         },
         isPublic = isPublic,
         hostUserId = hostUserId,
-        invitedPlayerIds = {},
+        invitedUserIds = {},
         gameId = gameId,
         gameTableState = GameTableStates.WaitingForPlayers,
     } :: CommonTypes.TableDescription
@@ -78,15 +80,15 @@ function GameTable.new(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameI
     return self
 end
 
-function GameTable.getGameTable(tableId): GameTable
+GameTable.getGameTable = function(tableId): GameTable
     return gameTables[tableId]
 end
 
 -- Return the table iff the table can be created.
-function GameTable.createNewTable(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): GameTable?
+GameTable.createNewTable = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): GameTable?
     -- You cannot create a new table while you are joined to a table.
     for _, gameTable in pairs(gameTables) do
-        if gameTable.tableDescription.memberPlayerIds[hostUserId] then
+        if gameTable.tableDescription.memberUserIds[hostUserId] then
             return nil
         end
     end

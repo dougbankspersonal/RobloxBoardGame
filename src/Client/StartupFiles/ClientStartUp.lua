@@ -52,6 +52,8 @@ ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId
 
     -- Fetch table descriptions from server.  Async, takes non-zero time.
     local allTableDescriptions = ClientEventManagement.fetchTableDescriptionsByTableIdAsync()
+
+    print("Doug: fetchTableDescriptionsByTableIdAsync returned with allTableDescriptions = ", allTableDescriptions)
     TableDescriptions.setTableDescriptions(allTableDescriptions)
 
     GuiMain.updateUI()

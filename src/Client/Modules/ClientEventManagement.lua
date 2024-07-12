@@ -6,7 +6,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
-local UIModes = require(RobloxBoardGameShared.Globals.UIModes)
 
 local ClientEventManagement = {}
 
@@ -22,8 +21,6 @@ if not tableFunctions then
 end
 
 -- Every new player starts in the table selection lobby.
-ClientEventManagement.uiModeFromServer = UIModes.TableSelection :: CommonTypes.UIMode
-
 ClientEventManagement.fetchTableDescriptionsByTableIdAsync = function(): CommonTypes.TableDescriptionsByTableId
     local fetchTableDescriptionsByTableIdRemoteFunction = tableFunctions:WaitForChild("FetchTableDescriptionsByTableId")
     if not fetchTableDescriptionsByTableIdRemoteFunction then
@@ -53,8 +50,28 @@ ClientEventManagement.listenToServerEvents = function(onTableCreated: (tableDesc
 end
 
 ClientEventManagement.createTable = function(gameId: CommonTypes.GameId, isPublic: boolean)
-    local event = ReplicatedStorage.TableEvents:WaitForChild("CreateNewGameTable")
+    local event = ReplicatedStorage.TableEvents:WaitForChild("CreateNewTable")
     event:FireServer(gameId, isPublic)
+end
+
+ClientEventManagement.destroyTable = function(tableId: CommonTypes.TableId)
+    local event = ReplicatedStorage.TableEvents:WaitForChild("DestroyTable")
+    event:FireServer(tableId)
+end
+
+ClientEventManagement.joinTable = function(tableId: CommonTypes.TableId)
+    local event = ReplicatedStorage.TableEvents:WaitForChild("JoinTable")
+    event:FireServer(tableId)
+end
+
+ClientEventManagement.startGame = function(tableId: CommonTypes.TableId)
+    local event = ReplicatedStorage.TableEvents:WaitForChild("StartGame")
+    event:FireServer(tableId)
+end
+
+ClientEventManagement.invitePlayerToTable = function(tableId: CommonTypes.TableId, userId: CommonTypes.UserId)
+    local event = ReplicatedStorage.TableEvents:WaitForChild("InvitePlayerToTable")
+    event:FireServer(tableId, userId)
 end
 
 return ClientEventManagement

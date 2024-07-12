@@ -12,8 +12,9 @@ export type UIMode = number
 export type UIModes = {
     Loading: UIMode,
     TableSelection: UIMode,
-    TableWaiting: UIMode,
+    TableWaitingForPlayers: UIMode,
     TablePlaying: UIMode,
+    TableFinished: UIMode,
     None: UIMode,
 }
 
@@ -50,16 +51,17 @@ export type DialogConfig = {
 -- properly rendered/described.
 export type TableDescription = {
     tableId: TableId,
-    hostPlayerId: UserId,
+    hostUserId: UserId,
     isPublic: boolean,
     -- Maps from user Id to true.  Basically a set.
     -- For all the functions we are dealing with when checking/modifying, set works better than array.
     -- Only drawback in on server when we render, we may wind up with inconsistent ordering.
     -- Solution: sort by player name.
-    memberPlayerIds: {
+    -- Note: the host is in this set.
+    memberUserIds: {
         [UserId]: boolean,
     },
-    invitedPlayerIds: {
+    invitedUserIds: {
         [UserId]: boolean,
     },
     gameId: GameId,
@@ -100,6 +102,13 @@ When using the library, you need to provide these three blocks of data for each 
 The blocks of data go in XXXbyGameId tables, where the key is the GameId.
 ]]
 
+
+export type GameOptions = {
+    name: string,
+    optionId: number,
+    details: string,
+}
+
 export type GameDetails = {
     gameId: GameId,
     gameImage: AssetId,
@@ -107,6 +116,18 @@ export type GameDetails = {
     description: string,
     maxPlayers: number,
     minPlayers: number,
+    -- Games may be configurable:
+    --   * use these rules variants.
+    --   * use these expansions.
+    -- Host should be able to set these, and guests should be able to see the selections.
+    -- In reality, there may be dependencies between these, e.g. you can only
+    -- use expansion B if you are also using A, or you can't use rules variant A with
+    -- expansion C.
+    -- We don't model that here: we just provide a list of configs, present that to
+    -- the user as a set of checkboxes, and pass the selections on to the game.
+    -- It is up to the game to make sense of any conficting/confusing/nonsensical selections
+    -- and message the user about it.
+    gameOptions: {GameOptions},
 }
 
 export type GameDetailsByGameId = {

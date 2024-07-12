@@ -1,14 +1,17 @@
 --[[
     Server-concept only.
-    Class for a game instance.  Kind of a generic wrapper: client of this library 
+    Class for a game instance.  Kind of a generic wrapper: client of this library
     will pass in functions to call on startup and teardown of game.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
-local RobloxBoardGameServer = script.Parent.Parent
 
+-- Shared
+local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+
+-- Server
+local RobloxBoardGameServer = script.Parent.Parent
 local GameInstanceFunctions = require(RobloxBoardGameServer.Globals.GameInstanceFunctions)
 
 local GameInstance = {}
@@ -27,10 +30,10 @@ export type GameInstance = {
     destroy: (self:GameInstance) -> nil,
 }
 
-function GameInstance.new(tableId: CommonTypes.TableId, gameId: CommonTypes.GameId): GameInstance
+GameInstance.new = function (tableId: CommonTypes.TableId, gameId: CommonTypes.GameId): GameInstance
     local self = {}
     setmetatable(self, GameInstance)
-    
+
     self.tableId = tableId
     self.gameId = gameId
 

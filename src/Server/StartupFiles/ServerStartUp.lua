@@ -2,23 +2,26 @@
 -- Call from a Server script ASAP.
 -- Creates events, listens for them.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 
+-- Server
 local RobloxBoardGameServer = script.Parent.Parent
 local GameInstanceFunctions = require(RobloxBoardGameServer.Globals.GameInstanceFunctions)
 local ServerEventManagement = require(RobloxBoardGameServer.Modules.ServerEventManagement)
 
 local ServerStartUp = {}
 
-function createRemoteEvents()
+local function createRemoteEvents()
     ServerEventManagement.createClientToServerEvents()
     ServerEventManagement.createServerToClientEvents()
 end
 
-function ServerStartUp.ServerStartUp(gameDetailsByGameId: CommonTypes.GameDetailsByGameId, gameInstanceFunctionsByGameId: CommonTypes.GameInstanceFunctionsByGameId): nil
+ServerStartUp.ServerStartUp = function(gameDetailsByGameId: CommonTypes.GameDetailsByGameId, gameInstanceFunctionsByGameId: CommonTypes.GameInstanceFunctionsByGameId): nil
     -- Sanity checks.
     assert(gameDetailsByGameId, "gameDetailsByGameId is nil")
     assert(gameInstanceFunctionsByGameId, "gameInstanceFunctionsByGameId is nil")
