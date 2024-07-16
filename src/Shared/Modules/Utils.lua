@@ -42,4 +42,17 @@ Utils.removeFirstInstancevFromArray = function(array: {any}, value: any): boolea
     return false
 end
 
+-- We have two maps.  Merge the second into the first, return that.
+-- So if first and second both have entry with same key, the value from second wins.
+Utils.mergeSecondMapIntoFirst = function(first: {[any]: any}, second: {[any]: any}): {[any]: any}
+    local result = {} :: {[any]: any}
+    for key, value in pairs(first) do
+        result[key] = value
+    end
+    for key, value in pairs(second) do
+        result[key] = value
+    end
+    return result
+end
+
 return Utils

@@ -65,7 +65,11 @@ export type TableDescription = {
         [UserId]: boolean,
     },
     gameId: GameId,
+    -- Game is waiting, playing, etc.  An enum.
     gameTableState: GameTableState,
+
+    -- Any game-specific tweaks that have been set.
+    enabledGameOptions: {[GameOptionId] : boolean},
 }
 
 -- We tend to keep these in a table indexed on tableId so it's easy
@@ -102,10 +106,11 @@ When using the library, you need to provide these three blocks of data for each 
 The blocks of data go in XXXbyGameId tables, where the key is the GameId.
 ]]
 
+export type GameOptionId = number
 
 export type GameOptions = {
     name: string,
-    optionId: number,
+    optionId: GameOptionId,
     details: string,
 }
 
@@ -150,6 +155,10 @@ export type GameUIs = {
 
 export type GameUIsByGameId = {
     [GameId]: GameUIs,
+}
+
+export type TweensToKill = {
+    [string]: Tween,
 }
 
 local CommonTypes = {

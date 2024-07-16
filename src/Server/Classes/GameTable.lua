@@ -168,6 +168,11 @@ function GameTable:invite(userId, inviteeId): boolean
 end
 
 function GameTable:leave(userId): boolean
+    -- Host can't leave.
+    if userId == self.hostUserId then
+        return false
+    end
+
     -- Remove this user from the array, if present.
     local removed = Utils.removeFromArray(self.tableDescription.memberUserIds, userId)
     if not removed then

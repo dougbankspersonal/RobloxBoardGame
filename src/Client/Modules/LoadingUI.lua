@@ -7,7 +7,13 @@ local TweenService = game:GetService("TweenService")
 
 --[[
 Build ui elements for an inital "loading" screen while we fetch stuff from the server.
-Return a list of functions we should call when this mode is over to clean up the UI.
+
+Returns a list of any special cleanup functions.
+"Special" because we have generic cleanup function that just kills
+everything under mainFrame.
+
+In this case, we create a tween, and I'd like to be thoughtful about killing the
+tween.
 ]]
 LoadingUI.build = function(screenGui: ScreenGui): {()->nil}
     local mainFrame = screenGui:WaitForChild("MainFrame")

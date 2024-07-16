@@ -84,78 +84,6 @@ local function buildTablePlayingUI(): nil
     gameUI.buildUI(mainFrame, currentTableDescription)
 end
 
--- update ui elements for the "in a table and waiting for game to start"
--- UI.
-local updateTableWaitingUI = function()
-    assert(currentTableDescription, "Should have a currentTableDescription")
-    local row
-
-    local gameDetails = GameDetails.getGameDetails(currentTableDescription.gameId)
-    -- If there are game options, add details about that to the UI.
-    if gameDetails.configOptions then
-        row = mainFrame:FindFirstChild("Game")
-        assert(row, "Should have a row for game details")
-        local gameUI = GameUIs.getGameUI(currentTableDescription.gameId)
-        gameUI.addSummaryOfGameOptions(row, currentTableDescription)
-    end
-
-    -- Update the guests and invites.
-    local invitedTablesRow = mainFrame:FindFirstChild("InvitedTablesRow", true)
-    assert(invitedTablesRow, "Should have an invitedTablesRow")
-    local sortedInvitedWaitingTablesForUser = TableDescriptions.getSortedInvitedWaitingTablesForUser(localUserId)
-    updateRowOfWidgets(invitedTablesRow, sortedInvitedWaitingTablesForUser, makeTableButtonContainer)
-
-
-    -- Add controls.
-    row = GuiUtils.addRowWithLabel(mainFrame, "Controls")
-    if localUserId == currentTableDescription.hostUserId then
-        GuiUtils.addButton(row, "Start Game", function()
-            print("FIXME: start game")
-        end)
-        GuiUtils.addButton(row, "Destroy Table", function()
-            print("FIXME: destroy game")
-        end)
-        if currentTableDescription.isPublic then
-            GuiUtils.addButton(row, "Add Invites", function()
-                print("FIXME: add invites")
-            end)
-        end
-        local gameDetails = GameDetails.getGameDetails(currentTableDescription.gameId)
-        if gameDetails.configOptions then
-            GuiUtils.addButton(row, "Configure Game", function()
-                print("FIXME: configure game")
-            end)
-        end
-    else
-        GuiUtils.addButton(row, "Leave Table", function()
-            print("FIXME: leave table")
-        end)
-    end
-
-
-
-
-
-
-
-    for memberPlayerId, _ in currentTableDescription.memberUserIds do
-        GuiUtils.addPlayerWidget(row, memberPlayerId)
-    end
-
-    if localUserId == currentTableDescription.hostUserId then
-        if not hasEnoughPlayers() then
-            GuiUtils.addLabel(row, "Waiting for more minimum number of players to join.")
-        elseif roomForMorePlayers() then
-            GuiUtils.addLabel(row, "Press start when ready, or wait for more players to join.")
-        else
-            GuiUtils.addLabel(row, "Press start when ready.")
-        end
-    else
-        GuiUtils.addLabel(row, "Waiting for game to start")
-    end
-
-end
-
 -- update ui elements for the "in a table and game is playing" UI.
 local updateTablePlayingUI = function()
     assert(false, "FIXME(dbanks) updateTablePlayingUI")
@@ -214,8 +142,10 @@ GuiMain.updateUI = function()
         elseif currentUIMode == UIModes.TableSelection then
             additionalCleanupFunctions = TableSelectionUI.build(screenGui)
         elseif currentUIMode == UIModes.TableWaitingForPlayers then
+            assert(currentTableDescription, "Should have a currentTableDescription")
             additionalCleanupFunctions = TableWaitingUI.build(screenGui, currentTableDescription)
         elseif currentUIMode == UIModes.TablePlaying then
+            assert(currentTableDescription, "Should have a currentTableDescription")
             additionalCleanupFunctions = buildTablePlayingUI(screenGui)
         end
 
@@ -228,6 +158,7 @@ GuiMain.updateUI = function()
     if currentUIMode == UIModes.TableSelection then
         TableSelectionUI.update(screenGui)
     elseif currentUIMode == UIModes.TableWaitingForPlayers then
+
         TableWaitingUI.update(screenGui)
     elseif currentUIMode == UIModes.TablePlaying then
         updateTablePlayingUI(screenGui)

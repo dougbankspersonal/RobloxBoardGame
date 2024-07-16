@@ -2,6 +2,7 @@
 Functions to build and update the UI for selecting a table to join or creating a table.
 ]]
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Shared...
@@ -49,45 +50,72 @@ TableDescriptions.getTableWithUserId = function(userId: number): CommonTypes.Tab
     return retVal
 end
 
-local sortTableDescriptionsByTableId = function(a, b)
-    return a.tableId < b.tableId
+TableDescriptions.playerCanJoinInvitedTable = function(userId: CommonTypes.UserId, tableId: CommonTypes.TableId): boolean
+    local tableDescription = TableDescriptions.tableDescriptionsByTableId[tableId]
+    if not tableDescription then
+        return false
+    end
+    if tableDescription.isPublic then
+        return false
+    end
+    if tableDescription.memberUserIds[userId] then
+        return false
+    end
+    if not tableDescription.invitedUserIds[userId] then
+        return false
+    end
+    return tableDescription.gameTableState == GameTableStates.WaitingForPlayers
+end
+
+TableDescriptions.playerCanJoinPublicTable = function(userId: CommonTypes.UserId, tableId: CommonTypes.TableId): boolean
+    local tableDescription = TableDescriptions.tableDescriptionsByTableId[tableId]
+    if not tableDescription then
+        return false
+    end
+    if not tableDescription.isPublic then
+        return false
+    end
+    if tableDescription.memberUserIds[userId] then
+        return false
+    end
+
+    return tableDescription.gameTableState == GameTableStates.WaitingForPlayers
+end
+
+
+-- Find all tables where:
+--   * Table is invite-only.
+--   * Local user is invited.
+--   * Table is in the "waiting" state.
+--   * Table is not full.
+--
+-- Return an array of ids for these tables.
+TableDescriptions.getTableIdsForInvitedWaitingTables = function(userId: CommonTypes.UserId): { CommonTypes.TableId }
+    local tableIds = {}
+    for _, tableDescription in pairs(TableDescriptions.tableDescriptionsByTableId) do
+        if TableDescriptions.playerCanJoinInvitedTable(userId, tableDescription) then
+            table.insert(tableIds, tableDescription.tableId)
+        end
+    end
+
+    return tableIds
 end
 
 -- Find all tables where:
---   Local user is invited.
---   Table is in the "waiting" state.
--- Sort by tableId with later table ids coming last (perhaps my own bias but and
--- old invite is more "urgent" than a new one).
+--   * Table is public.
+--   * Table is in the "waiting" state.
+--   * Table is not full.
 --
--- Returns an array.  Note that we need consistent sort:
--- * UI uses array order to determine button order, we want that to be consistent.
--- * If we use tableId -> description map, there's no guaranteed/consistent order.
-TableDescriptions.getSortedInvitedWaitingTablesForUser = function(userId: CommonTypes.UserId): { CommonTypes.TableDescription }
-    local invitedTables = {}
+-- Return an array of ids for these tables.TableDescriptions.getTableIdsForPublicWaitingTables = function(): { CommonTypes.TableId }
+TableDescriptions.getTableIdsForPublicWaitingTables = function(userId: CommonTypes.UserId): { CommonTypes.TableId }
+    local tableIds = {}
     for _, tableDescription in pairs(TableDescriptions.tableDescriptionsByTableId) do
-        if tableDescription.gameTableState == GameTableStates.WaitingForPlayers and
-            (not tableDescription.isPublic) and
-            tableDescription.invitedUserIds[userId] then
-            table.insert(invitedTables, tableDescription)
+        if TableDescriptions.playerCanJoinPublicTable(userId, tableDescription) then
+            table.insert(tableIds, tableDescription.tableId)
         end
     end
 
-    table.sort(invitedTables, sortTableDescriptionsByTableId)
-
-    return invitedTables
-end
-
-TableDescriptions.getSortedPublicWaitingTables = function(): { CommonTypes.TableDescription }
-    local publicTables = {}
-    for _, tableDescription in pairs(TableDescriptions.tableDescriptionsByTableId) do
-        if tableDescription.gameTableState == GameTableStates.WaitingForPlayers and tableDescription.isPublic then
-            table.insert(publicTables, tableDescription)
-        end
-    end
-
-    table.sort(publicTables, sortTableDescriptionsByTableId)
-
-    return publicTables
+    return tableIds
 end
 
 return TableDescriptions

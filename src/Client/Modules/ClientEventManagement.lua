@@ -64,6 +64,11 @@ ClientEventManagement.joinTable = function(tableId: CommonTypes.TableId)
     event:FireServer(tableId)
 end
 
+ClientEventManagement.leaveTable = function(tableId: CommonTypes.TableId)
+    local event = ReplicatedStorage.TableEvents:WaitForChild("LeaveTable")
+    event:FireServer(tableId)
+end
+
 ClientEventManagement.startGame = function(tableId: CommonTypes.TableId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("StartGame")
     event:FireServer(tableId)

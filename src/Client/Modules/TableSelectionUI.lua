@@ -10,6 +10,13 @@ UI Shows:
   Perhaps add other chrome/crap like a title, welcome text, help buttons, etc.
 ]]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Shared
+local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
+local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
+
 -- Client
 local RobloxBoardGameClient = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
@@ -19,41 +26,55 @@ local TableConfigDialog = require(RobloxBoardGameClient.Modules.TableConfigDialo
 
 local TableSelectionUI = {}
 
+local tweensToKill = {} :: CommonTypes.TweensToKill
+
 local function updateInvitedTables(mainFrame: GuiObject)
     local localUserId = game.Players.LocalPlayer.UserId
     assert(localUserId, "Should have a localUserId")
 
-    local invitedTablesRow = mainFrame:FindFirstChild("InvitedTablesRow", true)
-    assert(invitedTablesRow, "Should have an invitedTablesRow")
-    local sortedInvitedWaitingTablesForUser = TableDescriptions.getSortedInvitedWaitingTablesForUser(localUserId)
-    GuiUtils.updateRowOfWidgets(invitedTablesRow, sortedInvitedWaitingTablesForUser, GuiUtils.makeTableButtonContainer)
+    local invitedRowContent = GuiUtils.getRowContent(mainFrame, "Row_InvitedTables")
+    assert(invitedRowContent, "Should have an invitedRowContent")
+    local tableIdsForInvitedWaitingTables = TableDescriptions.getTableIdsForInvitedWaitingTables(localUserId)
+    local newTweensToKill = GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, GuiUtils.makeTableButtonWidgetContainer)
+    tweensToKill = Utils.mergeSecondMapIntoFirst(tweensToKill, newTweensToKill)
 end
 
 local function updatePublicTables(mainFrame: GuiObject)
-    local publicTablesRow = mainFrame:FindFirstChild("PublicTablesRow", true)
-    assert(publicTablesRow, "Should have an publicTablesRow")
-    local sortedPublicWaitingTables = TableDescriptions.getSortedPublicWaitingTables()
-    GuiUtils.updateRowOfWidgets(publicTablesRow, sortedPublicWaitingTables, GuiUtils.makeTableButtonContainer)
+    local publicRowContent = GuiUtils.getRowContent(mainFrame, "Row_PublicTables")
+    assert(publicRowContent, "Should have an publicRowContent")
+    local tableIdsForPublicWaitingTables = TableDescriptions.getTableIdsForPublicWaitingTables()
+    local newTweensToKill = GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, GuiUtils.makeTableButtonWidgetContainer)
+    tweensToKill = Utils.mergeSecondMapIntoFirst(tweensToKill, newTweensToKill)
+end
+
+local function killTweens()
+    for _, tween in tweensToKill do
+        tween:Cancel()
+    end
+    tweensToKill = {}
 end
 
 --[[
     Build ui elements for the table creation/selection ui.
     Note this is just the framework for this UI: any specifics related
     to what the tables are, we deal with in updateTableSelectionUI.
+
+    Returns a list of any special cleanup functions.
+    "Special" because we have generic cleanup function that just kills
+    everything under mainFrame.
+
+    We do create some tweens in this UI: we use the special cleanup function
+    to kill those tweens.
 ]]
-TableSelectionUI.build = function(screenGui: ScreenGui)
+TableSelectionUI.build = function(screenGui: ScreenGui): {()->nil}
     local mainFrame = screenGui:WaitForChild("MainFrame")
     assert(mainFrame, "MainFrame not found")
 
-    local uiListLayout = Instance.new("UIListLayout")
-    uiListLayout.FillDirection = Enum.FillDirection.Vertical
-    uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    uiListLayout.Parent = mainFrame
+    GuiUtils.addUiListLayout(mainFrame)
 
     -- Row to add a new table.
-    local makeTableRow = GuiUtils.addRow(mainFrame)
-    makeTableRow.Name = "MakeTablesRow"
-    GuiUtils.addButton(makeTableRow, "Host a new Table", function()
+    local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_CreateTable")
+    GuiUtils.addButton(rowContent, "Host a new Table", function()
         -- user must select a game and whether it is public or invite-only.
         TableConfigDialog.show(screenGui, function(gameId, isPublic)
             -- Send all this along to the server.
@@ -62,12 +83,13 @@ TableSelectionUI.build = function(screenGui: ScreenGui)
     end)
 
     -- Row to show tables you are invited to.
-    local invitedTablesRow = GuiUtils.addRowWithLabel(mainFrame, "Your invitations")
-    invitedTablesRow.Name = "InvitedTablesRow"
-
+    GuiUtils.addRowWithLabelAndReturnRowContent(mainFrame, "Row_InvitedTables", "Your invitations")
     -- Row to show public tables.
-    local publicTablesRow = GuiUtils.addRowWithLabel(mainFrame, "Public Tables")
-    publicTablesRow.Name = "PublicTablesRow"
+    GuiUtils.addRowWithLabelAndReturnRowContent(mainFrame, "Row_PublicTables", "Public Tables")
+
+    return {
+        killTweens,
+    }
 end
 
 -- update ui elements for the table creation/selection ui.
