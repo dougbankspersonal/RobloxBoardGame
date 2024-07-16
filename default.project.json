@@ -7,7 +7,7 @@
             "$className": "ReplicatedStorage",
             "$ignoreUnknownInstances": true,
             
-            "Shared": {
+            "RobloxBoardGameShared": {
                 "$className": "Folder",
                 "$ignoreUnknownInstances": true,
                 "$path": "src/Shared"
@@ -18,7 +18,7 @@
             "$className": "ServerScriptService",
             "$ignoreUnknownInstances": true,
             
-            "Server": {
+            "RobloxBoardGameServer": {
                 "$className": "Folder",
                 "$ignoreUnknownInstances": true,
                 "$path": "src/Server"
@@ -32,7 +32,7 @@
             "StarterPlayerScripts": {
                 "$className": "StarterPlayerScripts",
                 "$ignoreUnknownInstances": true,
-                "Client": {
+                "RobloxBoardGameClient": {
                     "$className": "Folder",
                     "$ignoreUnknownInstances": true,
                     "$path": "src/Client"
