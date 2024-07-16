@@ -1,0 +1,43 @@
+{
+    "name": "RobloxBoardGame",
+    "tree": {
+        "$className": "DataModel",
+        
+        "ReplicatedStorage": {
+            "$className": "ReplicatedStorage",
+            "$ignoreUnknownInstances": true,
+            
+            "Shared": {
+                "$className": "Folder",
+                "$ignoreUnknownInstances": true,
+                "$path": "src/Shared"
+            }
+        },
+        
+        "ServerScriptService": {
+            "$className": "ServerScriptService",
+            "$ignoreUnknownInstances": true,
+            
+            "Server": {
+                "$className": "Folder",
+                "$ignoreUnknownInstances": true,
+                "$path": "src/Server"
+            }
+        },
+        
+        "StarterPlayer": {
+            "$className": "StarterPlayer",
+            "$ignoreUnknownInstances": true,
+            
+            "StarterPlayerScripts": {
+                "$className": "StarterPlayerScripts",
+                "$ignoreUnknownInstances": true,
+                "Client": {
+                    "$className": "Folder",
+                    "$ignoreUnknownInstances": true,
+                    "$path": "src/Client"
+                }
+            }
+        }
+    }
+}
