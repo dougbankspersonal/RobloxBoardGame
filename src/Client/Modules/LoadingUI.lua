@@ -5,6 +5,10 @@ Functions to build the UI we show whilw waiting for initial download of tables f
 local LoadingUI = {}
 local TweenService = game:GetService("TweenService")
 
+-- Client
+local RobloxBoardGameClient = script.Parent.Parent
+local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
+
 --[[
 Build ui elements for an inital "loading" screen while we fetch stuff from the server.
 
@@ -27,12 +31,8 @@ LoadingUI.build = function(screenGui: ScreenGui): {()->nil}
     frame.Position = UDim2.fromOffset(0, 0)
     frame.BackgroundColor3 = Color3.new(1, 0.5, 0.5)
 
-    local textLabel = Instance.new("TextLabel")
+    local textLabel = GuiUtils.makeTextLabel(frame, "Loading")
     textLabel.Name = "LoadingLabel"
-    textLabel.Parent = frame
-    textLabel.Size = UDim2.fromOffset(200, 200)
-    textLabel.Text = "Loading"
-    textLabel.BackgroundTransparency = 1
     textLabel.AnchorPoint = Vector2.new(0.5, 0.5)
     textLabel.Position = UDim2.fromScale(0.5, 0.5)
 

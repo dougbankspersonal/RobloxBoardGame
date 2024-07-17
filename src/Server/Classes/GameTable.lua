@@ -13,7 +13,6 @@ local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
-local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
@@ -171,8 +170,11 @@ function GameTable:joinTable(userId: CommonTypes.UserId): boolean
         return false
     end
 
-
     table.insert(self.tableDescription.memberUserIds, userId)
+
+    -- Once a player is a memebr they are no longer invited.
+    self.invited[userId] = nil
+
     return true
 end
 

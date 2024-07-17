@@ -12,18 +12,18 @@ local GuiUtils = {}
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local SocialService = game:GetService("SocialService")
 local Players = game:GetService("Players")
 
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- Client
 local RobloxBoardGameClient = script.Parent.Parent
 local TableDescriptions = require(RobloxBoardGameClient.Modules.TableDescriptions)
-local ClientEventManagement = require(RobloxBoardGameClient.Modules.ClientEventManagement)
+local TweenHandling = require(RobloxBoardGameClient.Modules.TweenHandling)
 
 local globalLayoutOrder = 0
 
@@ -44,7 +44,7 @@ GuiUtils.getLayoutOrder = function(parent:Instance, opt_layoutOrder: number?): n
     return layoutOrder
 end
 
-GuiUtils.addLayoutOrderTracking = function(parent:Instance)
+GuiUtils.makeLayoutOrderTracking = function(parent:Instance)
     local nextLayoutOrder = Instance.new("IntValue")
     nextLayoutOrder.Parent = parent
     nextLayoutOrder.Value = 0
@@ -64,7 +64,7 @@ end
 --  |   of row      |  | widget | widget
 --  |               |  +--------+--------
 --  +--------------------------------------------
-GuiUtils.addRowWithLabelAndReturnRowContent = function(parent:Instance, rowName: string, text: string?, opt_layoutOrder: number?): Instance
+GuiUtils.makeRowWithLabelAndReturnRowContent = function(parent:Instance, rowName: string, text: string?, opt_layoutOrder: number?): Instance
     assert(parent, "Should have a parent")
     assert(rowName, "Should have a rowName")
 
@@ -81,9 +81,7 @@ GuiUtils.addRowWithLabelAndReturnRowContent = function(parent:Instance, rowName:
     uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
     uiListLayout.Padding = UDim.new(5, 5)
-    if opt_layoutOrder then
-        row.LayoutOrder = GuiUtils.getLayoutOrder(parent, opt_layoutOrder)
-    end
+    row.LayoutOrder = GuiUtils.getLayoutOrder(parent, opt_layoutOrder)
 
     row.AutomaticSize = Enum.AutomaticSize.Y
     local bgColor
@@ -95,19 +93,7 @@ GuiUtils.addRowWithLabelAndReturnRowContent = function(parent:Instance, rowName:
     row.BackgroundColor3 = bgColor
 
     if text then
-        local label = Instance.new("TextLabel")
-        label.Name = "LabelInRow"
-        label.Parent = row
-        label.Size = UDim2.new(0, 0, 0, 0)
-        label.AutomaticSize = Enum.AutomaticSize.XY
-        label.Position = UDim2.new(0, 0, 0, 0)
-        label.Text = text
-        label.TextSize = 14
-        label.TextXAlignment = Enum.TextXAlignment.Left
-        label.TextYAlignment = Enum.TextYAlignment.Center
-        label.BackgroundTransparency = 1
-        label.BorderSizePixel = 0
-        label.LayoutOrder = 1
+        GuiUtils.makeTextLabel(row, text)
     end
 
     local rowContent = Instance.new("Frame")
@@ -127,7 +113,7 @@ GuiUtils.addRowWithLabelAndReturnRowContent = function(parent:Instance, rowName:
     uiGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
     uiGridLayout.CellSize = UDim2.new(0, 200, 0, 30)
 
-    GuiUtils.addLayoutOrderTracking(rowContent)
+    GuiUtils.makeLayoutOrderTracking(rowContent)
 
     return rowContent
 end
@@ -143,13 +129,14 @@ GuiUtils.getRowContent = function(parent: GuiObject, rowName: string): Frame
 end
 
 -- Make a row with no label.
-GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, opt_layoutOrder: number?): Instance
+GuiUtils.makeRowAndReturnRowContent = function(parent:Instance, rowName: string, opt_layoutOrder: number?): Instance
     assert(parent, "Should have a parent")
-    assert(rowName, "Should have a rowName")
-    return GuiUtils.addRowWithLabelAndReturnRowContent(parent, rowName, nil, opt_layoutOrder)
+    assert(rowName, "Should have a rowName")g
+    return GuiUtils.makeRowWithLabelAndReturnRowContent(parent, rowName, nil, opt_layoutOrder)
 end
 
-GuiUtils.addButton = function(parent: Instance, text: string, callback: () -> (), opt_layoutOrder: number?): Instance
+-- Make a button with common look & feel.
+GuiUtils.makeTextButton = function(parent: Instance, text: string, callback: () -> ()): Instance
     local button = Instance.new("TextButton")
     button.Parent = parent
     button.Size = UDim2.new(0, 0, 1, 0)
@@ -157,7 +144,6 @@ GuiUtils.addButton = function(parent: Instance, text: string, callback: () -> ()
     button.Position = UDim2.new(0, 0, 0, 0)
     button.Text = text
     button.TextSize = 14
-    button.LayoutOrder = GuiUtils.getLayoutOrder(parent, opt_layoutOrder)
     parent.NextLayoutOrder.Value = parent.NextLayoutOrder.Value + 1
     button.MouseButton1Click:Connect(function()
         if not button.Active then
@@ -186,11 +172,11 @@ GuiUtils.makeDialog = function(screenGui: ScreenGui, dialogConfig: CommonTypes.D
     dialog.BackgroundColor3 = Color3.new(0.5, 0.5, 0.5)
     dialog.Parent = screenGui
 
-    GuiUtils.addRowWithLabelAndReturnRowContent(dialog, "Row_Title", dialogConfig.title)
-    GuiUtils.addRowWithLabelAndReturnRowContent(dialog, "Row_Description", dialogConfig.description)
-    local rowContent = GuiUtils.addRowAndReturnRowContent(dialog, "Row_Controls")
+    GuiUtils.makeRowWithLabelAndReturnRowContent(dialog, "Row_Title", dialogConfig.title)
+    GuiUtils.makeRowWithLabelAndReturnRowContent(dialog, "Row_Description", dialogConfig.description)
+    local rowContent = GuiUtils.makeRowAndReturnRowContent(dialog, "Row_Controls")
     for _, dialogButtonConfig in ipairs(dialogConfig.dialogButtonConfigs) do
-        GuiUtils.addButton(rowContent, dialogButtonConfig.text, function()
+        GuiUtils.makeTextButtonWidgetContainer(rowContent, dialogButtonConfig.text, function()
             -- Destroy the dialog.
             dialog.Parent = nil
             -- Hit callback if provided.
@@ -231,6 +217,9 @@ GuiUtils.makeTextLabel = function(parent: Instance, text: string): TextLabel
     textLabel.Text = text
     textLabel.TextSize = 14
     textLabel.BorderSizePixel = 0
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Center
     return textLabel
 end
 
@@ -356,8 +345,8 @@ end
 -- We want to make sure widgets in row match new set of ids.
 -- Update the parent to remove/add widgets so the widgets match the incoming list of things.
 -- Return a list of any tweens we created so we can murder them later if we need to.
-GuiUtils.updateWidgetContainerChildren = function(parentFrame:Frame, itemIds:{number}, _makeWidgetContainer: (Instance, number) -> Instance): CommonTypes.TweensToKill
-    local retVal = {} :: CommonTypes.TweensToKill
+GuiUtils.updateWidgetContainerChildren = function(parentFrame:Frame, itemIds:{number}, _makeWidgetContainer: (Instance, number) -> Instance)
+    local tweensToKill = {} :: CommonTypes.TweensToKill
 
     local allKids = parentFrame:GetChildren()
 
@@ -387,10 +376,9 @@ GuiUtils.updateWidgetContainerChildren = function(parentFrame:Frame, itemIds:{nu
         end
         local tween = TweenService:Create(uiScale, tweenInfo, {Scale = 0})
         local key = makeTweenKey(widgetContainer)
-        retVal[key] = tween
+        tweensToKill[key] = tween
 
         tween.Completed:Connect(function(_)
-            retVal[key] = nil
             widgetContainer:Destroy()
         end)
         tween:Play()
@@ -412,18 +400,17 @@ GuiUtils.updateWidgetContainerChildren = function(parentFrame:Frame, itemIds:{nu
 
         local tween = TweenService:Create(widgetContainer.UIScale, tweenInfo, {Scale = 1})
         local key = makeTweenKey(widgetContainer)
-        retVal[key] = tween
+        tweensToKill[key] = tween
 
-        tween.Completed:Connect(function(_)
-            retVal[key] = nil
-        end)
         tween:Play()
     end
 
-    return retVal
+    -- store the tweens.
+    TweenHandling.saveTweens(parentFrame, tweensToKill)
 end
 
 local genericIdGenerator = 0
+
 local makeWidgetContainer = function(parent:GuiObject, widgetType: string, _itemId: number?): GuiObject
     assert(parent, "Should have a parent")
     assert(widgetType, "Should have a widgetType")
@@ -461,7 +448,7 @@ GuiUtils.makeTableButtonWidgetContainer = function(parent: Instance, tableId: nu
     local tableDescription = TableDescriptions.getTableDescription(tableId)
     -- Should exist.
     assert(tableDescription, "Should have a tableDescription")
-    local tableButtonContainer = makeWidgetContainer(parent, "table", tableId)
+    local tableButtonContainer = makeWidgetContainer(parent, "Table", tableId)
 
     GuiUtils.makeTableButton(tableButtonContainer, tableDescription, onClick)
 
@@ -470,20 +457,29 @@ end
 
 -- Make a widgetContainer containing a user (name, thumbnail, etc).
 -- If a callback is given, make it a button, else it's just a static frame.
-GuiUtils.makeUserWidgetContainer = function(parent: Instance, userId: number, onClick: (() -> nil)?): Frame
+GuiUtils.makeUserWidgetContainer = function(parent: Instance, userId: number, onClick: ((userId) -> nil)?): Frame
     -- get the user.
     local playerName = Players: GetNameFromUserIdAsync(userId)
     local playerThumbnail = Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size180x180)
 
-    local tableButtonContainer = makeWidgetContainer(parent, "user", userId)
+    local tableButtonContainer = makeWidgetContainer(parent, "User", userId)
 
     if onClick then
-        GuiUtils.makeUserButton(tableButtonContainer, playerName, playerThumbnail, onClick)
+        GuiUtils.makeUserButton(tableButtonContainer, playerName, playerThumbnail, function()
+            onClick(userId)
+        end)
     else
         GuiUtils.makeUserWidget(tableButtonContainer, playerName, playerThumbnail)
     end
 
     return tableButtonContainer
+end
+
+-- A generic text button in a widget container.
+GuiUtils.makeTextButtonWidgetContainer = function(parent: Instance, text: string, onClick: () -> nil): Frame
+    local textButtonContainer = makeWidgetContainer(parent, "TextButton", nil)
+    GuiUtils.makeTextButton(textButtonContainer, text, onClick)
+    return textButtonContainer
 end
 
 -- Make a widget container containing a text label.
@@ -493,7 +489,6 @@ GuiUtils.makeTextLabelWidgetContainer = function(parent: Instance, text: string)
     return textLabelContainer
 end
 
-
 GuiUtils.updateTextLabelWidgetContainer = function(widgetContainer: Frame, text: string): boolean
     local textLabel = widgetContainer:FindFirstChild("TextLabel")
     assert(textLabel, "Should have a textLabel")
@@ -502,6 +497,13 @@ GuiUtils.updateTextLabelWidgetContainer = function(widgetContainer: Frame, text:
     end
     textLabel.Text = text
     return true
+end
+
+GuiUtils.updateTextButtonEnabledInWidgetContainer = function(widgetContainer: Frame, enabled: boolean)
+    assert(widgetContainer, "Should have a widgetContainer")
+    local textButton = widgetContainer:FindFirstChild("TextButton")
+    assert(textButton, "Should have a textButton")
+    textButton.Active = enabled
 end
 
 GuiUtils.selectFriend = function(screenGui, onFriendSelected: (userId: CommonTypes.UserId?)
@@ -557,7 +559,7 @@ GuiUtils.showConfirmationDialog = function(title: string, description: string, o
 end
 
 -- Conveniencce for adding vertical list layout, order based on layout order.
-GuiUtils.addUiListLayout = function(frame: Frame) : UIListLayout
+GuiUtils.makeUiListLayout = function(frame: Frame) : UIListLayout
     local uiListLayout = Instance.new("UIListLayout")
     uiListLayout.FillDirection = Enum.FillDirection.Vertical
     uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder

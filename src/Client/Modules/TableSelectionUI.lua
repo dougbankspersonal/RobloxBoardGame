@@ -26,8 +26,6 @@ local TableConfigDialog = require(RobloxBoardGameClient.Modules.TableConfigDialo
 
 local TableSelectionUI = {}
 
-local tweensToKill = {} :: CommonTypes.TweensToKill
-
 local function updateInvitedTables(mainFrame: GuiObject)
     local localUserId = game.Players.LocalPlayer.UserId
     assert(localUserId, "Should have a localUserId")
@@ -36,13 +34,11 @@ local function updateInvitedTables(mainFrame: GuiObject)
     assert(invitedRowContent, "Should have an invitedRowContent")
     local tableIdsForInvitedWaitingTables = TableDescriptions.getTableIdsForInvitedWaitingTables(localUserId)
 
-    local newTweensToKill = GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, function(parent: Frame, tableId: CommonTypes.TableId)
+    GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, function(parent: Frame, tableId: CommonTypes.TableId)
         GuiUtils.makeTableButtonWidgetContainer(parent, tableId, function()
             ClientEventManagement.joinTable(tableId)
         end)
     end)
-
-    tweensToKill = Utils.mergeSecondMapIntoFirst(tweensToKill, newTweensToKill)
 end
 
 local function updatePublicTables(mainFrame: GuiObject)
@@ -50,21 +46,14 @@ local function updatePublicTables(mainFrame: GuiObject)
     assert(publicRowContent, "Should have an publicRowContent")
     local tableIdsForPublicWaitingTables = TableDescriptions.getTableIdsForPublicWaitingTables()
 
-    local newTweensToKill = GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, function(parent: Frame, tableId: CommonTypes.TableId)
+    GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, function(parent: Frame, tableId: CommonTypes.TableId)
         GuiUtils.makeTableButtonWidgetContainer(parent, tableId, function()
             ClientEventManagement.joinTable(tableId)
         end)
     end)
-
-    tweensToKill = Utils.mergeSecondMapIntoFirst(tweensToKill, newTweensToKill)
 end
 
-local function killTweens()
-    for _, tween in tweensToKill do
-        tween:Cancel()
-    end
-    tweensToKill = {}
-end
+
 
 --[[
     Build ui elements for the table creation/selection ui.
@@ -78,15 +67,15 @@ end
     We do create some tweens in this UI: we use the special cleanup function
     to kill those tweens.
 ]]
-TableSelectionUI.build = function(screenGui: ScreenGui): {()->nil}
+TableSelectionUI.build = function(screenGui: ScreenGui)
     local mainFrame = screenGui:WaitForChild("MainFrame")
     assert(mainFrame, "MainFrame not found")
 
-    GuiUtils.addUiListLayout(mainFrame)
+    GuiUtils.makeUiListLayout(mainFrame)
 
     -- Row to add a new table.
-    local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_CreateTable")
-    GuiUtils.addButton(rowContent, "Host a new Table", function()
+    local rowContent = GuiUtils.makeRowAndReturnRowContent(mainFrame, "Row_CreateTable")
+    GuiUtils.makeTextButtonWidgetContainer(rowContent, "Host a new Table", function()
         -- user must select a game and whether it is public or invite-only.
         TableConfigDialog.show(screenGui, function(gameId, isPublic)
             -- Send all this along to the server.
@@ -95,13 +84,9 @@ TableSelectionUI.build = function(screenGui: ScreenGui): {()->nil}
     end)
 
     -- Row to show tables you are invited to.
-    GuiUtils.addRowWithLabelAndReturnRowContent(mainFrame, "Row_InvitedTables", "Your invitations")
+    GuiUtils.makeRowWithLabelAndReturnRowContent(mainFrame, "Row_InvitedTables", "Your invitations")
     -- Row to show public tables.
-    GuiUtils.addRowWithLabelAndReturnRowContent(mainFrame, "Row_PublicTables", "Public Tables")
-
-    return {
-        killTweens,
-    }
+    GuiUtils.makeRowWithLabelAndReturnRowContent(mainFrame, "Row_PublicTables", "Public Tables")
 end
 
 -- update ui elements for the table creation/selection ui.

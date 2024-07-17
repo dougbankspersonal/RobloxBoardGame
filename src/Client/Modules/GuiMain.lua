@@ -13,7 +13,6 @@ local Players = game:GetService("Players")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local UIModes = require(RobloxBoardGameShared.Globals.UIModes)
-local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
 
 -- Client
@@ -57,22 +56,7 @@ GuiMain.makeMainFrame = function(_screenGui: ScreenGui)
     mainFrame.Name = "main"
     mainFrame.BorderSizePixel= 0
 
-    GuiUtils.addLayoutOrderTracking(mainFrame)
-end
-
-local function hasEnoughPlayers() : boolean
-    assert(currentTableDescription, "Should have a currentTableDescription")
-    local gameDetails = GameDetails.getGameDetails(currentTableDescription.gameId)
-    return #currentTableDescription.memberUserIds >= gameDetails.minPlayers
-end
-
-local function roomForMorePlayers() : boolean
-    assert(currentTableDescription, "Should have a currentTableDescription")
-    local gameDetails = GameDetails.getGameDetails(currentTableDescription.gameId)
-    assert(gameDetails.maxPlayers, "GameDetails should have a maxPlayers")
-    assert(gameDetails.maxPlayers > 0, "GameDetails should have non-zero maxPlayers")
-    assert(gameDetails.maxPlayers >= #currentTableDescription.memberUserIds, "GameDetails.maxPlayers should be >= #currentTableDescription.memberUserIds")
-    return #currentTableDescription.memberUserIds < gameDetails.maxPlayers
+    GuiUtils.makeLayoutOrderTracking(mainFrame)
 end
 
 local function buildTablePlayingUI(): nil
@@ -136,21 +120,16 @@ GuiMain.updateUI = function()
     if currentUIMode ~= uiModeBasedOnTableDescriptions then
         cleanupCurrentUI()
         currentUIMode = uiModeBasedOnTableDescriptions
-        local additionalCleanupFunctions = {}
         if currentUIMode == UIModes.Loading then
-            additionalCleanupFunctions = LoadingUI.build(screenGui)
+            LoadingUI.build(screenGui)
         elseif currentUIMode == UIModes.TableSelection then
-            additionalCleanupFunctions = TableSelectionUI.build(screenGui)
+            TableSelectionUI.build(screenGui)
         elseif currentUIMode == UIModes.TableWaitingForPlayers then
             assert(currentTableDescription, "Should have a currentTableDescription")
-            additionalCleanupFunctions = TableWaitingUI.build(screenGui, currentTableDescription)
+            TableWaitingUI.build(screenGui, currentTableDescription)
         elseif currentUIMode == UIModes.TablePlaying then
             assert(currentTableDescription, "Should have a currentTableDescription")
-            additionalCleanupFunctions = buildTablePlayingUI(screenGui)
-        end
-
-        for _, cleanupFunction in additionalCleanupFunctions do
-            table.insert(cleanupFunctionsForCurrentUIMode, cleanupFunction)
+            buildTablePlayingUI(screenGui)
         end
     end
 

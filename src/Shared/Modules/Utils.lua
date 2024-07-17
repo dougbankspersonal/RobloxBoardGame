@@ -44,8 +44,10 @@ end
 
 -- We have two maps.  Merge the second into the first, return that.
 -- So if first and second both have entry with same key, the value from second wins.
-Utils.mergeSecondMapIntoFirst = function(first: {[any]: any}, second: {[any]: any}): {[any]: any}
+Utils.mergeSecondMapIntoFirst = function(first: {[any]: any}?, second: {[any]: any}?): {[any]: any}
     local result = {} :: {[any]: any}
+    first = first or {}
+    second = second or {}
     for key, value in pairs(first) do
         result[key] = value
     end
@@ -63,6 +65,16 @@ Utils.getKeys = function(table: {[any]: any}): {any}
     end
     return result
 end
+
+-- Given a table, get the values as an array
+Utils.getValues = function(table: {[any]: any}): {any}
+    local result = {} :: {any}
+    for _, value in pairs(table) do
+        table.insert(result, value)
+    end
+    return result
+end
+
 
 
 return Utils
