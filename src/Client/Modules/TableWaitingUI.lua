@@ -5,12 +5,12 @@ that table is in GameTableStates.WaitingForPlayers.
 UI Shows:
     * metadata about game, including currently set gameOptions.
     * metadata about host.
-    * row of guests who have joined. Host can click to remove.
+    * row of members. Host can click to remove.
     * row of outstanding invites.  Host can click to uninvite.
     * (Host only): if game has gameOptions (e.g. optional rules, expanstions) a control to set gameOptions.
     * (Host only): a control to start the game.
     * (Host only): a control to destroy the table.
-    * (Guest only): a control to leave the table.
+    * ( only): a control to leave the table.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- Client
 local RobloxBoardGameClient = script.Parent.Parent
@@ -29,6 +30,8 @@ local TableDescriptions = require(RobloxBoardGameClient.Modules.TableDescription
 local TableWaitingUI = {}
 
 local getOptionsLabelWidgetContainerName = nil
+
+local tweensToKill = {} :: CommonTypes.TweensToKill
 
 -- Called when first building the UI.
 -- Game and host info don't change so we can fill that in.
@@ -114,9 +117,9 @@ TableWaitingUI.build = function(screenGui: ScreenGui, currentTableDescription: C
 
     addGameAndHostInfo(mainFrame, gameDetails, currentTableDescription)
 
-    -- Make a row for guests (players who have joined), invites (players invited)
+    -- Make a row for members (players who have joined), invites (players invited who have not yet joined)
     -- but do not fill in as this info will change: we set this in update function.
-    GuiUtils.addRowWithLabelAndReturnRowContent(mainFrame, "Row_Guests", "Guests")
+    GuiUtils.addRowWithLabelAndReturnRowContent(mainFrame, "Row_Members", "Members")
     GuiUtils.addRowWithLabelAndReturnRowContent(mainFrame, "Row_Invites", "Invites")
 
     addTableControls(screenGui, mainFrame, currentTableDescription, isHost)
@@ -152,13 +155,52 @@ TableWaitingUI.update = function(screenGui: ScreenGui, currentTableDescription: 
     local mainFrame = screenGui:WaitForChild("MainFrame")
     assert(mainFrame, "Should have a screenGui")
 
+    local localUserId = game.Players.LocalPlayer.UserId
+    assert(localUserId, "Should have a localUserId")
+    local isHost = localUserId == currentTableDescription.hostUserId
+
+    -- Keep game options up to date.
     updateGameOptions(mainFrame, currentTableDescription)
 
-    -- Update the guests and invites.
-    local invitedTablesRow = mainFrame:FindFirstChild("InvitedTablesRow", true)
-    assert(invitedTablesRow, "Should have an invitedTablesRow")
-    local sortedInvitedWaitingTablesForUser = TableDescriptions.getSortedInvitedWaitingTablesForUser(localUserId)
-    updateWidgetContainerChildren(invitedTablesRow, sortedInvitedWaitingTablesForUser, makeTableButtonContainer)
+    -- Keep members up to date.
+    local guestsRowContent = GuiUtils.getRowContent(mainFrame, "Row_Members")
+    -- memberUserIds in currentTableDescription is s set mapping (id -> true: we need an array.
+    local memberUserIdsAsArray = Utils.getKeys(currentTableDescription.memberUserIds)
+    local newTweensToKill = GuiUtils.updateWidgetContainerChildren(guestsRowContent, memberUserIdsAsArray, function(frame: Frame, userId: CommonTypes.UserId): Frame
+        local widgetContainer
+        -- For host, if user is not himself, this widget is a button that lets you kick person out of table.
+        if isHost and userId ~= localUserId then
+            widgetContainer = GuiUtils.makeUserWidgetContainer(frame, userId, function()
+                GuiUtils.showConfirmationDialog("Remove Player?", "Please confirm you want to remove this player from the table.", function()
+                    ClientEventManagement.removePlayerFromTable(currentTableDescription.tableId, userId)
+                end)
+            end)
+        else
+            widgetContainer = GuiUtils.makeUserWidgetContainer(frame, userId)
+        end
+        return widgetContainer
+    end)
+    tweensToKill = Utils.mergeSecondMapIntoFirst(tweensToKill, newTweensToKill)
+
+    -- Keep invitees up to date.
+    local invitesRowContent = GuiUtils.getRowContent(mainFrame, "Row_Invites")
+    -- invitedUserIds in currentTableDescription is s set mapping (id -> true: we need an array.
+    local invitedUserIdsAsArray = Utils.getKeys(currentTableDescription.invitedUserIds)
+    local newTweensToKill = GuiUtils.updateWidgetContainerChildren(invitesRowContent, invitedUserIdsAsArray, function(frame: Frame, userId: CommonTypes.UserId)
+        local widgetContainer
+        -- For host, this widget is a button that lets you disinvite someone.
+        if isHost then
+            widgetContainer = GuiUtils.makeUserWidgetContainer(frame, userId, function()
+                GuiUtils.showConfirmationDialog("Remove Invitation?", "Please confirm you want to this player's invitation to join the table.", function()
+                    ClientEventManagement.removePlayerFromTable(currentTableDescription.tableId, userId)
+                end)
+            end)
+        else
+            widgetContainer = GuiUtils.makeUserWidgetContainer(frame, userId)
+        end
+        return widgetContainer
+    end)
+    tweensToKill = Utils.mergeSecondMapIntoFirst(tweensToKill, newTweensToKill)
 
 
     -- Update controls.

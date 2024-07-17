@@ -39,12 +39,23 @@ export type GameTable = {
     getAllGameTables: () -> { [CommonTypes.TableId]: GameTable },
 
     -- member  functions.
-    destroy: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    join: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    invite: (self: GameTable, userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId) -> boolean,
-    leave: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
+    -- Shortcuts to ask questions about table.
+    isMember: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
+    isInvitedToTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
+    isHost: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
+    getTableDescription: (self: GameTable) -> CommonTypes.TableDescription,
+
+    -- Perhaps modify table state.  Each returns true iff something changed.
+    destroyTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
+    joinTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
+    inviteToTable: (self: GameTable, userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId) -> boolean,
+    removeGuestFromTable: (self: GameTable, userId: CommonTypes.UserId, guestId: CommonTypes.UserId) -> boolean,
+    removeInviteForTable: (self: GameTable, userId: CommonTypes.UserId, inviteId: CommonTypes.UserId) -> boolean,
+    leaveTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
+
     startGame: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
     endGame: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
+    transitionFromEndToReplay: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
 }
 
 GameTable.getAllGameTables = function(): { [CommonTypes.TableId]: GameTable }
@@ -103,10 +114,22 @@ GameTable.createNewTable = function(hostUserId: CommonTypes.UserId, gameId: Comm
     return newGameTable
 end
 
-function GameTable:destroy(userId): boolean
-    -- Not host, no.
-    if self.hostUserId ~= userId then
-        return false
+function GameTable:isMember(userId: CommonTypes.UserId): boolean
+    return self.tableDescription.memberUserIds[userId]
+end
+
+function GameTable:isInvitedToTable(userId: CommonTypes.UserId): boolean
+    return self.invited[userId]
+end
+
+function GameTable:isHost(userId: CommonTypes.UserId): boolean
+    return self.hostUserId == userId
+end
+
+function GameTable:destroyTable(userId): boolean
+    -- Must be the host.
+    if not self:isHost(userId) then
+        return
     end
 
     -- Kill any ongoing game.
@@ -120,24 +143,31 @@ function GameTable:destroy(userId): boolean
     return true
 end
 
-function GameTable:join(userId: CommonTypes.UserId): boolean
+-- Try to add user as member of table.
+-- Return true iff successful.
+function GameTable:joinTable(userId: CommonTypes.UserId): boolean
+    -- Host can't join his own table.
+    if self:isHost(userId) then
+        return
+    end
+
     -- Game already started, no.
     if self.tableDescription.gameTableState ~= GameTableStates.WaitingForPlayers then
         return false
     end
 
     -- Already a member, no.
-    if self.memberUserIds[userId] then
+    if self:isMember(userId) then
         return false
     end
 
     -- not public, not invited: no.
-    if not self.tableDescription.isPublic and not self.invited[userId] then
+    if not self.tableDescription.isPublic and not self:isInvitedToTable(userId) then
         return false
     end
 
     -- too many players already, no.
-    if self.gameDetails.MaxPlayers == #self.tableDescription.memberUserIds then
+    if self.gameDetails.MaxPlayers <= #self.tableDescription.memberUserIds then
         return false
     end
 
@@ -146,20 +176,31 @@ function GameTable:join(userId: CommonTypes.UserId): boolean
     return true
 end
 
--- True iff player can be invited to table.
-function GameTable:invite(userId, inviteeId): boolean
+-- Try to add user as invitee of table.
+-- Return true iff successful.
+function GameTable:inviteToTable(userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId): boolean
+    -- Must be the host.
+    if not self:isHost(userId) then
+        return false
+    end
+
+    -- Can't invite self.
+    if userId == inviteeId then
+        return false
+    end
+
     -- Game already started, no.
     if self.tableDescription.gameTableState ~= GameTableStates.WaitingForPlayers then
         return false
     end
 
     -- Already a member, no.
-    if Utils.arrayHasValue(self.tableDescription.memberUserIds, userId) then
+    if self:isMember(inviteeId) then
         return false
     end
 
     -- Already invited, no.
-    if self.invited[inviteeId] then
+    if self:isInvitedToTable(inviteeId) then
         return false
     end
 
@@ -167,17 +208,54 @@ function GameTable:invite(userId, inviteeId): boolean
     return true
 end
 
-function GameTable:leave(userId): boolean
-    -- Host can't leave.
-    if userId == self.hostUserId then
+function GameTable:removeGuestFromTable(userId: CommonTypes.UserId, guestId: CommonTypes.UserId): boolean
+    -- Must be the host.
+    if not self:isHost(userId) then
         return false
     end
 
-    -- Remove this user from the array, if present.
-    local removed = Utils.removeFromArray(self.tableDescription.memberUserIds, userId)
-    if not removed then
+    -- Can't remove self.
+    if userId == guestId then
         return false
     end
+
+    -- Can't remove a non-member.
+    if not self:isMember(guestId) then
+        return false
+    end
+
+    self.invited[guestId] = nil
+    return true
+end
+
+function GameTable:removeInviteForTable(userId: CommonTypes.UserId, guestId: CommonTypes.UserId): boolean
+    -- Must be the host.
+    if not self:isHost(userId) then
+        return false
+    end
+
+    -- Must be an invitee.
+    if not self:isInvitedToTable(guestId) then
+        return false
+    end
+
+    self.invitedUserIds[guestId] = nil
+    return true
+end
+
+function GameTable:leaveTable(userId): boolean
+    -- Host can't leave.
+    if self:isHost(userId) then
+        return false
+    end
+
+    -- Can't leave if not a member.
+    if not self:isMember(userId) then
+        return false
+    end
+
+    -- Remove the user.
+    self.tableDescription.memberUserIds[userId] = nil
 
     -- Let the game deal with any fallout from the player leaving.
     if self.gameInstance then
@@ -188,8 +266,8 @@ function GameTable:leave(userId): boolean
 end
 
 function GameTable:startGame(userId: CommonTypes.UserId): boolean
-    -- Not the host, no.
-    if self.hostUserId ~= userId then
+    -- Only host can start.
+    if self:isHost(userId) then
         return false
     end
 
@@ -215,26 +293,8 @@ function GameTable:startGame(userId: CommonTypes.UserId): boolean
 end
 
 function GameTable:endGame(userId: CommonTypes.UserId): boolean
-    -- Not the host, no.
-    if self.hostUserId ~= userId then
-        return false
-    end
-
-    -- Game isn't playing, no.
-    if self.tableDescription.gameTableState ~= GameTableStates.Playing then
-        return false
-    end
-
-    self.tableDescription.gameTableState = GameTableStates.Finished
-    self.gameInstance:endGame()
-    self.gameInstance = nil
-
-    return true
-end
-
-function GameTable:endGame(userId: CommonTypes.UserId): boolean
-    -- Not the host, no.
-    if self.hostUserId ~= userId then
+    -- Must be the host.
+    if not self:isHost(userId) then
         return false
     end
 
@@ -251,8 +311,8 @@ function GameTable:endGame(userId: CommonTypes.UserId): boolean
 end
 
 function GameTable:transitionFromEndToReplay(userId: CommonTypes.UserId): CommonTypes.TableDescription
-    -- Not the host, no.
-    if self.hostUserId ~= userId then
+    -- Must be the host.
+    if not self:isHost(userId) then
         return false
     end
 

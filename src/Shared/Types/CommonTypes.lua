@@ -38,13 +38,13 @@ export type AssetId = number
 -- How to configure a dialog.
 export type DialogButtonConfig = {
     text: string,
-    callback: () -> (),
+    callback: (() -> ())?,
 }
 
 export type DialogConfig = {
     title: string,
     description: string,
-    buttons: {DialogButtonConfig},
+    dialogButtonConfigs: {DialogButtonConfig},
 }
 
 -- Everything a client needs to know about a created table so it can be
@@ -55,9 +55,8 @@ export type TableDescription = {
     isPublic: boolean,
     -- Maps from user Id to true.  Basically a set.
     -- For all the functions we are dealing with when checking/modifying, set works better than array.
-    -- Only drawback in on server when we render, we may wind up with inconsistent ordering.
-    -- Solution: sort by player name.
     -- Note: the host is in this set.
+    -- Note: everyone at the table is a "member".  Anyone who is not the host is also a "guest".
     memberUserIds: {
         [UserId]: boolean,
     },

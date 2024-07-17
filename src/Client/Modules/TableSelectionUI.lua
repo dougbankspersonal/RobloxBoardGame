@@ -35,7 +35,13 @@ local function updateInvitedTables(mainFrame: GuiObject)
     local invitedRowContent = GuiUtils.getRowContent(mainFrame, "Row_InvitedTables")
     assert(invitedRowContent, "Should have an invitedRowContent")
     local tableIdsForInvitedWaitingTables = TableDescriptions.getTableIdsForInvitedWaitingTables(localUserId)
-    local newTweensToKill = GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, GuiUtils.makeTableButtonWidgetContainer)
+
+    local newTweensToKill = GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, function(parent: Frame, tableId: CommonTypes.TableId)
+        GuiUtils.makeTableButtonWidgetContainer(parent, tableId, function()
+            ClientEventManagement.joinTable(tableId)
+        end)
+    end)
+
     tweensToKill = Utils.mergeSecondMapIntoFirst(tweensToKill, newTweensToKill)
 end
 
@@ -43,7 +49,13 @@ local function updatePublicTables(mainFrame: GuiObject)
     local publicRowContent = GuiUtils.getRowContent(mainFrame, "Row_PublicTables")
     assert(publicRowContent, "Should have an publicRowContent")
     local tableIdsForPublicWaitingTables = TableDescriptions.getTableIdsForPublicWaitingTables()
-    local newTweensToKill = GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, GuiUtils.makeTableButtonWidgetContainer)
+
+    local newTweensToKill = GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, function(parent: Frame, tableId: CommonTypes.TableId)
+        GuiUtils.makeTableButtonWidgetContainer(parent, tableId, function()
+            ClientEventManagement.joinTable(tableId)
+        end)
+    end)
+
     tweensToKill = Utils.mergeSecondMapIntoFirst(tweensToKill, newTweensToKill)
 end
 

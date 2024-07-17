@@ -116,21 +116,35 @@ ServerEventManagement.createClientToServerEvents = function()
     -- Event to destroy a table.
     createGameTableRemoteEvent("DestroyTable", function(player, gameTable)
         local gameTableId = gameTable.id
-        if gameTable:destroy(player.UserId) then
+        if gameTable:destroyTable(player.UserId) then
             sendToAllPlayers("TableDestroyed", gameTableId)
         end
     end)
 
     -- Event to join a table.
     createGameTableRemoteEvent("JoinTable", function(player, gameTable)
-        if gameTable:join(player.UserId) then
+        if gameTable:joinTable(player.UserId) then
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end
     end)
 
     -- Event to invite someone to table.
     createGameTableRemoteEvent("InvitePlayerToTable", function(player, gameTable, inviteeId)
-        if gameTable:invite(player.UserId, inviteeId) then
+        if gameTable:inviteToTable(player.UserId, inviteeId) then
+            sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
+        end
+    end)
+
+    -- Event to remove someone to table.
+    createGameTableRemoteEvent("RemoveGuestFromTable", function(player, gameTable, userId)
+        if gameTable:removeGuestFromTable(player.UserId, userId) then
+            sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
+        end
+    end)
+
+    -- Event to remove an invite from a table.
+    createGameTableRemoteEvent("RemoveInviteForTable", function(player, gameTable, userId)
+        if gameTable:removeInviteForTable(player.UserId, userId) then
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end
     end)

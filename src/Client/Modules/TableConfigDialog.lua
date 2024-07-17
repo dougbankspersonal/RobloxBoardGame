@@ -40,7 +40,7 @@ TableConfigDialog.show = function(screenGui: ScreenGui, onTableConfigSelected: (
     local dialogConfig: CommonTypes.DialogConfig = {
         title = "Public or Private?",
         description = "Anyone in experience can join a public game.  Only invited players can join a private game.",
-        buttons = {
+        dialogButtonConfigs = {
             {
                 text = "Public",
                 callback = function()

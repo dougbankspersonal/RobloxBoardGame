@@ -189,10 +189,14 @@ GuiUtils.makeDialog = function(screenGui: ScreenGui, dialogConfig: CommonTypes.D
     GuiUtils.addRowWithLabelAndReturnRowContent(dialog, "Row_Title", dialogConfig.title)
     GuiUtils.addRowWithLabelAndReturnRowContent(dialog, "Row_Description", dialogConfig.description)
     local rowContent = GuiUtils.addRowAndReturnRowContent(dialog, "Row_Controls")
-    for _, buttonConfig in ipairs(dialogConfig.buttons) do
-        GuiUtils.addButton(rowContent, buttonConfig.text, function()
+    for _, dialogButtonConfig in ipairs(dialogConfig.dialogButtonConfigs) do
+        GuiUtils.addButton(rowContent, dialogButtonConfig.text, function()
+            -- Destroy the dialog.
             dialog.Parent = nil
-            buttonConfig.callback()
+            -- Hit callback if provided.
+            if dialogButtonConfig.callback then
+                dialogButtonConfig.callback()
+            end
         end)
     end
 
@@ -395,6 +399,7 @@ GuiUtils.updateWidgetContainerChildren = function(parentFrame:Frame, itemIds:{nu
     -- Tween in new widgets.
     for _, itemId in itemIdsIn do
         local widgetContainer = _makeWidgetContainer(parentFrame, itemId)
+        assert(widgetContainer, "Should have widgetContainer")
         -- It is required that the widget container has an int value child with
         -- name "ItemId" and value equal to itemId.
         assert(widgetContainer.ItemId, "WidgetContainer should have an ItemId")
@@ -452,16 +457,31 @@ local makeWidgetContainer = function(parent:GuiObject, widgetType: string, _item
 end
 
 -- Make a widgetContainer containing a clickable button representing a table.
--- Clicking button joins the table.
-GuiUtils.makeTableButtonWidgetContainer = function(parent: Instance, tableId: number): Frame
+GuiUtils.makeTableButtonWidgetContainer = function(parent: Instance, tableId: number, onClick: () -> nil): Frame
     local tableDescription = TableDescriptions.getTableDescription(tableId)
     -- Should exist.
     assert(tableDescription, "Should have a tableDescription")
     local tableButtonContainer = makeWidgetContainer(parent, "table", tableId)
 
-    GuiUtils.makeTableButton(tableButtonContainer, tableDescription, function()
-        ClientEventManagement.joinTable(tableId)
-    end)
+    GuiUtils.makeTableButton(tableButtonContainer, tableDescription, onClick)
+
+    return tableButtonContainer
+end
+
+-- Make a widgetContainer containing a user (name, thumbnail, etc).
+-- If a callback is given, make it a button, else it's just a static frame.
+GuiUtils.makeUserWidgetContainer = function(parent: Instance, userId: number, onClick: (() -> nil)?): Frame
+    -- get the user.
+    local playerName = Players: GetNameFromUserIdAsync(userId)
+    local playerThumbnail = Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size180x180)
+
+    local tableButtonContainer = makeWidgetContainer(parent, "user", userId)
+
+    if onClick then
+        GuiUtils.makeUserButton(tableButtonContainer, playerName, playerThumbnail, onClick)
+    else
+        GuiUtils.makeUserWidget(tableButtonContainer, playerName, playerThumbnail)
+    end
 
     return tableButtonContainer
 end
@@ -496,7 +516,7 @@ GuiUtils.selectFriend = function(screenGui, onFriendSelected: (userId: CommonTyp
     -- I have to believe this exists somewhere, can't find it.
     -- Bonus if it also invites said friends to the experience.
     local localPlayerId = game.Players.LocalPlayer.UserId
-    local dialogButtonConfigs = {} :: {CommonTypes.DialogConfigButton}
+    local dialogButtonConfigs = {} :: {CommonTypes.DialogButtonConfig}
 
     -- FIXME(dbanks)
     -- Add the ids of the non-local players you get when you run in Studio.
@@ -512,9 +532,28 @@ GuiUtils.selectFriend = function(screenGui, onFriendSelected: (userId: CommonTyp
     local dialogConfig = {
         title = "Select a friend",
         description = "Select a friend to invite to the table.",
-        buttons = dialogButtonConfigs,
+        dialogButtonConfigs = dialogButtonConfigs,
     } :: CommonTypes.DialogConfig
     GuiUtils.makeDialog(screenGui, dialogConfig)
+end
+
+GuiUtils.showConfirmationDialog = function(title: string, description: string, onConfirm: () -> nil)
+    local dialogButtonConfigs = {} :: {CommonTypes.DialogButtonConfig}
+    table.insert(dialogButtonConfigs, {
+        text = "Cancel",
+    })
+    table.insert(dialogButtonConfigs, {
+        text = "OK",
+        callback = onConfirm,
+    })
+
+    local dialogConfig = {
+        title = title,
+        description = description,
+        dialogButtonConfigs = dialogButtonConfigs,
+    } :: CommonTypes.DialogConfig
+
+    GuiUtils.makeDialog(game.Players.LocalPlayer:WaitForChild("PlayerGui"), dialogConfig)
 end
 
 -- Conveniencce for adding vertical list layout, order based on layout order.

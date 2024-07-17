@@ -55,4 +55,14 @@ Utils.mergeSecondMapIntoFirst = function(first: {[any]: any}, second: {[any]: an
     return result
 end
 
+-- Given a table, get the keys as an array.
+Utils.getKeys = function(table: {[any]: any}): {any}
+    local result = {} :: {any}
+    for key, _ in pairs(table) do
+        table.insert(result, key)
+    end
+    return result
+end
+
+
 return Utils
