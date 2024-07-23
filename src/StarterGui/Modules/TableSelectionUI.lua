@@ -15,14 +15,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
-local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
--- Client
-local RobloxBoardGameClient = script.Parent.Parent
-local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
-local TableDescriptions = require(RobloxBoardGameClient.Modules.TableDescriptions)
-local ClientEventManagement = require(RobloxBoardGameClient.Modules.ClientEventManagement)
-local TableConfigDialog = require(RobloxBoardGameClient.Modules.TableConfigDialog)
+-- StarterGui
+local RobloxBoardGameStarterGui = script.Parent.Parent
+local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
+local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
+local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
+local TableConfigDialog = require(RobloxBoardGameStarterGui.Modules.TableConfigDialog)
 
 local TableSelectionUI = {}
 
@@ -68,30 +67,32 @@ end
     to kill those tweens.
 ]]
 TableSelectionUI.build = function(screenGui: ScreenGui)
-    local mainFrame = screenGui:WaitForChild("MainFrame")
+    local mainFrame = GuiUtils.getMainFrame(screenGui)
     assert(mainFrame, "MainFrame not found")
 
-    GuiUtils.makeUiListLayout(mainFrame)
+    local uiListLayout = GuiUtils.makeUiListLayout(mainFrame)
+    uiListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
     -- Row to add a new table.
     local rowContent = GuiUtils.makeRowAndReturnRowContent(mainFrame, "Row_CreateTable")
     GuiUtils.makeTextButtonWidgetContainer(rowContent, "Host a new Table", function()
         -- user must select a game and whether it is public or invite-only.
-        TableConfigDialog.show(screenGui, function(gameId, isPublic)
+        TableConfigDialog.promptForTableConfig(screenGui, function(gameId, isPublic)
+            print("Doug: in TableConfigDialog callback")
             -- Send all this along to the server.
             ClientEventManagement.createTable(gameId, isPublic)
         end)
     end)
 
     -- Row to show tables you are invited to.
-    GuiUtils.makeRowWithLabelAndReturnRowContent(mainFrame, "Row_InvitedTables", "Your invitations")
+    GuiUtils.makeRowWithLabelAndReturnRowContent(mainFrame, "Row_InvitedTables", "Your invitations:", true)
     -- Row to show public tables.
-    GuiUtils.makeRowWithLabelAndReturnRowContent(mainFrame, "Row_PublicTables", "Public Tables")
+    GuiUtils.makeRowWithLabelAndReturnRowContent(mainFrame, "Row_PublicTables", "Public Tables:", true)
 end
 
 -- update ui elements for the table creation/selection ui.
 TableSelectionUI.update = function(screenGui: ScreenGui)
-    local mainFrame = screenGui:WaitForChild("MainFrame")
+    local mainFrame = GuiUtils.getMainFrame(screenGui)
     assert(mainFrame, "MainFrame not found")
 
     updateInvitedTables(mainFrame)

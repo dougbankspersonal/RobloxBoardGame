@@ -1,5 +1,5 @@
 {
-  "name": "RobloxBoardGameClient",
+  "name": "RobloxBoardGameStarterGui",
   "tree": {
     "$className": "Folder",
     "Modules": {
@@ -10,6 +10,6 @@
     },
     "StartupFiles": {
       "$path": "StartupFiles"
-    }  
+    }
   }
 }

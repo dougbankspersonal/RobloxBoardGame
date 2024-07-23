@@ -21,10 +21,11 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
--- Client
-local RobloxBoardGameClient = script.Parent.Parent
-local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
-local ClientEventManagement = require(RobloxBoardGameClient.Modules.ClientEventManagement)
+-- StarterGui
+local RobloxBoardGameStarterGui = script.Parent.Parent
+local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
+local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
+local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
 
 local TableWaitingUI = {}
 
@@ -36,7 +37,7 @@ local gameOptionsWidgetContainerName: string
 -- Config options will change so that gets filled in in update, but we can create space for it now.
 local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameDetails, currentTableDescription: CommonTypes.TableDescription)
     -- Game info and host info will not change, might as well fill them in now.
-    local rowContent = GuiUtils.makeRowWithLabelAndReturnRowContent(frame, "Row_Game, Game")
+    local rowContent = GuiUtils.makeRowWithLabelAndReturnRowContent(frame, "Row_Game", "Game")
     GuiUtils.makeGameWidget(rowContent, currentTableDescription, true)
     -- If there are gameOptions, add a widget to contain that info.
     -- It will be filled in later.
@@ -53,12 +54,45 @@ local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameD
     GuiUtils.makePlayerWidget(rowContent, currentTableDescription.hostUserId)
 end
 
+local selectFriend = function(screenGui, onFriendSelected: (userId: CommonTypes.UserId?)
+    -> nil)
+    -- FIXME(dbanks)
+    -- Pure hackery for test purposes only.
+    -- What we really need is some widget that:
+    -- * shows all friends.
+    -- * search widget to filter.
+    -- * can select one or more friends.
+    -- * reports back set of selected friends.
+    -- I have to believe this exists somewhere, can't find it.
+    -- Bonus if it also invites said friends to the experience.
+    local dialogButtonConfigs = {} :: {CommonTypes.DialogButtonConfig}
+
+    -- FIXME(dbanks)
+    -- Add the ids of the non-local players you get when you run in Studio.
+
+    table.insert(dialogButtonConfigs, {
+        {
+            text = "Cancel",
+            callback = function()
+                onFriendSelected()
+            end,
+        }
+    })
+
+    local dialogConfig = {
+        title = "Select a friend",
+        description = "Select a friend to invite to the table.",
+        dialogButtonConfigs = dialogButtonConfigs,
+    } :: CommonTypes.DialogConfig
+    DialogUtils.makeDialog(screenGui, dialogConfig)
+end
+
 local onAddInviteClicked = function(frame: Frame, tableId: CommonTypes.TableId)
     -- Find the screenGui ancestor of the frame.
     local screenGui = frame:FindFirstAncestorOfClass("ScreenGui")
     assert(screenGui, "Should have a screenGui")
     assert(tableId, "Should have a tableId")
-    GuiUtils.selectFriend(screenGui, function (userId: CommonTypes.UserId?)
+    selectFriend(screenGui, function (userId: CommonTypes.UserId?)
         if userId then
             ClientEventManagement.invitePlayerToTable(tableId, userId)
         end
@@ -67,7 +101,7 @@ end
 
 local addTableControls = function (frame: Frame, currentTableDescription: CommonTypes.TableDescription, isHost: boolean)
     -- Make a row for controls.
-    local rowContent = GuiUtils.makeRowWithLabelAndReturnRowContent(frame, "Row_Controls")
+    local rowContent = GuiUtils.makeRowAndReturnRowContent(frame, "Row_Controls")
 
     -- If we are the host, we can start the game.
     if isHost then
@@ -123,10 +157,11 @@ TableWaitingUI.build = function(screenGui: ScreenGui, currentTableDescription: C
     local gameDetails = GameDetails.getGameDetails(currentTableDescription.gameId)
     assert(gameDetails, "Should have a gameDetails")
 
-    local mainFrame = screenGui:WaitForChild("MainFrame")
+    local mainFrame = GuiUtils.getMainFrame(screenGui)
     assert(mainFrame, "MainFrame not found")
 
-    GuiUtils.makeUiListLayout(mainFrame)
+    local uiListLayout = GuiUtils.makeUiListLayout(mainFrame)
+    uiListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
     addGameAndHostInfo(mainFrame, gameDetails, currentTableDescription)
 
@@ -176,18 +211,18 @@ local updateUserRow = function(mainFrame: Frame, rowName: string, userIds: {Comm
     local rowContent = GuiUtils.getRowContent(mainFrame, rowName)
     assert(rowContent, "Should have a rowContent")
 
-    local makeWidgetContainer = function(frame: Frame, userId: CommonTypes.UserId): Frame
-        local widgetContainer
+    local makeUserWidgetContainer = function(frame: Frame, userId: CommonTypes.UserId): Frame
+        local userWidgetContainer
         -- For host, if user is not himself, this widget is a button that lets you kick person out of table.
         if isButton() then
-            widgetContainer = GuiUtils.makeUserWidgetContainer(frame, userId, buttonCallback)
+            userWidgetContainer = GuiUtils.makeUserWidgetContainer(frame, userId, buttonCallback)
         else
-            widgetContainer = GuiUtils.makeUserWidgetContainer(frame, userId)
+            userWidgetContainer = GuiUtils.makeUserWidgetContainer(frame, userId)
         end
-        return widgetContainer
+        return userWidgetContainer
     end
 
-    GuiUtils.updateWidgetContainerChildren(rowContent, userIds, makeWidgetContainer)
+    GuiUtils.updateWidgetContainerChildren(rowContent, userIds, makeUserWidgetContainer)
 end
 
 local updateGuests = function(mainFrame: Frame, isHost: boolean, localUserId: CommonTypes.UserId, currentTableDescription: CommonTypes.TableDescription)
@@ -205,7 +240,7 @@ local updateGuests = function(mainFrame: Frame, isHost: boolean, localUserId: Co
     end
 
     local function removeGuestCallback(userId: CommonTypes.UserId)
-        GuiUtils.showConfirmationDialog("Remove Player?",
+        DialogUtils.showConfirmationDialog("Remove Player?",
             "Please confirm you want to remove this player from the table.", function()
                 ClientEventManagement.removeGuestFromTable(currentTableDescription.tableId, userId)
             end)
@@ -228,7 +263,7 @@ local updateInvites = function(mainFrame: Frame, isHost: boolean, currentTableDe
     end
 
     local function removeInviteCallback(userId: CommonTypes.UserId)
-        GuiUtils.showConfirmationDialog("Remove Invitation?",
+        DialogUtils.showConfirmationDialog("Remove Invitation?",
             "Please confirm you want to remove this player''s invitation to the table.", function()
                 ClientEventManagement.removeInviteForTable(currentTableDescription.tableId, userId)
             end)
@@ -273,7 +308,7 @@ TableWaitingUI.update = function(screenGui: ScreenGui, currentTableDescription: 
     -- Make sure we have all the stuff we need.
     assert(currentTableDescription, "Should have a currentTableDescription")
     assert(screenGui, "Should have a screenGui")
-    local mainFrame = screenGui:WaitForChild("MainFrame")
+    local mainFrame = GuiUtils.getMainFrame(screenGui)
     assert(mainFrame, "Should have a screenGui")
 
     local localUserId = game.Players.LocalPlayer.UserId

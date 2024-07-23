@@ -2,7 +2,6 @@
 Functions to build and update the UI for selecting a table to join or creating a table.
 ]]
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Shared...

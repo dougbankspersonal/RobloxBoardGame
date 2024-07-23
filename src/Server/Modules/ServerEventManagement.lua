@@ -78,9 +78,9 @@ local function makeFetchTableDescriptionsByTableIdRemoteFunction()
             retVal[tableId] = gameTable:getTableDescription()
         end
         -- Add some fake delay so I can see the loading screen...
-        for i = 1, 10 do
+        for _ = 1, 4 do
+            print("Doug: Fake waiting for FetchTableDescriptionsByTableId...")
             task.wait(1)
-            print("Doug: fake waiting ", i)
         end
         return retVal
     end
@@ -96,9 +96,15 @@ ServerEventManagement.createClientToServerEvents = function()
     -- Events sent from client to server.
     -- Event to create a new table.
     createRemoteEvent("TableEvents", "CreateNewTable", function(player, gameId, isPublic)
+        print("Doug: CreateNewTable 001")
+        print("Doug: CreateNewTable player = ", player.UserId)
+        print("Doug: CreateNewTable gameId = ", gameId)
+        print("Doug: CreateNewTable isPublic = ", isPublic)
+
         -- Does the game exist?
         local gameDetails = GameDetails.getGameDetails(gameId)
         if not gameDetails then
+            print("Doug: CreateNewTable 002")
             return
         end
 
@@ -106,9 +112,11 @@ ServerEventManagement.createClientToServerEvents = function()
         -- host is already in a table).
         local gameTable = GameTable.createNewTable(player.UserId, gameDetails, isPublic)
         if not gameTable then
+            print("Doug: CreateNewTable 003")
             return
         end
 
+        print("Doug: CreateNewTable 004")
         -- Broadcast the new table to all players
         sendToAllPlayers("TableCreated", gameTable:getTableDescription())
     end)

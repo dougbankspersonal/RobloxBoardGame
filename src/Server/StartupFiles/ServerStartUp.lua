@@ -25,6 +25,8 @@ ServerStartUp.ServerStartUp = function(gameDetailsByGameId: CommonTypes.GameDeta
     -- Sanity checks.
     assert(gameDetailsByGameId, "gameDetailsByGameId is nil")
     assert(gameInstanceFunctionsByGameId, "gameInstanceFunctionsByGameId is nil")
+    print("Doug: gameDetailsByGameId = ", gameDetailsByGameId)
+    print("Doug: gameInstanceFunctionsByGameId = ", gameInstanceFunctionsByGameId)
     assert(Utils.tablesHaveSameKeys(gameDetailsByGameId, gameInstanceFunctionsByGameId), "tables should have same keys")
     assert(#gameDetailsByGameId > 0, "Should have at least one game")
 

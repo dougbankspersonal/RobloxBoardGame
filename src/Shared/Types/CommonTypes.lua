@@ -44,7 +44,8 @@ export type DialogButtonConfig = {
 export type DialogConfig = {
     title: string,
     description: string,
-    dialogButtonConfigs: {DialogButtonConfig},
+    dialogButtonConfigs: {DialogButtonConfig}?,
+    addCustomControls: ((parent: Frame) -> ())?,
 }
 
 -- Everything a client needs to know about a created table so it can be

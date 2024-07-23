@@ -27,7 +27,8 @@ ClientEventManagement.fetchTableDescriptionsByTableIdAsync = function(): CommonT
         assert(false, "fetchTableDescriptionsByTableIdRemoteFunction remote function missing")
         return {} :: CommonTypes.TableDescriptionsByTableId
     end
-    return fetchTableDescriptionsByTableIdRemoteFunction:InvokeServer()
+    local tableDescriptionsByTableId = fetchTableDescriptionsByTableIdRemoteFunction:InvokeServer()
+    return tableDescriptionsByTableId
 end
 
 ClientEventManagement.listenToServerEvents = function(onTableCreated: (tableDescription: CommonTypes.TableDescription) -> nil,
@@ -50,42 +51,51 @@ ClientEventManagement.listenToServerEvents = function(onTableCreated: (tableDesc
 end
 
 ClientEventManagement.createTable = function(gameId: CommonTypes.GameId, isPublic: boolean)
+    print("Doug: in ClientEventManagement.createTable")
     local event = ReplicatedStorage.TableEvents:WaitForChild("CreateNewTable")
+    assert(event, "CreateNewTable event missing")
     event:FireServer(gameId, isPublic)
 end
 
 ClientEventManagement.destroyTable = function(tableId: CommonTypes.TableId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("DestroyTable")
+    assert(event, "DestroyTable event missing")
     event:FireServer(tableId)
 end
 
 ClientEventManagement.joinTable = function(tableId: CommonTypes.TableId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("JoinTable")
+    assert(event, "JoinTable event missing")
     event:FireServer(tableId)
 end
 
 ClientEventManagement.leaveTable = function(tableId: CommonTypes.TableId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("LeaveTable")
+    assert(event, "LeaveTable event missing")
     event:FireServer(tableId)
 end
 
 ClientEventManagement.startGame = function(tableId: CommonTypes.TableId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("StartGame")
+    assert(event, "StartGame event missing")
     event:FireServer(tableId)
 end
 
 ClientEventManagement.invitePlayerToTable = function(tableId: CommonTypes.TableId, userId: CommonTypes.UserId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("InvitePlayerToTable")
+    assert(event, "InvitePlayerToTable event missing")
     event:FireServer(tableId, userId)
 end
 
 ClientEventManagement.removeGuestFromTable = function(tableId: CommonTypes.TableId, userId: CommonTypes.UserId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("RemoveGuestFromTable")
+    assert(event, "RemoveGuestFromTable event missing")
     event:FireServer(tableId, userId)
 end
 
 ClientEventManagement.removeInviteForTable = function(tableId: CommonTypes.TableId, userId: CommonTypes.UserId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("RemoveInviteForTable")
+    assert(event, "RemoveInviteForTable event missing")
     event:FireServer(tableId, userId)
 end
 

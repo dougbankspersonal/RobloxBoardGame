@@ -1,11 +1,11 @@
 local ClientStartUp = {}
 
--- Client
-local RobloxBoardGameClient = script.Parent.Parent
-local GuiMain = require(RobloxBoardGameClient.Modules.GuiMain)
-local ClientEventManagement = require(RobloxBoardGameClient.Modules.ClientEventManagement)
-local GameUIs = require(RobloxBoardGameClient.Globals.GameUIs)
-local TableDescriptions = require(RobloxBoardGameClient.Modules.TableDescriptions)
+-- StarterGui
+local RobloxBoardGameStarterGui = script.Parent.Parent
+local GuiMain = require(RobloxBoardGameStarterGui.Modules.GuiMain)
+local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
+local GameUIs = require(RobloxBoardGameStarterGui.Globals.GameUIs)
+local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
 
 -- Shared
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,6 +23,21 @@ local function turnOffPlayerControls()
     controls:Disable()
 end
 
+-- Most Roblox experiences are 3d spaces with avatar running around.
+-- This is a 2s board game, no avatar, no 3d space.
+-- This has some implications for how we configure the game.
+local function configureForBoardGames()
+    -- Player can't move or jump.
+    turnOffPlayerControls()
+    -- We don't need/want local chat: people can use voice chat, and the chat widget gets in the way of
+    -- the 2d interface.
+    game.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
+    -- We don't want 3d sound.
+    local soundService = game:GetService("SoundService")
+    soundService.DistanceFactor = 0
+
+end
+
 ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, gameUIsByGameId: CommonTypes.GameUIsByGameId)
     -- must be at least one.
     assert(#gameDetailsByGameId > 0, "Should have at least one game")
@@ -36,27 +51,30 @@ ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId
     GameUIs.setAllGameUIs(gameUIsByGameId)
 
     screenGui.IgnoreGuiInset = true
-    turnOffPlayerControls()
+
+    configureForBoardGames()
+
     GuiMain.makeMainFrame(screenGui)
 
     -- Show a loading screen while we fetch data from backend.
-    GuiMain.updateUI()
+    GuiMain.showLoadingUI()
 
     -- Do this before we fetch all tables (just so there's no squirreliness where:
     -- a) we ask for all tables
     -- b) server replies
     -- c) server updates tables and broadcasts updates
     -- d) we get the updates
-
     ClientEventManagement.listenToServerEvents(GuiMain.onTableCreated, GuiMain.onTableDestroyed, GuiMain.onTableUpdated)
 
-    -- Fetch table descriptions from server.  Async, takes non-zero time.
-    local allTableDescriptions = ClientEventManagement.fetchTableDescriptionsByTableIdAsync()
-
-    print("Doug: fetchTableDescriptionsByTableIdAsync returned with allTableDescriptions = ", allTableDescriptions)
-    TableDescriptions.setTableDescriptions(allTableDescriptions)
-
-    GuiMain.updateUI()
+    print("Doug: ClientStartUp 001")
+    task.spawn(function()
+        print("Doug: ClientStartUp 002")
+        local tableDescriptionsByTableId = ClientEventManagement.fetchTableDescriptionsByTableIdAsync()
+        TableDescriptions.setTableDescriptions(tableDescriptionsByTableId)
+        GuiMain.updateUI()
+        print("Doug: ClientStartUp 003")
+    end)
+    print("Doug: ClientStartUp 004")
 end
 
 return ClientStartUp

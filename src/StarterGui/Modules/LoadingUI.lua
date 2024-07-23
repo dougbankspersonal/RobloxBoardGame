@@ -5,9 +5,9 @@ Functions to build the UI we show whilw waiting for initial download of tables f
 local LoadingUI = {}
 local TweenService = game:GetService("TweenService")
 
--- Client
-local RobloxBoardGameClient = script.Parent.Parent
-local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
+-- StarterGui
+local RobloxBoardGameStarterGui = script.Parent.Parent
+local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
 
 --[[
 Build ui elements for an inital "loading" screen while we fetch stuff from the server.
@@ -20,7 +20,7 @@ In this case, we create a tween, and I'd like to be thoughtful about killing the
 tween.
 ]]
 LoadingUI.build = function(screenGui: ScreenGui): {()->nil}
-    local mainFrame = screenGui:WaitForChild("MainFrame")
+    local mainFrame = GuiUtils.getMainFrame(screenGui)
     assert(mainFrame, "MainFrame not found")
 
     -- FIXME(dbanks): extremely ugly hackery/placeholder.
@@ -29,12 +29,17 @@ LoadingUI.build = function(screenGui: ScreenGui): {()->nil}
     frame.Parent = mainFrame
     frame.Size = UDim2.fromScale(1, 1)
     frame.Position = UDim2.fromOffset(0, 0)
-    frame.BackgroundColor3 = Color3.new(1, 0.5, 0.5)
+
+    GuiUtils.addUIGradient(frame, GuiUtils.blueColorSequence)
 
     local textLabel = GuiUtils.makeTextLabel(frame, "Loading")
     textLabel.Name = "LoadingLabel"
+    textLabel.TextColor3 = Color3.new(0.8, 0.6, 0.0)
+    textLabel.TextStrokeTransparency = 0.5
+    textLabel.TextStrokeColor3 = Color3.new(0.0, 0.0, 0.0)
     textLabel.AnchorPoint = Vector2.new(0.5, 0.5)
     textLabel.Position = UDim2.fromScale(0.5, 0.5)
+    textLabel.FontSize = Enum.FontSize.Size48
 
     -- Make it wiggle so you know things are not stuck.
     local jiggleMagnitude = 5

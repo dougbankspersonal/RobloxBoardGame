@@ -15,14 +15,14 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local UIModes = require(RobloxBoardGameShared.Globals.UIModes)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
 
--- Client
-local RobloxBoardGameClient = script.Parent.Parent
-local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
-local GameUIs = require(RobloxBoardGameClient.Globals.GameUIs)
-local LoadingUI = require(RobloxBoardGameClient.Modules.LoadingUI)
-local TableSelectionUI = require(RobloxBoardGameClient.Modules.TableSelectionUI)
-local TableWaitingUI = require(RobloxBoardGameClient.Modules.TableWaitingUI)
-local TableDescriptions = require(RobloxBoardGameClient.Modules.TableDescriptions)
+-- StarterGui
+local RobloxBoardGameStarterGui = script.Parent.Parent
+local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
+local GameUIs = require(RobloxBoardGameStarterGui.Globals.GameUIs)
+local LoadingUI = require(RobloxBoardGameStarterGui.Modules.LoadingUI)
+local TableSelectionUI = require(RobloxBoardGameStarterGui.Modules.TableSelectionUI)
+local TableWaitingUI = require(RobloxBoardGameStarterGui.Modules.TableWaitingUI)
+local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
 
 -- Globals
 local localUserId = Players.LocalPlayer.UserId
@@ -40,23 +40,29 @@ local uiModeBasedOnTableDescriptions: CommonTypes.UIMode = UIModes.Loading
 -- Iff local user is at a table (either waiting, playing, or finished), this describes that table.
 local currentTableDescription: CommonTypes.TableDescription? = nil
 
+
 --[[
     makeMainFrame
     Creates the main frame for the user interface.
     @param _screenGui: ScreenGui
     @returns: nil
 ]]
-GuiMain.makeMainFrame = function(_screenGui: ScreenGui)
+GuiMain.makeMainFrame = function(_screenGui: ScreenGui): Frame
     screenGui = _screenGui
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
     mainFrame = Instance.new("Frame")
     mainFrame.Size = UDim2.new(1, 0, 1, 0)
-    mainFrame.BackgroundColor3 = Color3.new(0.458823, 0.509803, 0.733333)
+    mainFrame.BackgroundColor3 = Color3.new(1, 1, 1)
     mainFrame.Parent = screenGui
-    mainFrame.ZIndex = 1
-    mainFrame.Name = "main"
+    mainFrame.ZIndex = GuiUtils.mainFrameZIndex
+    mainFrame.Name = GuiUtils.mainFrameName
     mainFrame.BorderSizePixel= 0
 
-    GuiUtils.makeLayoutOrderTracking(mainFrame)
+    GuiUtils.addUIGradient(mainFrame, GuiUtils.whiteToGrayColorSequence)
+
+    GuiUtils.makeLayoutOrderGenerator(mainFrame)
+    return mainFrame
 end
 
 local function buildTablePlayingUI(): nil
@@ -108,6 +114,10 @@ local cleanupCurrentUI = function()
     end
 end
 
+GuiMain.showLoadingUI = function()
+    LoadingUI.build(screenGui)
+end
+
 --[[
     When we receieve updates from the server, this function is called.
     Updates UI to reflect current state.
@@ -116,13 +126,14 @@ GuiMain.updateUI = function()
     -- Figure out which, if any, table we're at, and from that we know what ui mode we are in.
     setCurrentTableAndUIMode()
 
+    -- Should never call this if we are still loading.
+    assert(uiModeBasedOnTableDescriptions ~= UIModes.Loading, "Should not call updateUI while loading")
+
     -- If this causes a change in UIMode, destroy the old UI and build a new one.
     if currentUIMode ~= uiModeBasedOnTableDescriptions then
         cleanupCurrentUI()
         currentUIMode = uiModeBasedOnTableDescriptions
-        if currentUIMode == UIModes.Loading then
-            LoadingUI.build(screenGui)
-        elseif currentUIMode == UIModes.TableSelection then
+        if currentUIMode == UIModes.TableSelection then
             TableSelectionUI.build(screenGui)
         elseif currentUIMode == UIModes.TableWaitingForPlayers then
             assert(currentTableDescription, "Should have a currentTableDescription")
@@ -130,6 +141,9 @@ GuiMain.updateUI = function()
         elseif currentUIMode == UIModes.TablePlaying then
             assert(currentTableDescription, "Should have a currentTableDescription")
             buildTablePlayingUI(screenGui)
+        else
+            -- ???
+            assert(false, "Unknown UI Mode")
         end
     end
 
