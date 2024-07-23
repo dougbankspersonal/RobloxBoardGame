@@ -145,10 +145,7 @@ GuiUtils.makeTextButton = function(parent: Instance, text: string, callback: () 
     button.Text = text
     button.TextSize = 14
     parent.NextLayoutOrder.Value = parent.NextLayoutOrder.Value + 1
-    button.MouseButton1Click:Connect(function()
-        if not button.Active then
-            return
-        end
+    button.Activated:Connect(function()
         callback()
     end)
     button.BorderSizePixel = 3
@@ -243,7 +240,7 @@ GuiUtils.makeTableButton = function(tableButtonContainer: Instance, tableDescrip
     tableButton.Text = "\"" .. gameName .. "\" hosted by " .. hostName
     tableButton.TextSize = 14
     tableButton.BorderSizePixel = 0
-    tableButton.MouseButton1Click:Connect(onButtonCiicked)
+    tableButton.Activated:Connect(onButtonCiicked)
 end
 
 -- We want to have the set of widgets correspond 1-1 with the given ids.
