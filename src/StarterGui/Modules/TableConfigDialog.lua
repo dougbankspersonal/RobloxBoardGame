@@ -13,13 +13,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
 local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
 
-local selectPublicOrPrivate = function(screenGui: ScreenGui, gameId: CommonTypes.GameId, onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
+local selectPublicOrPrivate = function(gameId: CommonTypes.GameId, onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
     -- Put up a UI to get public or private.
     -- FIXME(dbanks): this is horrible temp hack using an array of buttons to pick from a set of two options.
     -- Implement a proper toggle switch (or radio buttons or whatever)
@@ -30,31 +31,67 @@ local selectPublicOrPrivate = function(screenGui: ScreenGui, gameId: CommonTypes
             {
                 text = "Public",
                 callback = function()
-                    print("Doug: Public clicked")
                     onTableConfigSelected(gameId, true)
                 end
             } :: CommonTypes.DialogButtonConfig,
             {
                 text = "Private",
                 callback = function()
-                    print("Doug: Private clicked")
                     onTableConfigSelected(gameId, false)
                 end
             } :: CommonTypes.DialogButtonConfig,
         } :: {CommonTypes.DialogConfig},
     }
 
-    DialogUtils.makeDialog(screenGui, dialogConfig)
+    DialogUtils.makeDialog(dialogConfig)
 end
 
-TableConfigDialog.promptForTableConfig = function(screenGui: ScreenGui, onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
+-- Helper for non-standard controls in the dialog.
+local function _makeRowAndAddCustomControls(parent: Frame, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
+    local rowOptions = {
+        isScrolling = true,
+        useGridLayout = true,
+        gridCellSize = UDim2.fromOffset(GuiUtils.gameWidgetX, GuiUtils.gameWidgetY),
+    }
+
+    local rowContent = GuiUtils.addRowAndReturnRowContent(parent, "Row_Controls", rowOptions, {
+        AutomaticSize = Enum.AutomaticSize.None,
+        ClipsDescendants = true,
+        BorderSizePixel = 0,
+        BorderColor3 = Color3.new(0.5, 0.5, 0.5),
+        BorderMode = Enum.BorderMode.Outline,
+        BackgroundColor3 = Color3.new(0.9, 0.9, 0.9),
+        BackgroundTransparency = 0,
+    })
+
+    GuiUtils.addUIGradient(rowContent, GuiUtils.scrollBackgroundGradient)
+    GuiUtils.addPadding(rowContent, {
+        PaddingLeft = UDim.new(0, 0),
+        PaddingRight = UDim.new(0, 0),
+    })
+
+    local gridLayout = rowContent:FindFirstChildWhichIsA("UIGridLayout", true)
+    assert(gridLayout, "Should have gridLayout")
+    local cellHeight = gridLayout.CellSize.Y.Offset
+    local totalHeight = 2 * cellHeight + 3 * GuiUtils.standardPaddingPixels
+    rowContent.Size = UDim2.new(1, 0, 0, totalHeight)
+
+    for gid, gameDetails in gameDetailsByGameId do
+        GuiUtils.addGameButton(rowContent, gameDetails, function()
+            DialogUtils.cleanupDialog()
+            selectPublicOrPrivate(gid, onTableConfigSelected)
+        end)
+    end
+end
+
+TableConfigDialog.promptForTableConfig = function(onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
     local gameDetailsByGameId = GameDetails.getAllGameDetails()
     assert(gameDetailsByGameId, "Should have gameDetailsByGameId")
-    assert(#gameDetailsByGameId >= 1, "Should have at last one item in gameDetailsByGameId")
+    local numGames = Utils.tableSize(gameDetailsByGameId)
+    assert(numGames, "Should have at last one item in gameDetailsByGameId")
 
     local gameId
-    if #gameDetailsByGameId == 1 then
-        print("Doug: promptForTableConfig gameDetailsByGameId = ", gameDetailsByGameId)
+    if numGames == 1 then
         -- If there's only one game, we don't need to ask the player to pick a game.
         -- Just use the gameId of the one game.
         for gid, _ in gameDetailsByGameId do
@@ -63,25 +100,18 @@ TableConfigDialog.promptForTableConfig = function(screenGui: ScreenGui, onTableC
         end
         assert(gameId ~= nil, "Should have a gameId")
         assert(type(gameId) == "number", "gameId should be a number")
-        selectPublicOrPrivate(screenGui, gameId, onTableConfigSelected)
+        selectPublicOrPrivate(gameId, onTableConfigSelected)
         return
     else
-        -- Throw up a game selection dialog.
-        local function addCustomControls(parent: Frame)
-            for gameId, gameDetails in gameDetailsByGameId do
-                GuiUtils.makeGameButton(parent, gameDetails, function()
-                    selectPublicOrPrivate(screenGui, gameId, onTableConfigSelected)
-                end)
-           end
-        end
-
         local dialogConfig: CommonTypes.DialogConfig = {
             title = "Select a game",
             description = "Click the game you want to play",
-            addCustomControls = addCustomControls,
+            makeRowAndAddCustomControls = function(parent: Frame)
+                _makeRowAndAddCustomControls(parent, gameDetailsByGameId, onTableConfigSelected)
+            end
         }
 
-        DialogUtils.makeDialog(screenGui, dialogConfig)
+        DialogUtils.makeDialog(dialogConfig)
     end
 end
 

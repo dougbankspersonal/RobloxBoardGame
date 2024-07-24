@@ -14,6 +14,7 @@ local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local UIModes = require(RobloxBoardGameShared.Globals.UIModes)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
@@ -27,9 +28,6 @@ local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescrip
 -- Globals
 local localUserId = Players.LocalPlayer.UserId
 assert(localUserId, "Should have a localUserId")
-
-local mainFrame: Frame?
-local screenGui: ScreenGui?
 
 local currentUIMode: CommonTypes.UIMode = UIModes.None
 local cleanupFunctionsForCurrentUIMode = {}:: {() -> nil}
@@ -47,21 +45,23 @@ local currentTableDescription: CommonTypes.TableDescription? = nil
     @param _screenGui: ScreenGui
     @returns: nil
 ]]
-GuiMain.makeMainFrame = function(_screenGui: ScreenGui): Frame
-    screenGui = _screenGui
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+GuiMain.makeMainFrame = function(): Frame
+    local mainScreenGui = GuiUtils.getMainScreenGui()
+    assert(mainScreenGui, "Should have a mainScreenGui")
+    mainScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-    mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(1, 0, 1, 0)
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.fromScale(1, 1)
     mainFrame.BackgroundColor3 = Color3.new(1, 1, 1)
-    mainFrame.Parent = screenGui
+    mainFrame.Parent = mainScreenGui
     mainFrame.ZIndex = GuiUtils.mainFrameZIndex
     mainFrame.Name = GuiUtils.mainFrameName
     mainFrame.BorderSizePixel= 0
 
     GuiUtils.addUIGradient(mainFrame, GuiUtils.whiteToGrayColorSequence)
+    GuiUtils.addPadding(mainFrame)
+    GuiUtils.addLayoutOrderGenerator(mainFrame)
 
-    GuiUtils.makeLayoutOrderGenerator(mainFrame)
     return mainFrame
 end
 
@@ -71,6 +71,9 @@ local function buildTablePlayingUI(): nil
 
     local gameUI = GameUIs.getGameUI(currentTableDescription.gameId)
     assert(gameUI, "Should have a gameUI")
+    local mainFrame = GuiUtils.getMainFrame()
+    assert(mainFrame, "Should have a mainFrame")
+
     gameUI.buildUI(mainFrame, currentTableDescription)
 end
 
@@ -82,6 +85,8 @@ end
 
 local function setCurrentTableAndUIMode()
     currentTableDescription = TableDescriptions.getTableWithUserId(localUserId)
+
+    Utils.debugPrint("Doug: setCurrentTableAndUIMode currentTableDescription = ", currentTableDescription)
 
     -- The local player is not part of any table: we show them the "select/create table" UI.
     if not currentTableDescription then
@@ -108,6 +113,7 @@ local cleanupCurrentUI = function()
     cleanupFunctionsForCurrentUIMode = {}
 
     -- Remove all the ui elements.
+    local mainFrame = GuiUtils.getMainFrame()
     local children = mainFrame:GetChildren()
     for _, child in children do
         child:Destroy()
@@ -115,7 +121,7 @@ local cleanupCurrentUI = function()
 end
 
 GuiMain.showLoadingUI = function()
-    LoadingUI.build(screenGui)
+    LoadingUI.build()
 end
 
 --[[
@@ -134,13 +140,13 @@ GuiMain.updateUI = function()
         cleanupCurrentUI()
         currentUIMode = uiModeBasedOnTableDescriptions
         if currentUIMode == UIModes.TableSelection then
-            TableSelectionUI.build(screenGui)
+            TableSelectionUI.build()
         elseif currentUIMode == UIModes.TableWaitingForPlayers then
             assert(currentTableDescription, "Should have a currentTableDescription")
-            TableWaitingUI.build(screenGui, currentTableDescription)
+            TableWaitingUI.build(currentTableDescription)
         elseif currentUIMode == UIModes.TablePlaying then
             assert(currentTableDescription, "Should have a currentTableDescription")
-            buildTablePlayingUI(screenGui)
+            buildTablePlayingUI()
         else
             -- ???
             assert(false, "Unknown UI Mode")
@@ -149,16 +155,17 @@ GuiMain.updateUI = function()
 
     -- Update the existing UI based on what we know about tables.
     if currentUIMode == UIModes.TableSelection then
-        TableSelectionUI.update(screenGui)
+        TableSelectionUI.update()
     elseif currentUIMode == UIModes.TableWaitingForPlayers then
-
-        TableWaitingUI.update(screenGui)
+        TableWaitingUI.update()
     elseif currentUIMode == UIModes.TablePlaying then
-        updateTablePlayingUI(screenGui)
+        updateTablePlayingUI()
     end
 end
 
 GuiMain.onTableCreated = function(tableDescription: CommonTypes.TableDescription)
+    -- Sending table description from server to client messes with some types. Fix it.
+    tableDescription = TableDescriptions.cleanUpTypes(tableDescription)
     TableDescriptions.addTableDescription(tableDescription)
     GuiMain.updateUI()
 end
@@ -169,6 +176,9 @@ GuiMain.onTableDestroyed = function(tableId: CommonTypes.TableId)
 end
 
 GuiMain.onTableUpdated = function(tableDescription: CommonTypes.TableDescription)
+    -- Sending table description from server to client messes with some types. Fix it.
+    tableDescription = TableDescriptions.cleanUpTypes(tableDescription)
+
     TableDescriptions.updateTableDescription(tableDescription)
     GuiMain.updateUI()
 end

@@ -1,7 +1,11 @@
 --[[
 Random assortment of useful functions.
+Note: before adding stuff here see if it's already in Cryo:
+https://roblox.github.io/cryo-internal/api-reference
 ]]
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Cryo = require(ReplicatedStorage.Cryo)
 
 local Utils = {}
 
@@ -22,59 +26,20 @@ end
 
 -- is a value in a number-indexed array?
 Utils.arrayHasValue = function(array: {any}, value: any): boolean
-    for _, v in ipairs(array) do
-        if v == value then
-            return true
-        end
-    end
-    return false
+    local index = Cryo.List.find(array, value)
+    return index ~= nil
 end
 
--- remove the first instance of the given value from the array, if it's there.
--- return true iff it was removed.
-Utils.removeFirstInstancevFromArray = function(array: {any}, value: any): boolean
-    for i, v in ipairs(array) do
-        if v == value then
-            table.remove(array, i)
-            return true
-        end
-    end
-    return false
+Utils.tableSize = function(table: {[any]: any}): number
+    assert(table ~= nil, "tableSize: table is nil")
+    local keys = Cryo.Dictionary.keys(table)
+    return #keys
 end
 
--- We have two maps.  Merge the second into the first, return that.
--- So if first and second both have entry with same key, the value from second wins.
-Utils.mergeSecondMapIntoFirst = function(first: {[any]: any}?, second: {[any]: any}?): {[any]: any}
-    local result = {} :: {[any]: any}
-    first = first or {}
-    second = second or {}
-    for key, value in pairs(first) do
-        result[key] = value
+Utils.debugPrint = function(...)
+    if game:GetService("RunService"):IsStudio() then
+        print(...)
     end
-    for key, value in pairs(second) do
-        result[key] = value
-    end
-    return result
 end
-
--- Given a table, get the keys as an array.
-Utils.getKeys = function(table: {[any]: any}): {any}
-    local result = {} :: {any}
-    for key, _ in pairs(table) do
-        table.insert(result, key)
-    end
-    return result
-end
-
--- Given a table, get the values as an array
-Utils.getValues = function(table: {[any]: any}): {any}
-    local result = {} :: {any}
-    for _, value in pairs(table) do
-        table.insert(result, value)
-    end
-    return result
-end
-
-
 
 return Utils

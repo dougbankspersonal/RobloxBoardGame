@@ -13,17 +13,16 @@ local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
 local GameInstance = require(RobloxBoardGameServer.Classes.GameInstance)
 
 local GameTable = {}
-local gameTables = {}
-
 GameTable.__index = GameTable
 
-local nextGameTableId: CommonTypes.TableId = 0
+local nextGameTableId: CommonTypes.TableId = 10000
 
 export type GameTable = {
     -- members
@@ -57,6 +56,9 @@ export type GameTable = {
     transitionFromEndToReplay: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
 }
 
+local gameTables = {} :: { [CommonTypes.TableId]: GameTable }
+
+
 GameTable.getAllGameTables = function(): { [CommonTypes.TableId]: GameTable }
     return gameTables
 end
@@ -85,7 +87,7 @@ GameTable.new = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.Gam
     self.gameDetails = GameDetails.getGameDetails(gameId)
     self.gameInstance = nil
 
-    gameTables[GameTable.id] = self
+    gameTables[tableId] = self
 
     return self
 end
@@ -166,7 +168,7 @@ function GameTable:joinTable(userId: CommonTypes.UserId): boolean
     end
 
     -- too many players already, no.
-    if self.gameDetails.MaxPlayers <= #self.tableDescription.memberUserIds then
+    if self.gameDetails.MaxPlayers <= Utils.tableSize(self.tableDescription.memberUserIds) then
         return false
     end
 
@@ -279,7 +281,7 @@ function GameTable:startGame(userId: CommonTypes.UserId): boolean
     end
 
     -- Right number of players?
-    local numPlayers = #self.members
+    local numPlayers = Utils.tableSize(self.tableDescription.memberUserIds)
     if numPlayers < self.gameDetails.MinPlayers then
         return false
     end

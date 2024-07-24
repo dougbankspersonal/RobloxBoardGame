@@ -6,7 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
-local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
@@ -16,7 +16,9 @@ local ServerEventManagement = {}
 
 -- Notify every player of an event.
 local function sendToAllPlayers(eventName, data)
-    local event = game.ReplicatedStorage[eventName]
+    local tableEvents = ReplicatedStorage:FindFirstChild("TableEvents")
+    assert(tableEvents, "TableEvents not found")
+    local event = tableEvents:FindFirstChild(eventName)
     assert(event, "Event not found: " .. eventName)
     event:FireAllClients(data)
 end
@@ -78,8 +80,8 @@ local function makeFetchTableDescriptionsByTableIdRemoteFunction()
             retVal[tableId] = gameTable:getTableDescription()
         end
         -- Add some fake delay so I can see the loading screen...
-        for _ = 1, 4 do
-            print("Doug: Fake waiting for FetchTableDescriptionsByTableId...")
+        for _ = 1, 2 do
+            Utils.debugPrint("Doug: Fake waiting for FetchTableDescriptionsByTableId...")
             task.wait(1)
         end
         return retVal
@@ -96,29 +98,18 @@ ServerEventManagement.createClientToServerEvents = function()
     -- Events sent from client to server.
     -- Event to create a new table.
     createRemoteEvent("TableEvents", "CreateNewTable", function(player, gameId, isPublic)
-        print("Doug: CreateNewTable 001")
-        print("Doug: CreateNewTable player = ", player.UserId)
-        print("Doug: CreateNewTable gameId = ", gameId)
-        print("Doug: CreateNewTable isPublic = ", isPublic)
-
-        -- Does the game exist?
-        local gameDetails = GameDetails.getGameDetails(gameId)
-        if not gameDetails then
-            print("Doug: CreateNewTable 002")
-            return
-        end
-
-        -- Try to make the table. It will fail if something is wrong (e.g. the prospective
-        -- host is already in a table).
-        local gameTable = GameTable.createNewTable(player.UserId, gameDetails, isPublic)
+        -- Try to make the table. It will fail if something is wrong:
+        -- * gameId is invalid.
+        -- * player is already in a table.
+        local gameTable = GameTable.createNewTable(player.UserId, gameId, isPublic)
         if not gameTable then
-            print("Doug: CreateNewTable 003")
             return
         end
 
-        print("Doug: CreateNewTable 004")
+        local tableDescription = gameTable:getTableDescription()
+
         -- Broadcast the new table to all players
-        sendToAllPlayers("TableCreated", gameTable:getTableDescription())
+        sendToAllPlayers("TableCreated", tableDescription)
     end)
 
     -- Event to destroy a table.

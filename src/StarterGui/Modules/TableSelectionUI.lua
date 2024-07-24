@@ -34,7 +34,7 @@ local function updateInvitedTables(mainFrame: GuiObject)
     local tableIdsForInvitedWaitingTables = TableDescriptions.getTableIdsForInvitedWaitingTables(localUserId)
 
     GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, function(parent: Frame, tableId: CommonTypes.TableId)
-        GuiUtils.makeTableButtonWidgetContainer(parent, tableId, function()
+        GuiUtils.addTableButtonWidgetContainer(parent, tableId, function()
             ClientEventManagement.joinTable(tableId)
         end)
     end)
@@ -46,7 +46,7 @@ local function updatePublicTables(mainFrame: GuiObject)
     local tableIdsForPublicWaitingTables = TableDescriptions.getTableIdsForPublicWaitingTables()
 
     GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, function(parent: Frame, tableId: CommonTypes.TableId)
-        GuiUtils.makeTableButtonWidgetContainer(parent, tableId, function()
+        GuiUtils.addTableButtonWidgetContainer(parent, tableId, function()
             ClientEventManagement.joinTable(tableId)
         end)
     end)
@@ -66,33 +66,41 @@ end
     We do create some tweens in this UI: we use the special cleanup function
     to kill those tweens.
 ]]
-TableSelectionUI.build = function(screenGui: ScreenGui)
-    local mainFrame = GuiUtils.getMainFrame(screenGui)
+TableSelectionUI.build = function()
+    local mainFrame = GuiUtils.getMainFrame()
     assert(mainFrame, "MainFrame not found")
 
-    local uiListLayout = GuiUtils.makeUiListLayout(mainFrame)
-    uiListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    GuiUtils.addUIListLayout(mainFrame, {
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
+    })
 
     -- Row to add a new table.
-    local rowContent = GuiUtils.makeRowAndReturnRowContent(mainFrame, "Row_CreateTable")
-    GuiUtils.makeTextButtonWidgetContainer(rowContent, "Host a new Table", function()
+    local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_CreateTable")
+    GuiUtils.addTextButtonWidgetContainer(rowContent, "Host a new Table", function()
         -- user must select a game and whether it is public or invite-only.
-        TableConfigDialog.promptForTableConfig(screenGui, function(gameId, isPublic)
-            print("Doug: in TableConfigDialog callback")
+        TableConfigDialog.promptForTableConfig(function(gameId, isPublic)
             -- Send all this along to the server.
             ClientEventManagement.createTable(gameId, isPublic)
         end)
     end)
 
     -- Row to show tables you are invited to.
-    GuiUtils.makeRowWithLabelAndReturnRowContent(mainFrame, "Row_InvitedTables", "Your invitations:", true)
+    GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_InvitedTables", {
+        isScrolling = true,
+        useGridLayout = true,
+        labelText = "Open Invitations",
+    })
     -- Row to show public tables.
-    GuiUtils.makeRowWithLabelAndReturnRowContent(mainFrame, "Row_PublicTables", "Public Tables:", true)
+    GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_PublicTables", {
+        isScrolling = true,
+        useGridLayout = true,
+        labelText = "Public Tables",
+    })
 end
 
 -- update ui elements for the table creation/selection ui.
-TableSelectionUI.update = function(screenGui: ScreenGui)
-    local mainFrame = GuiUtils.getMainFrame(screenGui)
+TableSelectionUI.update = function()
+    local mainFrame = GuiUtils.getMainFrame()
     assert(mainFrame, "MainFrame not found")
 
     updateInvitedTables(mainFrame)

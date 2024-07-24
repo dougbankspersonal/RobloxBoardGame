@@ -1,2 +1,8 @@
 -- Empty file to disable normal 3d sounds.
-print("Doug: RobxCharacterSounds 001")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Shared
+local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
+
+Utils.debugPrint("Sound is disabled.")

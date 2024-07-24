@@ -25,7 +25,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
-local Utils = require(RobloxBoardGameShared.Modules.Utils)
+local Cryo = require(ReplicatedStorage.Cryo)
 
 local TweenHandling = {}
 
@@ -33,7 +33,7 @@ local tweensToKill = {}:: CommonTypes.TweensToKill
 
 -- Murder all outstanding tweens.
 TweenHandling.killOutstandingTweens = function()
-    local plainTweens = Utils.getValues(tweensToKill)
+    local plainTweens = Cryo.Dictionary.values(tweensToKill)
     tweensToKill = {}
     for _, tween in plainTweens do
         tween:Cancel()
@@ -50,7 +50,7 @@ TweenHandling.saveTweens = function(newTweensToKill: CommonTypes.TweensToKill)
         end)
     end
 
-    Utils.mergeSecondMapIntoFirst(tweensToKill, newTweensToKill)
+    Cryo.Dictionary.join(tweensToKill, newTweensToKill)
 end
 
 return TweenHandling

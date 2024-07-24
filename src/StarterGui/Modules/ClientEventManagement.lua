@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 local ClientEventManagement = {}
 
@@ -41,17 +42,20 @@ ClientEventManagement.listenToServerEvents = function(onTableCreated: (tableDesc
 
     local event
     event = tableEvents:WaitForChild("TableCreated")
+    assert(event, "TableCreated event missing")
     event.OnClientEvent:Connect(onTableCreated)
 
     event = tableEvents:WaitForChild("TableDestroyed")
+    assert(event, "TableDestroyed event missing")
     event.OnClientEvent:Connect(onTableDestroyed)
 
     event = tableEvents:WaitForChild("TableUpdated")
+    assert(event, "TableUpdated event missing")
     event.OnClientEvent:Connect(onTableUpdated)
 end
 
 ClientEventManagement.createTable = function(gameId: CommonTypes.GameId, isPublic: boolean)
-    print("Doug: in ClientEventManagement.createTable")
+    Utils.debugPrint("Doug: in ClientEventManagement.createTable")
     local event = ReplicatedStorage.TableEvents:WaitForChild("CreateNewTable")
     assert(event, "CreateNewTable event missing")
     event:FireServer(gameId, isPublic)

@@ -45,7 +45,15 @@ export type DialogConfig = {
     title: string,
     description: string,
     dialogButtonConfigs: {DialogButtonConfig}?,
-    addCustomControls: ((parent: Frame) -> ())?,
+    makeRowAndAddCustomControls: ((parent: Frame) -> GuiObject)?,
+}
+
+export type GameOptionId = string
+
+export type BooleanOrNumber = boolean | number
+
+export type NonDefaultGameOptions = {
+    [GameOptionId]: BooleanOrNumber,
 }
 
 -- Everything a client needs to know about a created table so it can be
@@ -69,7 +77,7 @@ export type TableDescription = {
     gameTableState: GameTableState,
 
     -- Any game-specific tweaks that have been set.
-    enabledGameOptions: {[GameOptionId] : boolean},
+opt_nonDefaultGameOptions: NonDefaultGameOptions?,
 }
 
 -- We tend to keep these in a table indexed on tableId so it's easy
@@ -106,17 +114,21 @@ When using the library, you need to provide these three blocks of data for each 
 The blocks of data go in XXXbyGameId tables, where the key is the GameId.
 ]]
 
-export type GameOptionId = number
-
-export type GameOptions = {
+export type GameOptionVariant = {
     name: string,
-    optionId: GameOptionId,
+    description: string,
+}
+
+export type GameOption = {
+    name: string,
+    gameOptionId: GameOptionId,
     details: string,
+    opt_variants: {GameOptionVariant}?
 }
 
 export type GameDetails = {
     gameId: GameId,
-    gameImage: AssetId,
+    gameImage: string,
     name: string,
     description: string,
     maxPlayers: number,
@@ -132,7 +144,7 @@ export type GameDetails = {
     -- the user as a set of checkboxes, and pass the selections on to the game.
     -- It is up to the game to make sense of any conficting/confusing/nonsensical selections
     -- and message the user about it.
-    gameOptions: {GameOptions},
+    gameOptions: {GameOption},
 }
 
 export type GameDetailsByGameId = {
@@ -159,6 +171,18 @@ export type GameUIsByGameId = {
 
 export type TweensToKill = {
     [string]: Tween,
+}
+
+export type RowOptions = {
+    isScrolling: boolean?,
+    useGridLayout: boolean?,
+    labelText: string?,
+    gridCellSize: UDim2?,
+    horizontalAlignment: Enum.HorizontalAlignment?,
+}
+
+export type InstanceOptions = {
+    [string]: any,
 }
 
 local CommonTypes = {

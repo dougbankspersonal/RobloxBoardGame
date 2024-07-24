@@ -18,11 +18,14 @@ local Players = game:GetService("Players")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
 local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
 local TweenHandling = require(RobloxBoardGameStarterGui.Modules.TweenHandling)
+
+local mainScreenGui: ScreenGui = nil
 
 local globalLayoutOrder = 0
 
@@ -35,10 +38,12 @@ GuiUtils.mainFrameName = "MainFrame"
 GuiUtils.textButtonName = "TextButton"
 GuiUtils.textLabelName = "TextLabel"
 
+-- Various measurements.
 GuiUtils.textLabelHeight = 30
 GuiUtils.textLabelFontSize = 14
+GuiUtils.gameTextLabelFontSize = 10
 GuiUtils.dialogTitleFontSize = 24
-GuiUtils.horizontalPadding = UDim.new(0, 5)
+GuiUtils.standardPaddingPixels = 5
 GuiUtils.minWidgetContainerHeight = 30
 
 GuiUtils.mainFrameZIndex = 2
@@ -46,21 +51,64 @@ GuiUtils.dialogBackgroundZIndex = 3
 GuiUtils.dialogInputSinkZIndex = 4
 GuiUtils.dialogZIndex = 5
 
+GuiUtils.gameWidgetX = 100
+GuiUtils.gameWidgetY = 130
+GuiUtils.gameLabelHeight = 20
+
 GuiUtils.whiteToGrayColorSequence = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(0.8, 0.8, 0.8))
+GuiUtils.scrollBackgroundGradient = ColorSequence.new(Color3.new(0.8, 0.8, 0.8), Color3.new(0.6, 0.6, 0.6))
 GuiUtils.blueColorSequence = ColorSequence.new(Color3.new(0.5, 0.6, 0.8), Color3.new(0.2, 0.3, 0.5))
 
+GuiUtils.setMainScreenGui = function(msg: ScreenGui)
+    assert(msg, "Should have a mainScreenGui")
+    mainScreenGui = msg
+end
 
-GuiUtils.addUIGradient = function(frame:Frame, colorSequence: ColorSequence, opt_leftToRight: boolean?): UIGradient
-    local uiGradient = Instance.new("UIGradient")
-    uiGradient.Parent = frame
-    uiGradient.Color = colorSequence
-    if opt_leftToRight == nil or not opt_leftToRight then
-        uiGradient.Rotation = 90
+GuiUtils.applyInstanceOptions = function(instance: Instance, opt_instanceOptions: CommonTypes.InstanceOptions?)
+    if not opt_instanceOptions then
+        return
+    end
+    for key, value in pairs(opt_instanceOptions) do
+        -- Note: I could pcall this to make it not die if you use a bad property name but I'd rather things fail so
+        -- you notice something is wrong.
+        instance[key] = value
     end
 end
 
-GuiUtils.getMainFrame = function(screenGui: ScreenGui): Frame?
-    local mainFrame = screenGui:FindFirstChild(GuiUtils.mainFrameName)
+
+GuiUtils.addPadding = function(guiObject: GuiObject, opt_instanceOptions: CommonTypes.InstanceOptions?): UIPadding
+    local uiPadding = Instance.new("UIPadding")
+    uiPadding.Parent = guiObject
+    uiPadding.Name = "UniformPadding"
+    local defaultPadding = UDim.new(0, GuiUtils.standardPaddingPixels)
+
+    uiPadding.PaddingLeft = defaultPadding
+    uiPadding.PaddingRight = defaultPadding
+    uiPadding.PaddingTop = defaultPadding
+    uiPadding.PaddingBottom = defaultPadding
+
+    GuiUtils.applyInstanceOptions(uiPadding, opt_instanceOptions)
+
+    return uiPadding
+end
+GuiUtils.addUIGradient = function(frame:Frame, colorSequence: ColorSequence, opt_instanceOptions: CommonTypes.InstanceOptions): UIGradient
+    local uiGradient = Instance.new("UIGradient")
+    uiGradient.Parent = frame
+    uiGradient.Color = colorSequence
+    uiGradient.Rotation = 90
+
+    GuiUtils.applyInstanceOptions(uiGradient, opt_instanceOptions)
+end
+
+GuiUtils.getMainScreenGui = function(): ScreenGui
+    assert(mainScreenGui, "Should have a mainScreenGui")
+    return mainScreenGui
+
+end
+
+GuiUtils.getMainFrame = function(): Frame?
+    assert(mainScreenGui, "Should have a mainScreenGui")
+    local mainFrame = mainScreenGui:FindFirstChild(GuiUtils.mainFrameName)
     assert(mainFrame, "Should have a mainFrame")
     return mainFrame
 end
@@ -78,16 +126,57 @@ GuiUtils.getLayoutOrder = function(parent:Instance): number
     return layoutOrder
 end
 
-GuiUtils.makeLayoutOrderGenerator = function(parent:Instance)
+GuiUtils.addLayoutOrderGenerator = function(parent:Instance)
     local layoutOrderGenerator = Instance.new("IntValue")
     layoutOrderGenerator.Parent = parent
     layoutOrderGenerator.Value = 0
     layoutOrderGenerator.Name = layoutOrderGeneratorName
 end
 
+-- Make a text label, standardized look & feel.
+GuiUtils.addTextLabel = function(parent: Instance, text: string, opt_instanceOptions: CommonTypes.InstanceOptions): TextLabel
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Name = GuiUtils.textLabelName
+
+    textLabel.Parent = parent
+    textLabel.Size = UDim2.fromOffset(0, GuiUtils.textLabelHeight)
+    textLabel.Position = UDim2.fromScale(0, 0)
+    textLabel.AutomaticSize = Enum.AutomaticSize.XY
+    textLabel.Text = text
+    textLabel.TextSize = GuiUtils.textLabelFontSize
+    textLabel.BorderSizePixel = 0
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.TextYAlignment = Enum.TextYAlignment.Center
+
+    GuiUtils.applyInstanceOptions(textLabel, opt_instanceOptions)
+
+    return textLabel
+end
+
+-- Conveniencce for adding ui list layout.
+-- Defaults to vertical fill direction, vertical align center, horizontal align left.
+-- This can be overridden with options.
+-- Defaults to center/center.
+GuiUtils.addUIListLayout = function(frame: Frame, opt_instanceOptions: CommonTypes.InstanceOptions) : UIListLayout
+    local uiListLayout = Instance.new("UIListLayout")
+    uiListLayout.Name = "UIListLayout"
+    uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    uiListLayout.Parent = frame
+    uiListLayout.Padding = UDim.new(0, 5)
+
+    uiListLayout.FillDirection = Enum.FillDirection.Vertical
+    uiListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+    uiListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+    GuiUtils.applyInstanceOptions(uiListLayout, opt_instanceOptions)
+
+    return uiListLayout
+end
+
 -- Make a row spanning the screen left to right.
 -- Give it a layout order so it sorts properly with other rows.
--- If text is given, add a label widget as the first child of the row.
+-- If label text is given in options, add a label as first rightmost child.
 -- Add "rowContent" as the second child of the row.
 -- Return this "rowContent": this is where we stick the useful widgets for this row.
 --
@@ -98,51 +187,71 @@ end
 --  |   of row      |  | widget | widget
 --  |               |  +--------+--------
 --  +--------------------------------------------
-GuiUtils.makeRowWithLabelAndReturnRowContent = function(parent:Instance, rowName: string, text: string?, opt_useGridLayout: boolean?): Instance
+GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, opt_rowOptions: CommonTypes.RowOptions?, opt_instanceOptions: CommonTypes.InstanceOptions?): GuiObject
     assert(parent, "Should have a parent")
     assert(rowName, "Should have a rowName")
+
+    local rowOptions = opt_rowOptions or {}
 
     local row = Instance.new("Frame")
     row.Name = rowName
     row.Parent = parent
     row.Size = UDim2.new(1, -10, 0, 0)
-    row.Position = UDim2.new(0, 0, 0, 0)
+    row.Position = UDim2.fromScale(0, 0)
     row.BorderSizePixel = 0
 
     row.LayoutOrder = GuiUtils.getLayoutOrder(parent)
     row.AutomaticSize = Enum.AutomaticSize.Y
     row.BackgroundTransparency = 1.0
 
-    if text then
-        GuiUtils.makeTextLabel(row, text)
+    GuiUtils.addUIListLayout(row, {
+        FillDirection = Enum.FillDirection.Horizontal,
+        HorizontalAlignment = rowOptions.horizontalAlignment or Enum.HorizontalAlignment.Left,
+    })
+
+    if rowOptions.labelText then
+        GuiUtils.addTextLabel(row, rowOptions.labelText)
     end
 
-    local rowContent = Instance.new("Frame")
+    local rowContent
+    if rowOptions.isScrolling then
+        rowContent = Instance.new("ScrollingFrame")
+        rowContent.AutomaticCanvasSize = Enum.AutomaticSize.XY
+        rowContent.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+        rowContent.HorizontalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+        rowContent.ScrollingDirection = Enum.ScrollingDirection.Y
+    else
+        rowContent = Instance.new("Frame")
+    end
     rowContent.Parent = row
-    rowContent.Size = UDim2.new(0, 0, 0, 0)
+    rowContent.Size = UDim2.fromScale(0, 0)
     rowContent.AutomaticSize = Enum.AutomaticSize.XY
-    rowContent.Position = UDim2.new(0, 0, 0, 0)
+    rowContent.Position = UDim2.fromScale(0, 0)
     rowContent.Name = rowContentName
     rowContent.LayoutOrder = 2
     rowContent.BackgroundTransparency = 1
     rowContent.BorderSizePixel = 0
 
     -- Rows usually contain ordered list of widgets, add a layout order generator.
-    GuiUtils.makeLayoutOrderGenerator(rowContent)
+    GuiUtils.addLayoutOrderGenerator(rowContent)
 
-    if opt_useGridLayout then
+    if rowOptions.useGridLayout then
         local uiGridLayout = Instance.new("UIGridLayout")
         uiGridLayout.Parent = rowContent
         uiGridLayout.FillDirection = Enum.FillDirection.Horizontal
+        uiGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
         uiGridLayout.Name = rowUIGridLayoutName
         uiGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        -- FIXME(dbanks)
-        -- This is just junk/random value.  Should be passsed in I guess?
-        uiGridLayout.CellSize = UDim2.new(0, 200, 0, 30)
+        if rowOptions.gridCellSize then
+            uiGridLayout.CellSize = rowOptions.gridCellSize
+        end
     else
-        GuiUtils.makeUiListLayout(rowContent, true)
+        GuiUtils.addUIListLayout(rowContent, {
+            FillDirection = Enum.FillDirection.Horizontal,
+        })
     end
 
+    GuiUtils.applyInstanceOptions(rowContent, opt_instanceOptions)
 
     return rowContent
 end
@@ -164,21 +273,14 @@ GuiUtils.getRowContent = function(parent: GuiObject, rowName: string): Frame
     return rowContent
 end
 
--- Make a row with no label.
-GuiUtils.makeRowAndReturnRowContent = function(parent:Instance, rowName: string): Instance
-    assert(parent, "Should have a parent")
-    assert(rowName, "Should have a rowName")
-    return GuiUtils.makeRowWithLabelAndReturnRowContent(parent, rowName, nil)
-end
-
 -- Make a button with common look & feel.
-GuiUtils.makeTextButton = function(parent: Instance, text: string, callback: () -> ()): Instance
+GuiUtils.addTextButton = function(parent: Instance, text: string, callback: () -> ()): Instance
     local button = Instance.new("TextButton")
     button.Name = GuiUtils.textButtonName
     button.Parent = parent
-    button.Size = UDim2.new(0, 0, 1, 0)
-    button.AutomaticSize = Enum.AutomaticSize.X
-    button.Position = UDim2.new(0, 0, 0, 0)
+    button.Size = UDim2.fromScale(0, 0)
+    button.AutomaticSize = Enum.AutomaticSize.XY
+    button.Position = UDim2.fromScale(0, 0)
     button.Text = text
     button.TextSize = 14
     button.MouseButton1Click:Connect(function()
@@ -187,14 +289,10 @@ GuiUtils.makeTextButton = function(parent: Instance, text: string, callback: () 
         end
         callback()
     end)
-    button.BorderSizePixel = 3
 
     GuiUtils.addCorner(button)
 
-    local uiPadding = Instance.new("UIPadding")
-    uiPadding.Parent = button
-    uiPadding.PaddingLeft = GuiUtils.horizontalPadding
-    uiPadding.PaddingRight = GuiUtils.horizontalPadding
+    GuiUtils.addPadding(button)
 
     return button
 end
@@ -217,31 +315,10 @@ GuiUtils.getGameName = function(gameId: CommonTypes.GameId): string?
     end
 end
 
--- Make a text label, standardized look & feel.
-GuiUtils.makeTextLabel = function(parent: Instance, text: string, opt_richText: boolean?): TextLabel
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Name = GuiUtils.textLabelName
-    if opt_richText then
-        textLabel.RichText = true
-    end
-    textLabel.Parent = parent
-    textLabel.Size = UDim2.new(0, 0, 0, GuiUtils.textLabelHeight)
-    textLabel.Position = UDim2.new(0, 0, 0, 0)
-    textLabel.AutomaticSize = Enum.AutomaticSize.XY
-    textLabel.TextWrapped = true
-    textLabel.Text = text
-    textLabel.TextSize = GuiUtils.textLabelFontSize
-    textLabel.BorderSizePixel = 0
-    textLabel.BackgroundTransparency = 1
-    textLabel.TextXAlignment = Enum.TextXAlignment.Left
-    textLabel.TextYAlignment = Enum.TextYAlignment.Center
-    return textLabel
-end
-
 --[[
     Make a clickable button representing a game table.
 ]]
-GuiUtils.makeTableButton = function(parent: Instance, tableDescription: CommonTypes.TableDescription, onButtonCiicked: () -> nil): GuiObject
+GuiUtils.addTableButton = function(parent: Instance, tableDescription: CommonTypes.TableDescription, onButtonCiicked: () -> nil): GuiObject
     -- FIXME(dbanks)
     -- Someday a nice large button with image of game, name, host, description, etc.
     -- For now just host name and game name as a text button.
@@ -251,28 +328,84 @@ GuiUtils.makeTableButton = function(parent: Instance, tableDescription: CommonTy
     assert(gameName, "No game name for " .. tableDescription.gameId)
     local buttonText = "\"" .. gameName .. "\" hosted by " .. hostName
 
-    return GuiUtils.makeTextButton(parent, buttonText, onButtonCiicked)
+    return GuiUtils.addTextButton(parent, buttonText, onButtonCiicked)
 end
 
-GuiUtils.makeUserButton = function(parent: Instance, playerName: string, playerThumbnail: string, onButtonClicked: () -> nil): GuiObject
+local gameButtonOrWidgetHelper = function(frame: GuiObject, gameDetails: CommonTypes.GameDetails)
+    assert(gameDetails, "Should have gameDetails")
+    Utils.debugPrint("Doug: gameDetails = ", gameDetails)
+
+    frame.Size = UDim2.fromOffset(GuiUtils.gameWidgetX, GuiUtils.gameWidgetY)
+    frame.BackgroundColor3 = Color3.new(1, 1, 1)
+
+    GuiUtils.addUIGradient(frame, GuiUtils.whiteToGrayColorSequence)
+    GuiUtils.addCorner(frame)
+    GuiUtils.addUIListLayout(frame, {
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+    })
+    GuiUtils.addPadding(frame)
+
+    local textLabel = GuiUtils.addTextLabel(frame, gameDetails.name, {
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+    })
+    -- Twiddle this a bit...
+    textLabel.TextSize = GuiUtils.gameTextLabelFontSize
+    textLabel.Size = UDim2.new(1, 0, 0, GuiUtils.gameLabelHeight)
+    textLabel.AutomaticSize = Enum.AutomaticSize.None
+    textLabel.LayoutOrder = 1
+
+    local imageLabel = Instance.new("ImageLabel")
+    imageLabel.Name = "GameImage"
+    imageLabel.ScaleType = Enum.ScaleType.Fit
+    imageLabel.BackgroundTransparency = 1
+    imageLabel.Parent = frame
+    local sideLength = GuiUtils.gameWidgetY - 3 * GuiUtils.standardPaddingPixels - GuiUtils.gameLabelHeight
+    imageLabel.Size = UDim2.fromOffset(sideLength, sideLength)
+    imageLabel.LayoutOrder = 2
+    Utils.debugPrint("Doug: gameDetails = ", gameDetails)
+    imageLabel.Image = gameDetails.gameImage
+    GuiUtils.addCorner(imageLabel)
+end
+
+GuiUtils.addGameButton = function(parent: Instance, gameDetails: CommonTypes.GameDetails, onButtonClicked: () -> nil): GuiObject
+    local button = Instance.new("TextButton")
+    button.Parent = parent
+
+    button.Text = ""
+    button.Name = "GameButton"
+    button.Activated:Connect(onButtonClicked)
+
+    gameButtonOrWidgetHelper(button, gameDetails)
+
+    return button
+end
+
+GuiUtils.addGameWidget = function(parent: Instance, gameDetails: CommonTypes.GameDetails): GuiObject
+    -- Frame with name and image.
     -- FIXME(dbanks)
-    -- Someday a nice large button with image of user, name, etc.
-    -- For now just text button with name,
-    return GuiUtils.makeTextButton(parent, playerName, onButtonClicked)
+    -- Make this look cooler.
+    local frame = Instance.new("Frame")
+    frame.Name = "GameWidget"
+    frame.Parent = parent
+
+    gameButtonOrWidgetHelper(frame, gameDetails)
+
+    return frame
 end
 
-GuiUtils.makeGameButton = function(parent: Instance, gameDetails: CommonTypes.GameDetails, onButtonClicked: () -> nil): GuiObject
-    -- FIXME(dbanks)
-    -- Someday a nice large button with image of game, description, etc.
-    -- For now just text button with name,
-    return GuiUtils.makeTextButton(parent, gameDetails.name, onButtonClicked)
-end
-
-GuiUtils.makeUserWidget = function(parent: Instance, playerName: string, playerThumbnail: string): GuiObject
+GuiUtils.addUserWidget = function(parent: Instance, playerName: string, playerThumbnail: string): GuiObject
     -- FIXME(dbanks)
     -- Someday a nice large widget with image of user, name, etc.
     -- For now just text label with name,
-    return GuiUtils.makeTextLabel(parent, playerName)
+    return GuiUtils.addTextLabel(parent, playerName)
+end
+
+GuiUtils.addUserButton = function(parent: Instance, playerName: string, playerThumbnail: string, onButtonClicked: () -> nil): GuiObject
+    -- FIXME(dbanks)
+    -- Someday a nice large button with image of user, name, etc.
+    -- For now just text button with name,
+    return GuiUtils.addTextButton(parent, playerName, onButtonClicked)
 end
 
 -- We want to have the set of widgets correspond 1-1 with the given ids.
@@ -454,7 +587,7 @@ local makeWidgetContainer = function(parent:GuiObject, widgetType: string, _item
 
     local widgetContainer = Instance.new("Frame")
     widgetContainer.Parent = parent
-    widgetContainer.Size = UDim2.new(0, 0, 0, GuiUtils.minWidgetContainerHeight)
+    widgetContainer.Size = UDim2.fromOffset(0, GuiUtils.minWidgetContainerHeight)
     widgetContainer.BackgroundColor3 = Color3.new(0.8, 0.8, 0.8)
     widgetContainer.BorderSizePixel = 0
     widgetContainer.Name = GuiUtils.constructWidgetContainerName(widgetType, itemId)
@@ -476,20 +609,20 @@ local makeWidgetContainer = function(parent:GuiObject, widgetType: string, _item
 end
 
 -- Make a widgetContainer containing a clickable button representing a table.
-GuiUtils.makeTableButtonWidgetContainer = function(parent: Instance, tableId: number, onClick: () -> nil): Frame
+GuiUtils.addTableButtonWidgetContainer = function(parent: Instance, tableId: number, onClick: () -> nil): Frame
     local tableDescription = TableDescriptions.getTableDescription(tableId)
     -- Should exist.
     assert(tableDescription, "Should have a tableDescription")
     local tableButtonContainer = makeWidgetContainer(parent, "Table", tableId)
 
-    GuiUtils.makeTableButton(tableButtonContainer, tableDescription, onClick)
+    GuiUtils.addTableButton(tableButtonContainer, tableDescription, onClick)
 
     return tableButtonContainer
 end
 
 -- Make a widgetContainer containing a user (name, thumbnail, etc).
 -- If a callback is given, make it a button, else it's just a static frame.
-GuiUtils.makeUserWidgetContainer = function(parent: Instance, userId: number, onClick: ((userId) -> nil)?): Frame
+GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, onClick: ((userId) -> nil)?): Frame
     -- So what will happen:
     -- We return a table button container with "loading" message.
     -- We fire off a fetch to get async info.
@@ -497,7 +630,7 @@ GuiUtils.makeUserWidgetContainer = function(parent: Instance, userId: number, on
     -- FIXME(dbanks)
     -- Make nicer: loading message could be a swirly or whatever.
     local tableButtonContainer = makeWidgetContainer(parent, "User", userId)
-    local waitingWidget = GuiUtils.makeTextLabel(tableButtonContainer, "Loading...")
+    local waitingWidget = GuiUtils.addTextLabel(tableButtonContainer, "Loading...")
     waitingWidget.Name = widgetLoadingName
 
 
@@ -517,11 +650,11 @@ GuiUtils.makeUserWidgetContainer = function(parent: Instance, userId: number, on
         waitingWidget:Destroy()
 
         if onClick then
-            GuiUtils.makeUserButton(tableButtonContainer, playerName, playerThumbnail, function()
+            GuiUtils.addUserButton(tableButtonContainer, playerName, playerThumbnail, function()
                 onClick(userId)
             end)
         else
-            GuiUtils.makeUserWidget(tableButtonContainer, playerName, playerThumbnail)
+            GuiUtils.addUserWidget(tableButtonContainer, playerName, playerThumbnail)
         end
     end)
 
@@ -529,16 +662,16 @@ GuiUtils.makeUserWidgetContainer = function(parent: Instance, userId: number, on
 end
 
 -- A generic text button in a widget container.
-GuiUtils.makeTextButtonWidgetContainer = function(parent: Instance, text: string, onClick: () -> nil): Frame
+GuiUtils.addTextButtonWidgetContainer = function(parent: Instance, text: string, onClick: () -> nil): Frame
     local textButtonContainer = makeWidgetContainer(parent, "TextButtonWidgetContainer", nil)
-    GuiUtils.makeTextButton(textButtonContainer, text, onClick)
+    GuiUtils.addTextButton(textButtonContainer, text, onClick)
     return textButtonContainer
 end
 
 -- Make a widget container containing a text label.
-GuiUtils.makeTextLabelWidgetContainer = function(parent: Instance, text: string): Frame
+GuiUtils.addTextLabelWidgetContainer = function(parent: Instance, text: string, opt_instanceOptions: CommonTypes.InstanceOptions): Frame
     local textLabelContainer = makeWidgetContainer(parent, "TextLabelWidgetContainer", nil)
-    GuiUtils.makeTextLabel(textLabelContainer, text)
+    GuiUtils.addTextLabel(textLabelContainer, text, opt_instanceOptions)
     return textLabelContainer
 end
 
@@ -559,42 +692,61 @@ GuiUtils.updateTextButtonEnabledInWidgetContainer = function(widgetContainer: Fr
     textButton.Active = enabled
 end
 
--- Conveniencce for adding vertical list layout, order based on layout order.
-GuiUtils.makeUiListLayout = function(frame: Frame, opt_useHorizontal: boolean) : UIListLayout
-    local uiListLayout = Instance.new("UIListLayout")
-    uiListLayout.FillDirection = Enum.FillDirection.Vertical
-    uiListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    if opt_useHorizontal then
-        uiListLayout.FillDirection = Enum.FillDirection.Horizontal
-    else
-        uiListLayout.FillDirection = Enum.FillDirection.Vertical
+local function getOptionValue(gameOption: CommonTypes.GameOption, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions): string?
+    -- Does this particular option have a non-default value?
+    local opt_nonDefaultGameOption = nonDefaultGameOptions[gameOption.gameOptionId]
+    if opt_nonDefaultGameOption then
+        -- Yes it does.  How we write about the value turns on whether the option is a bool or has variants.
+        if gameOption.opt_variants then
+            -- This is a variant option: the value of the non-default option is an index.
+            assert(typeof(opt_nonDefaultGameOption) == "number", "Should have a number")
+            local variant = gameOption.opt_variants[opt_nonDefaultGameOption]
+            assert(variant, "Should have a variant")
+            return variant.Name
+        end
+
+        -- It's a bool.
+        assert(typeof(opt_nonDefaultGameOption) == "boolean", "Should have a boolean")
+        if opt_nonDefaultGameOption then
+            return "Yes"
+        else
+            return "No"
+        end
     end
-    uiListLayout.Parent = frame
 
-    uiListLayout.Padding = UDim.new(0, 5)
+    -- We are using default value.
+    -- For variants, it's the first.
+    if gameOption.opt_variants then
+        assert(#gameOption.opt_variants > 0, "Should have at least one variant")
+        local variant = gameOption.opt_variants[1]
+        assert(variant, "Should have a variant")
+        return variant.name
+    end
 
-    return uiListLayout
+    -- It's a bool, and default is "off"/"no"
+    return "No"
 end
 
-GuiUtils.getSelectedOptionsString = function(tableDescription: CommonTypes.TableDescription): string
+GuiUtils.getSelectedGameOptionsString = function(tableDescription: CommonTypes.TableDescription): string?
     local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
 
-    if not gameDetails.configOptions then
-        return
+    -- Game doesn't even have options: nothing to say.
+    if not gameDetails.gameOptions then
+        return nil
     end
 
     local enabledOptionsStrings = {}
-    for _, optionId in tableDescription.enabledGameOptions do
-        local optionName
-        for _, gameOption in gameDetails.gameOptions do
-            if gameOption.id == optionId then
-                optionName = gameOption.name
-                break
-            end
-        end
-        assert(optionId, "Should have an optionId")
-        table.insert(enabledOptionsStrings, optionName)
+    local nonDefaultGameOptions = tableDescription.opt_nonDefaultGameOptions or {}
+
+    for _, gameOption in gameDetails.gameOptions do
+        local optionName = gameOption.name
+        assert(optionName, "Should have an optionName")
+        local optionValue = getOptionValue(gameOption, nonDefaultGameOptions)
+        assert(optionValue, "Should have an optionValue"
+    )
+        local optionString = optionName .. ": " .. optionValue
+
+        table.insert(enabledOptionsStrings, optionString)
     end
     if #enabledOptionsStrings == 0 then
         return "(None)"

@@ -1,8 +1,12 @@
 local DataStoreService = game:GetService("DataStoreService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+-- Shared
+local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
+local Cryo = require(ReplicatedStorage.Cryo)
+
 local playerHistory = DataStoreService:GetDataStore("PlayerHistory")
-local Cryo = ReplicatedStorage.Cryo
 
 local module = {}
 
@@ -13,7 +17,7 @@ module.GetPlayerRecord = function(userId)
         return playerHistory:GetAsync(userId)
     end)
     if getSuccess then
-        print("it worked")
+        Utils.debugPrint("it worked")
     else
         currentHistory = {}
     end

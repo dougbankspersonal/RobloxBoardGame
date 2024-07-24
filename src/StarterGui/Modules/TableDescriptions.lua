@@ -4,10 +4,12 @@ Functions to build and update the UI for selecting a table to join or creating a
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Shared...
+-- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
+local Cryo = require(ReplicatedStorage.Cryo)
 
 local TableDescriptions = {
 }
@@ -44,6 +46,8 @@ TableDescriptions.getTableWithUserId = function(userId: number): CommonTypes.Tab
             -- Should only ever be one.
             assert(retVal == nil, "User should only be in one table")
             retVal = tableDescription
+            -- we could just break here but I want to prove this assumption that any user is part of
+            -- no more than 1 table, so we keep going.
         end
     end
     return retVal
@@ -115,6 +119,36 @@ TableDescriptions.getTableIdsForPublicWaitingTables = function(userId: CommonTyp
     end
 
     return tableIds
+end
+
+TableDescriptions.cleanUpTypes = function(tableDescription: CommonTypes.TableDescription): CommonTypes.TableDescription
+    local retVal = Cryo.Dictionary.join(tableDescription, {})
+
+    Utils.debugPrint("Doug: TableDescriptions.cleanUpTypes 001 retVal = ", retVal)
+    retVal.memberUserIds = {}
+    for userId, v in tableDescription.memberUserIds do
+        Utils.debugPrint("Doug: TableDescriptions.cleanUpTypes userId = ", userId)
+        Utils.debugPrint("Doug: TableDescriptions.cleanUpTypes typeof(userId) = ", typeof(userId))
+        local userIdAsNumber = tonumber(userId)
+        Utils.debugPrint("Doug: TableDescriptions.cleanUpTypes userIdAsNumber = ", userIdAsNumber)
+        Utils.debugPrint("Doug: TableDescriptions.cleanUpTypes typeof(userIdAsNumber) = ", typeof(userIdAsNumber))
+        retVal.memberUserIds[userIdAsNumber] = v
+    end
+    Utils.debugPrint("Doug: TableDescriptions.cleanUpTypes 002 retVal = ", retVal)
+
+    retVal.invitedUserIds = {}
+    for userId, v in tableDescription.invitedUserIds do
+        retVal.invitedUserIds[tonumber(userId)] = v
+    end
+
+    if tableDescription.nonDefaultGameOptions then
+        retVal.nonDefaultGameOptions = {}
+        for gameOptionId, v in tableDescription.nonDefaultGameOptions do
+            retVal.nonDefaultGameOptions[tonumber(gameOptionId)] = v
+        end
+    end
+
+    return retVal
 end
 
 return TableDescriptions

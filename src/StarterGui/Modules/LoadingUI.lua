@@ -19,8 +19,8 @@ everything under mainFrame.
 In this case, we create a tween, and I'd like to be thoughtful about killing the
 tween.
 ]]
-LoadingUI.build = function(screenGui: ScreenGui): {()->nil}
-    local mainFrame = GuiUtils.getMainFrame(screenGui)
+LoadingUI.build = function(): {()->nil}
+    local mainFrame = GuiUtils.getMainFrame()
     assert(mainFrame, "MainFrame not found")
 
     -- FIXME(dbanks): extremely ugly hackery/placeholder.
@@ -32,14 +32,14 @@ LoadingUI.build = function(screenGui: ScreenGui): {()->nil}
 
     GuiUtils.addUIGradient(frame, GuiUtils.blueColorSequence)
 
-    local textLabel = GuiUtils.makeTextLabel(frame, "Loading")
+    local textLabel = GuiUtils.addTextLabel(frame, "Loading")
     textLabel.Name = "LoadingLabel"
     textLabel.TextColor3 = Color3.new(0.8, 0.6, 0.0)
     textLabel.TextStrokeTransparency = 0.5
     textLabel.TextStrokeColor3 = Color3.new(0.0, 0.0, 0.0)
     textLabel.AnchorPoint = Vector2.new(0.5, 0.5)
     textLabel.Position = UDim2.fromScale(0.5, 0.5)
-    textLabel.FontSize = Enum.FontSize.Size48
+    textLabel.TextSize = 48
 
     -- Make it wiggle so you know things are not stuck.
     local jiggleMagnitude = 5

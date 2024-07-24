@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
@@ -16,13 +17,15 @@ local DialogUtils = {}
 --   * Throw on an invisible button to suck up UI stuff that might otherwise
 --     go to mainFrame.
 --  * Manually shut down all the stuff in main frame.
-local function suppressMainFrameInteractions(dialogBackground: Frame, mainFrame: Frame)
+local function suppressMainFrameInteractions(dialogBackground: Frame, mainFrame:Frame)
+    assert(mainFrame, "mainFrame not found")
+    assert(dialogBackground, "dialogBackground not found")
     local dialogInputSink = Instance.new("TextButton")
     dialogInputSink.Parent = dialogBackground
     dialogInputSink.BackgroundColor3 = Color3.new(0, 0, 0)
     dialogInputSink.BackgroundTransparency = 1
-    dialogInputSink.Position = UDim2.new(0, 0, 0, 0)
-    dialogInputSink.Size = UDim2.new(1, 0, 1, 0)
+    dialogInputSink.Position = UDim2.fromScale(0, 0)
+    dialogInputSink.Size = UDim2.fromScale(1, 1)
     dialogInputSink.BorderSizePixel = 0
     dialogInputSink.ZIndex = GuiUtils.dialogInputSinkZIndex
     dialogInputSink.Name = "DialogInputSink"
@@ -38,7 +41,9 @@ local function suppressMainFrameInteractions(dialogBackground: Frame, mainFrame:
     end
 end
 
-local restoreMainFrameInteractions = function(mainFrame: Frame)
+local restoreMainFrameInteractions = function()
+    local mainFrame = GuiUtils.getMainFrame()
+    assert(mainFrame, "MainFrame not found")
     mainFrame.Active = true
     local descendants = mainFrame:GetDescendants()
     for _, d in descendants do
@@ -49,26 +54,38 @@ local restoreMainFrameInteractions = function(mainFrame: Frame)
     end
 end
 
-local cleanupDialog = function(mainFrame: Frame, dialogBackground: Frame)
+DialogUtils.getDialogBackground = function(): Frame?
+    local screenGui = GuiUtils.getMainScreenGui()
+    assert(screenGui, "ScreenGui not found")
+    return screenGui:FindFirstChild("DialogBackground", true)
+end
+
+DialogUtils.cleanupDialog = function()
+    local dialogBackground = DialogUtils.getDialogBackground()
+
+    assert(dialogBackground, "DialogBackground not found")
+
     dialogBackground:Destroy()
-    restoreMainFrameInteractions(mainFrame)
+
+    restoreMainFrameInteractions()
 end
 
 -- Throw up a dialog using the given config.
 -- Clicking any button in the config will kill the dialog and hit the associated callback.
-DialogUtils.makeDialog = function(screenGui: ScreenGui, dialogConfig: CommonTypes.DialogConfig): Frame?
+DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame?
+    local screenGui = GuiUtils.getMainScreenGui()
     -- Can't have two dialogs up at once.
-    local existingDialog = screenGui:FindFirstChild("DialogBackground", true)
-    if existingDialog then
-        print("Doug: tried to put up a dialog when one is already up")
+    local existingDialogBackground = DialogUtils.getDialogBackground()
+    if existingDialogBackground then
+        Utils.debugPrint("Error: tried to put up a dialog when one is already up")
         return nil
     end
 
-    local mainFrame = GuiUtils.getMainFrame(screenGui)
+    local mainFrame = GuiUtils.getMainFrame()
     assert(mainFrame, "MainFrame not found")
 
     local dialogBackground = Instance.new("Frame")
-    dialogBackground.Size = UDim2.new(1, 0, 1, 0)
+    dialogBackground.Size = UDim2.fromScale(1, 1)
     dialogBackground.BackgroundColor3 = Color3.new(0, 0, 0)
     dialogBackground.BackgroundTransparency = 0.5
     dialogBackground.Parent = screenGui
@@ -80,8 +97,10 @@ DialogUtils.makeDialog = function(screenGui: ScreenGui, dialogConfig: CommonType
     -- One way to make this nicer, add some kinda cool tweening effect for dialog
     -- going up/down.
     local dialog = Instance.new("Frame")
-    dialog.Size = UDim2.new(0.5, 0, 0.5, 0)
-    dialog.Position = UDim2.new(0.25, 0, 0.25, 0)
+    dialog.Size = UDim2.fromScale(0.75,0)
+    dialog.Position = UDim2.fromScale(0.5, 0.5)
+    dialog.AnchorPoint = Vector2.new(0.5, 0.5)
+    dialog.AutomaticSize = Enum.AutomaticSize.Y
     dialog.BackgroundColor3 = Color3.new(1, 1, 1)
     dialog.Parent = dialogBackground
     dialog.Name = "Dialog"
@@ -93,35 +112,43 @@ DialogUtils.makeDialog = function(screenGui: ScreenGui, dialogConfig: CommonType
 
     -- A separate frame for content since the cancel button ignores UIListLayout.
     local contentFrame = Instance.new("Frame")
+    contentFrame.Name = "ContentFrame"
     contentFrame.Parent = dialog
-    contentFrame.Size = UDim2.new(1, 0, 1, 0)
-    contentFrame.Position = UDim2.new(0, 0, 0, 0)
+    contentFrame.Size = UDim2.fromScale(1, 0)
+    contentFrame.AutomaticSize = Enum.AutomaticSize.Y
+    contentFrame.Position = UDim2.fromScale(0, 0)
     contentFrame.BackgroundTransparency = 1
     contentFrame.BorderSizePixel = 0
 
-    local uiListLayout = GuiUtils.makeUiListLayout(contentFrame)
-    uiListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    GuiUtils.addPadding(contentFrame)
 
-    local titleContent = GuiUtils.makeRowWithLabelAndReturnRowContent(contentFrame, "Row_Title")
-    local title = GuiUtils.makeTextLabel(titleContent, "<b>" .. dialogConfig.title .. "</b>", true)
+    GuiUtils.addUIListLayout(contentFrame, {
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        VerticalAlignment = Enum.VerticalAlignment.Top,
+    })
+
+    local titleContent = GuiUtils.addRowAndReturnRowContent(contentFrame, "Row_Title")
+    local title = GuiUtils.addTextLabel(titleContent, "<b>" .. dialogConfig.title .. "</b>", {RichText = true})
     title.TextSize = GuiUtils.dialogTitleFontSize
 
-    local descriptionContent = GuiUtils.makeRowWithLabelAndReturnRowContent(contentFrame, "Row_Description")
-    GuiUtils.makeTextLabel(descriptionContent, "<i>" .. dialogConfig.description .. "</i>", true)
+    local descriptionContent = GuiUtils.addRowAndReturnRowContent(contentFrame, "Row_Description")
+    GuiUtils.addTextLabel(descriptionContent, "<i>" .. dialogConfig.description .. "</i>", {
+        RichText = true,
+        TextWrapped = true,
+    })
 
-    local rowContent = GuiUtils.makeRowAndReturnRowContent(contentFrame, "Row_Controls")
-
-    -- There should be exactly one of dialogButtonConfigs or addCustomControls
-    local hasDialogButtonConfigs = dialogConfig.dialogButtonConfigs and #dialogConfig.dialogButtonConfigs > 0 and dialogConfig.addCustomControls == nil
-    local hasAddCustomControls = dialogConfig.addCustomControls and dialogConfig.dialogButtonConfigs == nil
-    assert(hasDialogButtonConfigs or hasAddCustomControls, "Should at least one of dialogButtonConfigs or addCustomControls")
-    assert(not (hasDialogButtonConfigs and hasAddCustomControls), "Should not have both dialogButtonConfigs addCustomControls")
+    -- There should be exactly one of dialogButtonConfigs or makeRowAndAddCustomControls
+    local hasDialogButtonConfigs = dialogConfig.dialogButtonConfigs and #dialogConfig.dialogButtonConfigs > 0
+    local hasMakeRowAndAddCustomControls = dialogConfig.makeRowAndAddCustomControls
+    assert(hasDialogButtonConfigs or hasMakeRowAndAddCustomControls, "Should at least one of dialogButtonConfigs or hasMakeRowAndAddCustomControls")
+    assert(not (hasDialogButtonConfigs and hasMakeRowAndAddCustomControls), "Should not have both dialogButtonConfigs hasMakeRowAndAddCustomControls")
 
     if hasDialogButtonConfigs then
+        local rowContent = GuiUtils.addRowAndReturnRowContent(contentFrame, "Row_Controls")
         for _, dialogButtonConfig in ipairs(dialogConfig.dialogButtonConfigs) do
-            GuiUtils.makeTextButtonWidgetContainer(rowContent, dialogButtonConfig.text, function()
+            GuiUtils.addTextButtonWidgetContainer(rowContent, dialogButtonConfig.text, function()
                 -- Destroy the dialog.
-                cleanupDialog(mainFrame, dialogBackground)
+                DialogUtils.cleanupDialog(mainFrame, dialogBackground)
                 -- Hit callback if provided.
                 if dialogButtonConfig.callback then
                     dialogButtonConfig.callback()
@@ -129,19 +156,19 @@ DialogUtils.makeDialog = function(screenGui: ScreenGui, dialogConfig: CommonType
             end)
         end
     else
-        dialogConfig.addCustomControls(rowContent)
+        dialogConfig.makeRowAndAddCustomControls(contentFrame)
     end
 
     -- Put a cancel button in upper right corner.
     -- Note this is not in "dialogContent" to avoid the UIListLayout.
     local cancelButton = Instance.new("ImageButton")
     cancelButton.Parent = dialog
-    cancelButton.Size = UDim2.new(0, 20, 0, 20)
+    cancelButton.Size = UDim2.fromOffset(20, 20)
     cancelButton.Position = UDim2.new(1, -25, 0, 5)
     cancelButton.Image = "http://www.roblox.com/asset/?id=171846064"
     cancelButton.BackgroundTransparency = 1
     cancelButton.MouseButton1Click:Connect(function()
-        cleanupDialog(mainFrame, dialogBackground)
+        DialogUtils.cleanupDialog(mainFrame, dialogBackground)
     end)
 
     return dialog

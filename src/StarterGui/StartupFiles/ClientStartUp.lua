@@ -1,18 +1,19 @@
 local ClientStartUp = {}
 
--- StarterGui
-local RobloxBoardGameStarterGui = script.Parent.Parent
-local GuiMain = require(RobloxBoardGameStarterGui.Modules.GuiMain)
-local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
-local GameUIs = require(RobloxBoardGameStarterGui.Globals.GameUIs)
-local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
-
 -- Shared
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
+
+-- StarterGui
+local RobloxBoardGameStarterGui = script.Parent.Parent
+local GuiMain = require(RobloxBoardGameStarterGui.Modules.GuiMain)
+local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
+local GameUIs = require(RobloxBoardGameStarterGui.Globals.GameUIs)
+local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
+local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
 
 -- 3d avatar is irrelevant for this game.
 local function turnOffPlayerControls()
@@ -39,21 +40,22 @@ local function configureForBoardGames()
 end
 
 ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, gameUIsByGameId: CommonTypes.GameUIsByGameId)
-    -- must be at least one.
-    assert(#gameDetailsByGameId > 0, "Should have at least one game")
     -- Sanity checks.
     assert(gameDetailsByGameId ~= nil, "Should have non=nil gameDetailsByGameIds")
     assert(gameUIsByGameId ~= nil, "Should have non=nil gameUIsByGameId")
+    -- must be at least one.
+    local numGames = Utils.tableSize(gameDetailsByGameId)
+    assert(numGames > 0, "Should have at least one game")
     assert(Utils.tablesHaveSameKeys(gameDetailsByGameId, gameUIsByGameId), "tables should have same keys")
-    assert(#gameDetailsByGameId > 0, "Should have at least one game")
 
+    -- Set up globals.
     GameDetails.setAllGameDetails(gameDetailsByGameId)
     GameUIs.setAllGameUIs(gameUIsByGameId)
 
     screenGui.IgnoreGuiInset = true
-
     configureForBoardGames()
 
+    GuiUtils.setMainScreenGui(screenGui)
     GuiMain.makeMainFrame(screenGui)
 
     -- Show a loading screen while we fetch data from backend.
@@ -66,15 +68,11 @@ ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId
     -- d) we get the updates
     ClientEventManagement.listenToServerEvents(GuiMain.onTableCreated, GuiMain.onTableDestroyed, GuiMain.onTableUpdated)
 
-    print("Doug: ClientStartUp 001")
     task.spawn(function()
-        print("Doug: ClientStartUp 002")
         local tableDescriptionsByTableId = ClientEventManagement.fetchTableDescriptionsByTableIdAsync()
         TableDescriptions.setTableDescriptions(tableDescriptionsByTableId)
         GuiMain.updateUI()
-        print("Doug: ClientStartUp 003")
     end)
-    print("Doug: ClientStartUp 004")
 end
 
 return ClientStartUp
