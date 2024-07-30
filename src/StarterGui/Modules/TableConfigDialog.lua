@@ -19,6 +19,7 @@ local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local RobloxBoardGameStarterGui = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
 local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
+local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 
 local selectPublicOrPrivate = function(gameId: CommonTypes.GameId, onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
     -- Put up a UI to get public or private.
@@ -51,7 +52,7 @@ local function _makeRowAndAddCustomControls(parent: Frame, gameDetailsByGameId: 
     local rowOptions = {
         isScrolling = true,
         useGridLayout = true,
-        gridCellSize = UDim2.fromOffset(GuiUtils.gameWidgetX, GuiUtils.gameWidgetY),
+        gridCellSize = UDim2.fromOffset(GuiConstants.gameWidgetX, GuiConstants.gameWidgetY),
     }
 
     local rowContent = GuiUtils.addRowAndReturnRowContent(parent, "Row_Controls", rowOptions, {
@@ -64,7 +65,7 @@ local function _makeRowAndAddCustomControls(parent: Frame, gameDetailsByGameId: 
         BackgroundTransparency = 0,
     })
 
-    GuiUtils.addUIGradient(rowContent, GuiUtils.scrollBackgroundGradient)
+    GuiUtils.addUIGradient(rowContent, GuiConstants.scrollBackgroundGradient)
     GuiUtils.addPadding(rowContent, {
         PaddingLeft = UDim.new(0, 0),
         PaddingRight = UDim.new(0, 0),
@@ -73,7 +74,7 @@ local function _makeRowAndAddCustomControls(parent: Frame, gameDetailsByGameId: 
     local gridLayout = rowContent:FindFirstChildWhichIsA("UIGridLayout", true)
     assert(gridLayout, "Should have gridLayout")
     local cellHeight = gridLayout.CellSize.Y.Offset
-    local totalHeight = 2 * cellHeight + 3 * GuiUtils.standardPaddingPixels
+    local totalHeight = 2 * cellHeight + 3 * GuiConstants.standardPadding
     rowContent.Size = UDim2.new(1, 0, 0, totalHeight)
 
     for gid, gameDetails in gameDetailsByGameId do

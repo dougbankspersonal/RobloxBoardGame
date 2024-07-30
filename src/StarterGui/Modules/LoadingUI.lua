@@ -8,7 +8,7 @@ local TweenService = game:GetService("TweenService")
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
-
+local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 --[[
 Build ui elements for an inital "loading" screen while we fetch stuff from the server.
 
@@ -30,7 +30,7 @@ LoadingUI.build = function(): {()->nil}
     frame.Size = UDim2.fromScale(1, 1)
     frame.Position = UDim2.fromOffset(0, 0)
 
-    GuiUtils.addUIGradient(frame, GuiUtils.blueColorSequence)
+    GuiUtils.addUIGradient(frame, GuiConstants.blueColorSequence)
 
     local textLabel = GuiUtils.addTextLabel(frame, "Loading")
     textLabel.Name = "LoadingLabel"

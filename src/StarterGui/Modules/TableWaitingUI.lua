@@ -27,6 +27,7 @@ local RobloxBoardGameStarterGui = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
 local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
 local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
+local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 
 local TableWaitingUI = {}
 
@@ -39,35 +40,45 @@ local gameOptionsWidgetContainerName: string
 local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameDetails, currentTableDescription: CommonTypes.TableDescription)
     -- Game info and host info will not change, might as well fill them in now.
     local rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Game", {
-        labelText = "Game",
-
+        labelText = "Game:",
     })
 
     GuiUtils.addGameWidget(rowContent, gameDetails, true)
 
+    -- Num players row.
+    rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_NumPlayers", {
+        labelText = "Num Players:",
+    })
+    GuiUtils.addTextLabelWidgetContainer(rowContent, GuiUtils.getTableSizeString(gameDetails))
+
+    -- Visiblility row.
+    rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Visibility", {
+        labelText = "Visibility:",
+    })
+    GuiUtils.addTextLabelWidgetContainer(rowContent, if currentTableDescription.isPublic then "Public" else "Private")
+
     -- If there are gameOptions, add a widget to contain that info.
     -- It will be filled in later.
-    Utils.debugPrint("Doug: addGameAndHostInfo gameDetails = ", gameDetails)
-    Utils.debugPrint("Doug: addGameAndHostInfo gameDetails.gameOptions = ", gameDetails.gameOptions)
     if gameDetails.gameOptions and #gameDetails.gameOptions > 0 then
         rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_GameOptions", {
-            labelText = "Game Options",
+            labelText = "Game Options:",
         })
-        Utils.debugPrint("Doug: addGameAndHostInfo currentTableDescription = ", currentTableDescription)
         local selectedOptionsString = GuiUtils.getSelectedGameOptionsString(currentTableDescription)
         assert(selectedOptionsString, "selectedOptionsString should exist")
+
         local gameOptionsLabelWidgetContainer = GuiUtils.addTextLabelWidgetContainer(rowContent, selectedOptionsString,
             {
                 TextWrapped = true,
+                RichText = true,
             })
         assert(gameOptionsLabelWidgetContainer, "Should have gameOptionsLabelWidgetContainer")
         gameOptionsWidgetContainerName = gameOptionsLabelWidgetContainer.Name
     end
 
     rowContent  = GuiUtils.addRowAndReturnRowContent(frame, "Row_Host", {
-        labelText = "Host",
+        labelText = "Host:",
     })
-    GuiUtils.addPlayerWidget(rowContent, currentTableDescription.hostUserId)
+    GuiUtils.addUserWidget(rowContent, currentTableDescription.hostUserId)
 end
 
 local selectFriend = function(onFriendSelected: (userId: CommonTypes.UserId?)
@@ -114,7 +125,9 @@ end
 
 local addTableControls = function (frame: Frame, currentTableDescription: CommonTypes.TableDescription, isHost: boolean)
     -- Make a row for controls.
-    local rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Controls")
+    local rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Controls", {
+        horizontalAlignment = Enum.HorizontalAlignment.Center,
+    })
 
     -- If we are the host, we can start the game.
     if isHost then
@@ -134,11 +147,13 @@ local addTableControls = function (frame: Frame, currentTableDescription: Common
         GuiUtils.addTextButtonWidgetContainer(rowContent, "Destroy Table", function()
             ClientEventManagement.destroyTable(currentTableDescription.tableId)
         end)
+
         if not currentTableDescription.isPublic then
             GuiUtils.addTextButtonWidgetContainer(rowContent, "Add Invites", function()
                 onAddInviteClicked(currentTableDescription.tableId)
             end)
         end
+
         local gameDetails = GameDetails.getGameDetails(currentTableDescription.gameId)
         assert(gameDetails, "Should have gameDetails")
         if gameDetails.gameOptions and #gameDetails.gameOptions > 0 then
@@ -172,6 +187,9 @@ TableWaitingUI.build = function(currentTableDescription: CommonTypes.TableDescri
     local mainFrame = GuiUtils.getMainFrame()
     assert(mainFrame, "MainFrame not found")
 
+    GuiUtils.addUIGradient(mainFrame, GuiConstants.whiteToGrayColorSequence)
+    GuiUtils.addStandardMainFramePadding(mainFrame)
+    GuiUtils.addLayoutOrderGenerator(mainFrame)
     GuiUtils.addUIListLayout(mainFrame)
 
     addGameAndHostInfo(mainFrame, gameDetails, currentTableDescription)
@@ -179,11 +197,14 @@ TableWaitingUI.build = function(currentTableDescription: CommonTypes.TableDescri
     -- Make a row for members (players who have joined), invites (players invited who have not yet joined)
     -- but do not fill in as this info will change: we set this in update function.
     GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_Members", {
-        labelText = "Members",
+        labelText = "Members:",
     })
-    GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_Invites", {
-        labelText = "Invites",
-    })
+
+    if not currentTableDescription.isPublic then
+        GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_Invites", {
+            labelText = "Invites:",
+        })
+    end
 
     addTableControls(mainFrame, currentTableDescription, isHost)
 end
@@ -237,7 +258,7 @@ local updateUserRow = function(parentOfRow: Frame, rowName: string, userIds: {Co
         return userWidgetContainer
     end
 
-    GuiUtils.updateWidgetContainerChildren(rowContent, userIds, makeUserWidgetContainer)
+    GuiUtils.updateWidgetContainerChildren(rowContent, userIds, makeUserWidgetContainer, "<i>None</i>")
 end
 
 local updateGuests = function(parentOfRow: Frame, isHost: boolean, localUserId: CommonTypes.UserId, currentTableDescription: CommonTypes.TableDescription)
@@ -261,10 +282,15 @@ local updateGuests = function(parentOfRow: Frame, isHost: boolean, localUserId: 
             end)
     end
 
-    updateUserRow(parentOfRow, "Row_Members", Cryo.Dictionary.keys(currentTableDescription.memberUserIds), canRemoveGuest, removeGuestCallback)
+    -- We don't want to display the host as a member, remove him.
+    local memberUserIdsWithoutHost = currentTableDescription.memberUserIds
+    memberUserIdsWithoutHost[localUserId] = nil
+
+    updateUserRow(parentOfRow, "Row_Members", Cryo.Dictionary.keys(memberUserIdsWithoutHost), canRemoveGuest, removeGuestCallback)
 end
 
 local updateInvites = function(parentOfRow: Frame, isHost: boolean, currentTableDescription: CommonTypes.TableDescription)
+    print("Doug: updateInvites currentTableDescription = ", currentTableDescription)
     assert(parentOfRow, "Should have a mainFrame")
     assert(currentTableDescription, "Should have a currentTableDescription")
 
@@ -284,8 +310,7 @@ local updateInvites = function(parentOfRow: Frame, isHost: boolean, currentTable
             end)
     end
 
-    -- Update guests.
-    updateUserRow(parentOfRow, "Row_Invites", Cryo.Dictionary.keys(currentTableDescription.memberUserIds), canRemoveInvite, removeInviteCallback)
+    updateUserRow(parentOfRow, "Row_Invites", Cryo.Dictionary.keys(currentTableDescription.invitedUserIds), canRemoveInvite, removeInviteCallback)
 end
 
 local updateTableControls = function(parentOfRow: Frame, currentTableDescription: CommonTypes.TableDescription, isHost: boolean)
@@ -336,7 +361,9 @@ TableWaitingUI.update = function(currentTableDescription: CommonTypes.TableDescr
     updateGuests(mainFrame, isHost, localUserId, currentTableDescription)
 
     -- Keep invites up to date.
-    updateInvites(mainFrame, isHost, currentTableDescription)
+    if not currentTableDescription.isPublic then
+        updateInvites(mainFrame, isHost, currentTableDescription)
+    end
 
     -- Keep controls up to date.
     updateTableControls(mainFrame, currentTableDescription, isHost)

@@ -22,6 +22,7 @@ local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
 local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
 local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
 local TableConfigDialog = require(RobloxBoardGameStarterGui.Modules.TableConfigDialog)
+local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 
 local TableSelectionUI = {}
 
@@ -37,7 +38,7 @@ local function updateInvitedTables(mainFrame: GuiObject)
         GuiUtils.addTableButtonWidgetContainer(parent, tableId, function()
             ClientEventManagement.joinTable(tableId)
         end)
-    end)
+    end, "<i>None</i>")
 end
 
 local function updatePublicTables(mainFrame: GuiObject)
@@ -49,7 +50,7 @@ local function updatePublicTables(mainFrame: GuiObject)
         GuiUtils.addTableButtonWidgetContainer(parent, tableId, function()
             ClientEventManagement.joinTable(tableId)
         end)
-    end)
+    end, "<i>None</i>")
 end
 
 
@@ -70,12 +71,18 @@ TableSelectionUI.build = function()
     local mainFrame = GuiUtils.getMainFrame()
     assert(mainFrame, "MainFrame not found")
 
+    GuiUtils.addUIGradient(mainFrame, GuiConstants.whiteToGrayColorSequence)
+    GuiUtils.addStandardMainFramePadding(mainFrame)
+    GuiUtils.addLayoutOrderGenerator(mainFrame)
+
     GuiUtils.addUIListLayout(mainFrame, {
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
     })
 
     -- Row to add a new table.
-    local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_CreateTable")
+    local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_CreateTable", {
+        horizontalAlignment = Enum.HorizontalAlignment.Center,
+    })
     GuiUtils.addTextButtonWidgetContainer(rowContent, "Host a new Table", function()
         -- user must select a game and whether it is public or invite-only.
         TableConfigDialog.promptForTableConfig(function(gameId, isPublic)
@@ -88,13 +95,13 @@ TableSelectionUI.build = function()
     GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_InvitedTables", {
         isScrolling = true,
         useGridLayout = true,
-        labelText = "Open Invitations",
+        labelText = "Open Invitations:",
     })
     -- Row to show public tables.
     GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_PublicTables", {
         isScrolling = true,
         useGridLayout = true,
-        labelText = "Public Tables",
+        labelText = "Public Tables:",
     })
 end
 

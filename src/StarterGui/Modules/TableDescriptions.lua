@@ -25,6 +25,7 @@ TableDescriptions.getTableDescription = function(tableId: CommonTypes.TableId): 
 end
 
 TableDescriptions.addTableDescription = function(tableDescription: CommonTypes.TableDescription)
+    print("Doug: adding table description = ", tableDescription)
     TableDescriptions.tableDescriptionsByTableId[tableDescription.tableId] = tableDescription
 end
 
@@ -33,6 +34,7 @@ TableDescriptions.removeTableDescription = function(tableId: CommonTypes.TableId
 end
 
 TableDescriptions.updateTableDescription = function(tableDescription: CommonTypes.TableDescription)
+    print("Doug: updating table description = ", tableDescription)
     TableDescriptions.tableDescriptionsByTableId[tableDescription.tableId] = tableDescription
 end
 
@@ -124,17 +126,11 @@ end
 TableDescriptions.cleanUpTypes = function(tableDescription: CommonTypes.TableDescription): CommonTypes.TableDescription
     local retVal = Cryo.Dictionary.join(tableDescription, {})
 
-    Utils.debugPrint("Doug: TableDescriptions.cleanUpTypes 001 retVal = ", retVal)
     retVal.memberUserIds = {}
     for userId, v in tableDescription.memberUserIds do
-        Utils.debugPrint("Doug: TableDescriptions.cleanUpTypes userId = ", userId)
-        Utils.debugPrint("Doug: TableDescriptions.cleanUpTypes typeof(userId) = ", typeof(userId))
         local userIdAsNumber = tonumber(userId)
-        Utils.debugPrint("Doug: TableDescriptions.cleanUpTypes userIdAsNumber = ", userIdAsNumber)
-        Utils.debugPrint("Doug: TableDescriptions.cleanUpTypes typeof(userIdAsNumber) = ", typeof(userIdAsNumber))
         retVal.memberUserIds[userIdAsNumber] = v
     end
-    Utils.debugPrint("Doug: TableDescriptions.cleanUpTypes 002 retVal = ", retVal)
 
     retVal.invitedUserIds = {}
     for userId, v in tableDescription.invitedUserIds do

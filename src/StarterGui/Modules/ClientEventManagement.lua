@@ -55,7 +55,6 @@ ClientEventManagement.listenToServerEvents = function(onTableCreated: (tableDesc
 end
 
 ClientEventManagement.createTable = function(gameId: CommonTypes.GameId, isPublic: boolean)
-    Utils.debugPrint("Doug: in ClientEventManagement.createTable")
     local event = ReplicatedStorage.TableEvents:WaitForChild("CreateNewTable")
     assert(event, "CreateNewTable event missing")
     event:FireServer(gameId, isPublic)

@@ -33,6 +33,7 @@ local tweensToKill = {}:: CommonTypes.TweensToKill
 
 -- Murder all outstanding tweens.
 TweenHandling.killOutstandingTweens = function()
+    print("Doug: killing tweens")
     local plainTweens = Cryo.Dictionary.values(tweensToKill)
     tweensToKill = {}
     for _, tween in plainTweens do
@@ -44,8 +45,10 @@ end
 -- We have some new tweens to monitor.
 -- Make sure when they die they are removed from our global list.
 TweenHandling.saveTweens = function(newTweensToKill: CommonTypes.TweensToKill)
+    print("Doug: saving tweens: newTweensToKill = ", newTweensToKill)
     for key, tween in newTweensToKill do
         tween.Completed:Connect(function(_)
+            print("Doug:tween completed")
             tweensToKill[key] = nil
         end)
     end

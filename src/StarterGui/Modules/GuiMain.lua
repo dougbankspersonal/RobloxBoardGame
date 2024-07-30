@@ -24,6 +24,7 @@ local LoadingUI = require(RobloxBoardGameStarterGui.Modules.LoadingUI)
 local TableSelectionUI = require(RobloxBoardGameStarterGui.Modules.TableSelectionUI)
 local TableWaitingUI = require(RobloxBoardGameStarterGui.Modules.TableWaitingUI)
 local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
+local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 
 -- Globals
 local localUserId = Players.LocalPlayer.UserId
@@ -54,13 +55,12 @@ GuiMain.makeMainFrame = function(): Frame
     mainFrame.Size = UDim2.fromScale(1, 1)
     mainFrame.BackgroundColor3 = Color3.new(1, 1, 1)
     mainFrame.Parent = mainScreenGui
-    mainFrame.ZIndex = GuiUtils.mainFrameZIndex
-    mainFrame.Name = GuiUtils.mainFrameName
+    mainFrame.ZIndex = GuiConstants.mainFrameZIndex
+    mainFrame.Name = GuiConstants.mainFrameName
     mainFrame.BorderSizePixel= 0
 
-    GuiUtils.addUIGradient(mainFrame, GuiUtils.whiteToGrayColorSequence)
-    GuiUtils.addPadding(mainFrame)
-    GuiUtils.addLayoutOrderGenerator(mainFrame)
+    -- No point in adding any children here, they will all be destroyed each time we
+    -- build a new UI.
 
     return mainFrame
 end
@@ -85,8 +85,6 @@ end
 
 local function setCurrentTableAndUIMode()
     currentTableDescription = TableDescriptions.getTableWithUserId(localUserId)
-
-    Utils.debugPrint("Doug: setCurrentTableAndUIMode currentTableDescription = ", currentTableDescription)
 
     -- The local player is not part of any table: we show them the "select/create table" UI.
     if not currentTableDescription then
@@ -157,7 +155,7 @@ GuiMain.updateUI = function()
     if currentUIMode == UIModes.TableSelection then
         TableSelectionUI.update()
     elseif currentUIMode == UIModes.TableWaitingForPlayers then
-        TableWaitingUI.update()
+        TableWaitingUI.update(currentTableDescription)
     elseif currentUIMode == UIModes.TablePlaying then
         updateTablePlayingUI()
     end

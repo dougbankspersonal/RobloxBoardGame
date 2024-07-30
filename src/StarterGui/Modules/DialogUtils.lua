@@ -8,6 +8,7 @@ local Utils = require(RobloxBoardGameShared.Modules.Utils)
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
+local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 
 local DialogUtils = {}
 
@@ -17,7 +18,8 @@ local DialogUtils = {}
 --   * Throw on an invisible button to suck up UI stuff that might otherwise
 --     go to mainFrame.
 --  * Manually shut down all the stuff in main frame.
-local function suppressMainFrameInteractions(dialogBackground: Frame, mainFrame:Frame)
+local function suppressMainFrameInteractions(dialogBackground: Frame)
+    local mainFrame = GuiUtils.getMainFrame()
     assert(mainFrame, "mainFrame not found")
     assert(dialogBackground, "dialogBackground not found")
     local dialogInputSink = Instance.new("TextButton")
@@ -27,7 +29,7 @@ local function suppressMainFrameInteractions(dialogBackground: Frame, mainFrame:
     dialogInputSink.Position = UDim2.fromScale(0, 0)
     dialogInputSink.Size = UDim2.fromScale(1, 1)
     dialogInputSink.BorderSizePixel = 0
-    dialogInputSink.ZIndex = GuiUtils.dialogInputSinkZIndex
+    dialogInputSink.ZIndex = GuiConstants.dialogInputSinkZIndex
     dialogInputSink.Name = "DialogInputSink"
     dialogInputSink.Text = ""
 
@@ -81,18 +83,15 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
         return nil
     end
 
-    local mainFrame = GuiUtils.getMainFrame()
-    assert(mainFrame, "MainFrame not found")
-
     local dialogBackground = Instance.new("Frame")
     dialogBackground.Size = UDim2.fromScale(1, 1)
     dialogBackground.BackgroundColor3 = Color3.new(0, 0, 0)
     dialogBackground.BackgroundTransparency = 0.5
     dialogBackground.Parent = screenGui
     dialogBackground.Name = "DialogBackground"
-    dialogBackground.ZIndex = GuiUtils.dialogBackgroundZIndex
+    dialogBackground.ZIndex = GuiConstants.dialogBackgroundZIndex
 
-    suppressMainFrameInteractions(dialogBackground, mainFrame)
+    suppressMainFrameInteractions(dialogBackground)
 
     -- One way to make this nicer, add some kinda cool tweening effect for dialog
     -- going up/down.
@@ -105,8 +104,8 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     dialog.Parent = dialogBackground
     dialog.Name = "Dialog"
     dialog.BorderSizePixel = 0
-    dialog.ZIndex = GuiUtils.dialogZIndex
-    GuiUtils.addUIGradient(dialog, GuiUtils.whiteToGrayColorSequence)
+    dialog.ZIndex = GuiConstants.dialogZIndex
+    GuiUtils.addUIGradient(dialog, GuiConstants.whiteToGrayColorSequence)
 
     GuiUtils.addCorner(dialog)
 
@@ -129,7 +128,7 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
 
     local titleContent = GuiUtils.addRowAndReturnRowContent(contentFrame, "Row_Title")
     local title = GuiUtils.addTextLabel(titleContent, "<b>" .. dialogConfig.title .. "</b>", {RichText = true})
-    title.TextSize = GuiUtils.dialogTitleFontSize
+    title.TextSize = GuiConstants.dialogTitleFontSize
 
     local descriptionContent = GuiUtils.addRowAndReturnRowContent(contentFrame, "Row_Description")
     GuiUtils.addTextLabel(descriptionContent, "<i>" .. dialogConfig.description .. "</i>", {
@@ -148,7 +147,7 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
         for _, dialogButtonConfig in ipairs(dialogConfig.dialogButtonConfigs) do
             GuiUtils.addTextButtonWidgetContainer(rowContent, dialogButtonConfig.text, function()
                 -- Destroy the dialog.
-                DialogUtils.cleanupDialog(mainFrame, dialogBackground)
+                DialogUtils.cleanupDialog()
                 -- Hit callback if provided.
                 if dialogButtonConfig.callback then
                     dialogButtonConfig.callback()
@@ -168,7 +167,7 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     cancelButton.Image = "http://www.roblox.com/asset/?id=171846064"
     cancelButton.BackgroundTransparency = 1
     cancelButton.MouseButton1Click:Connect(function()
-        DialogUtils.cleanupDialog(mainFrame, dialogBackground)
+        DialogUtils.cleanupDialog()
     end)
 
     return dialog
