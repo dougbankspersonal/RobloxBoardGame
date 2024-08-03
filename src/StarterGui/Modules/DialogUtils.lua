@@ -12,54 +12,10 @@ local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 
 local DialogUtils = {}
 
--- mainFrame being set to Inactive, I'd expect, would mean that elements on the
--- mainFrame no longer highlight on mouseover.  Nope.
--- So when dialog goes up we:
---   * Throw on an invisible button to suck up UI stuff that might otherwise
---     go to mainFrame.
---  * Manually shut down all the stuff in main frame.
-local function suppressMainFrameInteractions(dialogBackground: Frame)
-    local mainFrame = GuiUtils.getMainFrame()
-    assert(mainFrame, "mainFrame not found")
-    assert(dialogBackground, "dialogBackground not found")
-    local dialogInputSink = Instance.new("TextButton")
-    dialogInputSink.Parent = dialogBackground
-    dialogInputSink.BackgroundColor3 = Color3.new(0, 0, 0)
-    dialogInputSink.BackgroundTransparency = 1
-    dialogInputSink.Position = UDim2.fromScale(0, 0)
-    dialogInputSink.Size = UDim2.fromScale(1, 1)
-    dialogInputSink.BorderSizePixel = 0
-    dialogInputSink.ZIndex = GuiConstants.dialogInputSinkZIndex
-    dialogInputSink.Name = "DialogInputSink"
-    dialogInputSink.Text = ""
-
-    mainFrame.Active = false
-    local descendants = mainFrame:GetDescendants()
-    for _, d in descendants do
-        if d:IsA("GuiButton") then
-            d.Active = false
-            d.AutoButtonColor = false
-        end
-    end
-end
-
-local restoreMainFrameInteractions = function()
-    local mainFrame = GuiUtils.getMainFrame()
-    assert(mainFrame, "MainFrame not found")
-    mainFrame.Active = true
-    local descendants = mainFrame:GetDescendants()
-    for _, d in descendants do
-        if d:IsA("GuiButton") then
-            d.Active = true
-            d.AutoButtonColor = true
-        end
-    end
-end
-
 DialogUtils.getDialogBackground = function(): Frame?
-    local screenGui = GuiUtils.getMainScreenGui()
-    assert(screenGui, "ScreenGui not found")
-    return screenGui:FindFirstChild("DialogBackground", true)
+    local containingScrollingFrame = GuiUtils.getContainingScrollingFrame()
+    assert(containingScrollingFrame, "ScreenGui not found")
+    return containingScrollingFrame:FindFirstChild(GuiConstants.dialogBackgroundName, true)
 end
 
 DialogUtils.cleanupDialog = function()
@@ -68,14 +24,12 @@ DialogUtils.cleanupDialog = function()
     assert(dialogBackground, "DialogBackground not found")
 
     dialogBackground:Destroy()
-
-    restoreMainFrameInteractions()
 end
 
 -- Throw up a dialog using the given config.
 -- Clicking any button in the config will kill the dialog and hit the associated callback.
 DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame?
-    local screenGui = GuiUtils.getMainScreenGui()
+    local containingScrollingFrame = GuiUtils.getContainingScrollingFrame()
     -- Can't have two dialogs up at once.
     local existingDialogBackground = DialogUtils.getDialogBackground()
     if existingDialogBackground then
@@ -83,15 +37,28 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
         return nil
     end
 
-    local dialogBackground = Instance.new("Frame")
+    -- Make it a text button so it soaks up input.
+    local dialogBackground = Instance.new("TextButton")
     dialogBackground.Size = UDim2.fromScale(1, 1)
     dialogBackground.BackgroundColor3 = Color3.new(0, 0, 0)
     dialogBackground.BackgroundTransparency = 0.5
-    dialogBackground.Parent = screenGui
-    dialogBackground.Name = "DialogBackground"
+    dialogBackground.Parent = containingScrollingFrame
+    dialogBackground.Name = GuiConstants.dialogBackgroundName
     dialogBackground.ZIndex = GuiConstants.dialogBackgroundZIndex
+    dialogBackground.AutomaticSize = Enum.AutomaticSize.XY
+    dialogBackground.Text = ""
 
-    suppressMainFrameInteractions(dialogBackground)
+    GuiUtils.addPadding(dialogBackground, {
+        PaddingTop = UDim.new(0, GuiConstants.dialogOuterPadding),
+        PaddingBottom = UDim.new(0, GuiConstants.dialogOuterPadding),
+        PaddingLeft = UDim.new(0, GuiConstants.dialogOuterPadding),
+        PaddingRight = UDim.new(0, GuiConstants.dialogOuterPadding),
+    })
+
+    GuiUtils.addUIListLayout(dialogBackground, {
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+    })
 
     -- One way to make this nicer, add some kinda cool tweening effect for dialog
     -- going up/down.
@@ -131,7 +98,7 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     title.TextSize = GuiConstants.dialogTitleFontSize
 
     local descriptionContent = GuiUtils.addRowAndReturnRowContent(contentFrame, "Row_Description")
-    GuiUtils.addTextLabel(descriptionContent, "<i>" .. dialogConfig.description .. "</i>", {
+    GuiUtils.addTextLabel(descriptionContent, GuiUtils.italicize(dialogConfig.description), {
         RichText = true,
         TextWrapped = true,
     })
@@ -143,7 +110,10 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     assert(not (hasDialogButtonConfigs and hasMakeRowAndAddCustomControls), "Should not have both dialogButtonConfigs hasMakeRowAndAddCustomControls")
 
     if hasDialogButtonConfigs then
-        local rowContent = GuiUtils.addRowAndReturnRowContent(contentFrame, "Row_Controls")
+        local rowContent = GuiUtils.addRowAndReturnRowContent(contentFrame, "Row_Controls", {
+            horizontalAlignment = Enum.HorizontalAlignment.Center,
+        })
+
         for _, dialogButtonConfig in ipairs(dialogConfig.dialogButtonConfigs) do
             GuiUtils.addTextButtonWidgetContainer(rowContent, dialogButtonConfig.text, function()
                 -- Destroy the dialog.
@@ -162,9 +132,9 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     -- Note this is not in "dialogContent" to avoid the UIListLayout.
     local cancelButton = Instance.new("ImageButton")
     cancelButton.Parent = dialog
-    cancelButton.Size = UDim2.fromOffset(20, 20)
-    cancelButton.Position = UDim2.new(1, -25, 0, 5)
-    cancelButton.Image = "http://www.roblox.com/asset/?id=171846064"
+    cancelButton.Size = UDim2.fromOffset(GuiConstants.redXSize, GuiConstants.redXSize)
+    cancelButton.Position = UDim2.new(1, -GuiConstants.redXSize - GuiConstants.redXMargin, 0, GuiConstants.redXMargin)
+    cancelButton.Image = GuiConstants.redXImage
     cancelButton.BackgroundTransparency = 1
     cancelButton.MouseButton1Click:Connect(function()
         DialogUtils.cleanupDialog()

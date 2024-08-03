@@ -38,7 +38,7 @@ local function updateInvitedTables(mainFrame: GuiObject)
         GuiUtils.addTableButtonWidgetContainer(parent, tableId, function()
             ClientEventManagement.joinTable(tableId)
         end)
-    end, "<i>None</i>")
+    end, GuiUtils.italicize("No open invitations"))
 end
 
 local function updatePublicTables(mainFrame: GuiObject)
@@ -50,10 +50,8 @@ local function updatePublicTables(mainFrame: GuiObject)
         GuiUtils.addTableButtonWidgetContainer(parent, tableId, function()
             ClientEventManagement.joinTable(tableId)
         end)
-    end, "<i>None</i>")
+    end, GuiUtils.italicize("No public tables"))
 end
-
-
 
 --[[
     Build ui elements for the table creation/selection ui.

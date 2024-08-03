@@ -14,7 +14,6 @@ local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local UIModes = require(RobloxBoardGameShared.Globals.UIModes)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
-local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
@@ -25,6 +24,7 @@ local TableSelectionUI = require(RobloxBoardGameStarterGui.Modules.TableSelectio
 local TableWaitingUI = require(RobloxBoardGameStarterGui.Modules.TableWaitingUI)
 local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
+local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
 
 -- Globals
 local localUserId = Players.LocalPlayer.UserId
@@ -39,6 +39,22 @@ local uiModeBasedOnTableDescriptions: CommonTypes.UIMode = UIModes.Loading
 -- Iff local user is at a table (either waiting, playing, or finished), this describes that table.
 local currentTableDescription: CommonTypes.TableDescription? = nil
 
+GuiMain.makeContaintingScrollingFrame = function()
+    local mainScreenGui = GuiUtils.getMainScreenGui()
+    assert(mainScreenGui, "Should have a mainScreenGui")
+
+    local containingScrollingFrame = Instance.new("ScrollingFrame")
+    containingScrollingFrame.Size = UDim2.fromScale(1, 1)
+    containingScrollingFrame.BackgroundColor3 = Color3.new(1, 1, 1)
+    containingScrollingFrame.Parent = mainScreenGui
+    containingScrollingFrame.Name = GuiConstants.containingScrollingFrameName
+    containingScrollingFrame.BorderSizePixel= 0
+    containingScrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+    containingScrollingFrame.CanvasSize = UDim2.fromScale(1, 0)
+    containingScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    containingScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(0.5, 0.5, 0.5)
+    return containingScrollingFrame
+end
 
 --[[
     makeMainFrame
@@ -47,20 +63,15 @@ local currentTableDescription: CommonTypes.TableDescription? = nil
     @returns: nil
 ]]
 GuiMain.makeMainFrame = function(): Frame
-    local mainScreenGui = GuiUtils.getMainScreenGui()
-    assert(mainScreenGui, "Should have a mainScreenGui")
-    mainScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    local containingScrollingFrame = GuiUtils.getContainingScrollingFrame()
+    assert(containingScrollingFrame, "Should have a containingScrollingFrame")
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Size = UDim2.fromScale(1, 1)
-    mainFrame.BackgroundColor3 = Color3.new(1, 1, 1)
-    mainFrame.Parent = mainScreenGui
-    mainFrame.ZIndex = GuiConstants.mainFrameZIndex
+    mainFrame.BackgroundTransparency = 1
+    mainFrame.Parent = containingScrollingFrame
     mainFrame.Name = GuiConstants.mainFrameName
     mainFrame.BorderSizePixel= 0
-
-    -- No point in adding any children here, they will all be destroyed each time we
-    -- build a new UI.
 
     return mainFrame
 end
@@ -84,7 +95,9 @@ end
 
 
 local function setCurrentTableAndUIMode()
+    print("Doug: setCurrentTableAndUIMode localUserId = ", localUserId)
     currentTableDescription = TableDescriptions.getTableWithUserId(localUserId)
+    print("Doug: setCurrentTableAndUIMode currentTableDescription = ", currentTableDescription)
 
     -- The local player is not part of any table: we show them the "select/create table" UI.
     if not currentTableDescription then
@@ -130,6 +143,8 @@ GuiMain.updateUI = function()
     -- Figure out which, if any, table we're at, and from that we know what ui mode we are in.
     setCurrentTableAndUIMode()
 
+    print("Doug: updateUI currentTableDescription = ", currentTableDescription)
+
     -- Should never call this if we are still loading.
     assert(uiModeBasedOnTableDescriptions ~= UIModes.Loading, "Should not call updateUI while loading")
 
@@ -169,6 +184,21 @@ GuiMain.onTableCreated = function(tableDescription: CommonTypes.TableDescription
 end
 
 GuiMain.onTableDestroyed = function(tableId: CommonTypes.TableId)
+    -- If this was your table, throw up a dialog.
+    if TableDescriptions.localPlayerIsAtTable(tableId) then
+        local dialogConfig: CommonTypes.DialogConfig = {
+            title = "Table Destroyed",
+            description = "The table you were seated at has been destroyed.",
+            dialogButtonConfigs = {
+                {
+                    text = "OK",
+                    callback = function()
+                    end
+                } :: CommonTypes.DialogButtonConfig,
+            } :: {CommonTypes.DialogConfig},
+        }
+        DialogUtils.makeDialog(dialogConfig)
+    end
     TableDescriptions.removeTableDescription(tableId)
     GuiMain.updateUI()
 end

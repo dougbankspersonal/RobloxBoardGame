@@ -8,7 +8,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
-local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local Cryo = require(ReplicatedStorage.Cryo)
 
 local TableDescriptions = {
@@ -25,17 +24,18 @@ TableDescriptions.getTableDescription = function(tableId: CommonTypes.TableId): 
 end
 
 TableDescriptions.addTableDescription = function(tableDescription: CommonTypes.TableDescription)
-    print("Doug: adding table description = ", tableDescription)
     TableDescriptions.tableDescriptionsByTableId[tableDescription.tableId] = tableDescription
+    print("Doug: addTableDescription: tableDescription = ", tableDescription)
 end
 
 TableDescriptions.removeTableDescription = function(tableId: CommonTypes.TableId)
     TableDescriptions.tableDescriptionsByTableId[tableId] = nil
+    print("Doug: removeTableDescription: tableId = ", tableId   )
 end
 
 TableDescriptions.updateTableDescription = function(tableDescription: CommonTypes.TableDescription)
-    print("Doug: updating table description = ", tableDescription)
     TableDescriptions.tableDescriptionsByTableId[tableDescription.tableId] = tableDescription
+    print("Doug: updateTableDescription: tableDescription = ", tableDescription)
 end
 
 -- Find the table this user belongs to.
@@ -123,19 +123,33 @@ TableDescriptions.getTableIdsForPublicWaitingTables = function(userId: CommonTyp
     return tableIds
 end
 
+TableDescriptions.getMembersWithoutHost = function(tableDescription: CommonTypes.TableDescription): { [CommonTypes.UserId]: boolean }
+    local membersWithoutHost = {}
+    for userId, _ in pairs(tableDescription.memberUserIds) do
+        if userId ~= tableDescription.hostUserId then
+            membersWithoutHost[userId] = true
+        end
+    end
+    return membersWithoutHost
+end
+
 TableDescriptions.cleanUpTypes = function(tableDescription: CommonTypes.TableDescription): CommonTypes.TableDescription
     local retVal = Cryo.Dictionary.join(tableDescription, {})
 
+    print("Doug: cleanUpTypes: tableDescription = ", tableDescription)
+    print("Doug: cleanUpTypes: 001 retVal = ", retVal)
     retVal.memberUserIds = {}
     for userId, v in tableDescription.memberUserIds do
         local userIdAsNumber = tonumber(userId)
         retVal.memberUserIds[userIdAsNumber] = v
     end
+    print("Doug: cleanUpTypes: 002 retVal = ", retVal)
 
     retVal.invitedUserIds = {}
     for userId, v in tableDescription.invitedUserIds do
         retVal.invitedUserIds[tonumber(userId)] = v
     end
+    print("Doug: cleanUpTypes: 003 retVal = ", retVal)
 
     if tableDescription.nonDefaultGameOptions then
         retVal.nonDefaultGameOptions = {}
@@ -143,8 +157,26 @@ TableDescriptions.cleanUpTypes = function(tableDescription: CommonTypes.TableDes
             retVal.nonDefaultGameOptions[tonumber(gameOptionId)] = v
         end
     end
+    print("Doug: cleanUpTypes: 004 retVal = ", retVal)
 
     return retVal
+end
+
+TableDescriptions.localPlayerIsAtTable = function(tableId: CommonTypes.TableId): boolean
+    print("Doug: localPlayerIsAtTable: TableDescriptions.tableDescriptionsByTableId = ", TableDescriptions.tableDescriptionsByTableId)
+    local player = game.Players.LocalPlayer
+    if not player then
+        print(("Doug: localPlayerIsAtTable: no local player. tableId = %d"):format(tableId))
+        return false
+    end
+    local userId = player.UserId
+    local tableDescription = TableDescriptions.tableDescriptionsByTableId[tableId]
+    if not tableDescription then
+        print(("Doug: localPlayerIsAtTable: no table. tableId = %d"):format(tableId))
+        return false
+    end
+    print("Doug: localPlayerIsAtTable: memberUserIds = ", tableDescription.memberUserIds)
+    return tableDescription.memberUserIds[userId] ~= nil
 end
 
 return TableDescriptions

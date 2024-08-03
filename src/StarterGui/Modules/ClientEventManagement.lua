@@ -63,6 +63,7 @@ end
 ClientEventManagement.destroyTable = function(tableId: CommonTypes.TableId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("DestroyTable")
     assert(event, "DestroyTable event missing")
+    print("Doug: client sends destroy table: ", tableId)
     event:FireServer(tableId)
 end
 

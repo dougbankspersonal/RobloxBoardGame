@@ -18,7 +18,6 @@ local Players = game:GetService("Players")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
-local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
@@ -30,9 +29,34 @@ local mainScreenGui: ScreenGui = nil
 
 local globalLayoutOrder = 0
 
+GuiUtils.getMainScreenGui = function(): ScreenGui
+    assert(mainScreenGui, "Should have a mainScreenGui")
+    return mainScreenGui
+
+end
+
+GuiUtils.getMainFrame = function(): Frame?
+    assert(mainScreenGui, "Should have a mainScreenGui")
+    local mainFrame = mainScreenGui:FindFirstChild(GuiConstants.mainFrameName, true)
+    assert(mainFrame, "Should have a mainFrame")
+    return mainFrame
+end
+
+GuiUtils.getContainingScrollingFrame = function(): Frame?
+    assert(mainScreenGui, "Should have a mainScreenGui")
+    local containingScrollingFrameName = mainScreenGui:FindFirstChild(GuiConstants.containingScrollingFrameName)
+    assert(containingScrollingFrameName, "Should have a containingScrollingFrameName")
+    return containingScrollingFrameName
+end
+
+GuiUtils.italicize = function(text: string): string
+    return "<i>" .. text .. "</i>"
+end
+
 GuiUtils.setMainScreenGui = function(msg: ScreenGui)
     assert(msg, "Should have a mainScreenGui")
     mainScreenGui = msg
+    mainScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 end
 
 GuiUtils.applyInstanceOptions = function(instance: Instance, opt_instanceOptions: CommonTypes.InstanceOptions?)
@@ -79,19 +103,6 @@ GuiUtils.addUIGradient = function(frame:Frame, colorSequence: ColorSequence, opt
     uiGradient.Rotation = 90
 
     GuiUtils.applyInstanceOptions(uiGradient, opt_instanceOptions)
-end
-
-GuiUtils.getMainScreenGui = function(): ScreenGui
-    assert(mainScreenGui, "Should have a mainScreenGui")
-    return mainScreenGui
-
-end
-
-GuiUtils.getMainFrame = function(): Frame?
-    assert(mainScreenGui, "Should have a mainScreenGui")
-    local mainFrame = mainScreenGui:FindFirstChild(GuiConstants.mainFrameName)
-    assert(mainFrame, "Should have a mainFrame")
-    return mainFrame
 end
 
 GuiUtils.getLayoutOrder = function(parent:Instance): number
@@ -339,6 +350,7 @@ local addImageOverTextLabel = function(frame: GuiObject): (ImageLabel, TextLabel
     imageLabel.BackgroundTransparency = 1
     imageLabel.Parent = frame
     imageLabel.LayoutOrder = 1
+    imageLabel.ZIndex = GuiConstants.iotlImageZIndex
     GuiUtils.addCorner(imageLabel)
 
     local textLabel = GuiUtils.addTextLabel(frame, "", {
@@ -349,6 +361,7 @@ local addImageOverTextLabel = function(frame: GuiObject): (ImageLabel, TextLabel
     textLabel.AutomaticSize = Enum.AutomaticSize.None
     textLabel.LayoutOrder = 2
     textLabel.Name = "ItemText"
+    textLabel.ZIndex = GuiConstants.iotlTextZIndex
 
     return imageLabel, textLabel
 end
@@ -446,6 +459,15 @@ GuiUtils.addUserButton = function(parent: Instance, userId: CommonTypes.UserId, 
     end)
 
     addUserImageOverTextLabel(textButton, userId)
+
+    -- The only reason we ever use this button is to kick the user out.  Put a little x indicator on the button.
+    local xImage = Instance.new("ImageButton")
+    xImage.Parent = textButton
+    xImage.Size = UDim2.fromOffset(GuiConstants.redXSize, GuiConstants.redXSize)
+    xImage.Position = UDim2.new(1, -(GuiConstants.redXSize + GuiConstants.redXMargin), 0, GuiConstants.redXMargin)
+    xImage.Image = GuiConstants.redXImage
+    xImage.BackgroundTransparency = 1
+    xImage.ZIndex = GuiConstants.iotlOtherZIndex
 
     return textButton
 end
@@ -777,9 +799,7 @@ GuiUtils.getSelectedGameOptionsString = function(tableDescription: CommonTypes.T
         return "(None)"
     end
 
-    local retVal = table.concat(enabledOptionsStrings,"\n")
-    retVal = "<i>" .. retVal .. "</i>"
-    return retVal
+    return table.concat(enabledOptionsStrings,"\n")
 end
 
 GuiUtils.getTableSizeString = function(gameDetails: CommonTypes.GameDetails): string

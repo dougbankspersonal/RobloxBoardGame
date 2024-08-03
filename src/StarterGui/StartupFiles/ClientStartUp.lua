@@ -56,7 +56,8 @@ ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId
     configureForBoardGames()
 
     GuiUtils.setMainScreenGui(screenGui)
-    GuiMain.makeMainFrame(screenGui)
+    GuiMain.makeContaintingScrollingFrame()
+    GuiMain.makeMainFrame()
 
     -- Show a loading screen while we fetch data from backend.
     GuiMain.showLoadingUI()

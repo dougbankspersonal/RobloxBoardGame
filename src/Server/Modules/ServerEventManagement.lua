@@ -114,7 +114,10 @@ ServerEventManagement.createClientToServerEvents = function()
 
     -- Event to destroy a table.
     createGameTableRemoteEvent("DestroyTable", function(player, gameTable)
-        local gameTableId = gameTable.id
+        assert(gameTable, "Should have a gameTable")
+        assert(gameTable.tableDescription, "Should have a tableDescription")
+        local gameTableId = gameTable:getTableId()
+        assert(gameTableId, "Should have a gameTableId")
         if gameTable:destroyTable(player.UserId) then
             sendToAllPlayers("TableDestroyed", gameTableId)
         end

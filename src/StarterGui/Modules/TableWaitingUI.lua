@@ -28,6 +28,7 @@ local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
 local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
 local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
+local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
 
 local TableWaitingUI = {}
 
@@ -47,15 +48,21 @@ local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameD
 
     -- Num players row.
     rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_NumPlayers", {
-        labelText = "Num Players:",
+        labelText = "Players:",
     })
-    GuiUtils.addTextLabelWidgetContainer(rowContent, GuiUtils.getTableSizeString(gameDetails))
+    GuiUtils.addTextLabelWidgetContainer(rowContent, GuiUtils.italicize(GuiUtils.getTableSizeString(gameDetails)), {
+        RichText = true,
+    })
 
     -- Visiblility row.
     rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Visibility", {
         labelText = "Visibility:",
     })
-    GuiUtils.addTextLabelWidgetContainer(rowContent, if currentTableDescription.isPublic then "Public" else "Private")
+    local value = currentTableDescription.isPublic and "Public" or "Private"
+    value = GuiUtils.italicize(value)
+    GuiUtils.addTextLabelWidgetContainer(rowContent, value, {
+        RichText = true,
+    })
 
     -- If there are gameOptions, add a widget to contain that info.
     -- It will be filled in later.
@@ -65,6 +72,7 @@ local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameD
         })
         local selectedOptionsString = GuiUtils.getSelectedGameOptionsString(currentTableDescription)
         assert(selectedOptionsString, "selectedOptionsString should exist")
+        selectedOptionsString = GuiUtils.italicize(selectedOptionsString)
 
         local gameOptionsLabelWidgetContainer = GuiUtils.addTextLabelWidgetContainer(rowContent, selectedOptionsString,
             {
@@ -229,6 +237,8 @@ local updateGameOptions = function(parentOfRow: Frame, currentTableDescription: 
     assert(gameOptionsContainerWidget, "Should have gameConfigLabelWidgetContainerName")
 
     local selectedOptionsString = GuiUtils.getSelectedGameOptionsString(currentTableDescription)
+    assert(selectedOptionsString, "selectedOptionsString should exist")
+    selectedOptionsString = GuiUtils.italicize(selectedOptionsString)
     GuiUtils.updateTextLabelWidgetContainer(gameOptionsContainerWidget, selectedOptionsString)
 end
 
@@ -258,7 +268,7 @@ local updateUserRow = function(parentOfRow: Frame, rowName: string, userIds: {Co
         return userWidgetContainer
     end
 
-    GuiUtils.updateWidgetContainerChildren(rowContent, userIds, makeUserWidgetContainer, "<i>None</i>")
+    GuiUtils.updateWidgetContainerChildren(rowContent, userIds, makeUserWidgetContainer, GuiUtils.italicize("None"))
 end
 
 local updateGuests = function(parentOfRow: Frame, isHost: boolean, localUserId: CommonTypes.UserId, currentTableDescription: CommonTypes.TableDescription)
@@ -283,8 +293,7 @@ local updateGuests = function(parentOfRow: Frame, isHost: boolean, localUserId: 
     end
 
     -- We don't want to display the host as a member, remove him.
-    local memberUserIdsWithoutHost = currentTableDescription.memberUserIds
-    memberUserIdsWithoutHost[localUserId] = nil
+    local memberUserIdsWithoutHost = TableDescriptions.getMembersWithoutHost(currentTableDescription)
 
     updateUserRow(parentOfRow, "Row_Members", Cryo.Dictionary.keys(memberUserIdsWithoutHost), canRemoveGuest, removeGuestCallback)
 end
@@ -345,6 +354,7 @@ local updateTableControls = function(parentOfRow: Frame, currentTableDescription
 end
 
 TableWaitingUI.update = function(currentTableDescription: CommonTypes.TableDescription)
+    print("Doug: TableWaitingUI.update currentTableDescription = ", currentTableDescription)
     -- Make sure we have all the stuff we need.
     assert(currentTableDescription, "Should have a currentTableDescription")
     local mainFrame = GuiUtils.getMainFrame()

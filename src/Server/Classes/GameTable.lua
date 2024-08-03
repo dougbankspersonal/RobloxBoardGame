@@ -42,6 +42,8 @@ export type GameTable = {
     isInvitedToTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
     isHost: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
     getTableDescription: (self: GameTable) -> CommonTypes.TableDescription,
+    getTableId: (self: GameTable) -> CommonTypes.TableId,
+    getGameId: (self: GameTable) -> CommonTypes.GameId,
 
     -- Perhaps modify table state.  Each returns true iff something changed.
     destroyTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
@@ -115,6 +117,14 @@ GameTable.createNewTable = function(hostUserId: CommonTypes.UserId, gameId: Comm
     return newGameTable
 end
 
+function GameTable:getTableId(): CommonTypes.TableId
+    return self.tableDescription.tableId
+end
+
+function GameTable:getGameId(): CommonTypes.GameId
+    return self.tableDescription.gameId
+end
+
 function GameTable:isMember(userId: CommonTypes.UserId): boolean
     return self.tableDescription.memberUserIds[userId]
 end
@@ -124,13 +134,14 @@ function GameTable:isInvitedToTable(userId: CommonTypes.UserId): boolean
 end
 
 function GameTable:isHost(userId: CommonTypes.UserId): boolean
-    return self.hostUserId == userId
+    return self.tableDescription.hostUserId == userId
 end
 
-function GameTable:destroyTable(userId): boolean
+function GameTable:destroyTable(userId: CommonTypes.UserId): boolean
+    assert(userId, "Should have a userId")
     -- Must be the host.
     if not self:isHost(userId) then
-        return
+        return false
     end
 
     -- Kill any ongoing game.
@@ -139,7 +150,7 @@ function GameTable:destroyTable(userId): boolean
         self.gameInstance = nil
     end
 
-    gameTables[self.id] = nil
+    gameTables[self:getTableId()] = nil
 
     return true
 end
@@ -291,7 +302,7 @@ function GameTable:startGame(userId: CommonTypes.UserId): boolean
 
     assert(self.gameInstance == nil, "Game instance already exists"	)
     self.tableDescription.gameTableState = GameTableStates.Playing
-    self.gameInstance = GameInstance.new(self.id, self.gameDetails.gameId)
+    self.gameInstance = GameInstance.new(self:getTableId(), self:getGameId())
 
     return true
 end
