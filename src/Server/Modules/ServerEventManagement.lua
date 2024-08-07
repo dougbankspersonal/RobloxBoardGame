@@ -7,12 +7,15 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
+local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
 local GameTable = require(RobloxBoardGameServer.Classes.GameTable)
 
 local ServerEventManagement = {}
+
+local mockHostId = 2000000
 
 -- Notify every player of an event.
 local function sendToAllPlayers(eventName, data)
@@ -178,6 +181,36 @@ ServerEventManagement.createClientToServerEvents = function()
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end
     end)
+
+    if game:GetService("RunService"):IsStudio() then
+        -- Mock tables for testing.
+        createRemoteEvent("TableEvents", "MockTable", function(player, isPublic)
+            Utils.debugPrint("Doug; Mocking Table")
+            -- Make a random table.
+            mockHostId = mockHostId + 1
+            -- Get a random game id.
+            local gameDetailsByGameId = GameDetails.getAllGameDetails()
+            local gameId = Utils.getRandomKey(gameDetailsByGameId)
+
+            local gameTable = GameTable.createNewTable(mockHostId, gameId, isPublic)
+            if not gameTable then
+                Utils.debugPrint("Doug; Mocking Table: no table")
+                return
+            end
+
+            -- If not public, invite the player who sent the mock.
+            if not isPublic then
+                gameTable:inviteToTable(mockHostId, player.UserId)
+            end
+
+            local tableDescription = gameTable:getTableDescription()
+
+            Utils.debugPrint("Doug; Mocking Table: broadcasting TableCreated tableDescription = ", tableDescription)
+
+            -- Broadcast the new table to all players
+            sendToAllPlayers("TableCreated", tableDescription)
+        end)
+    end
 end
 
 ServerEventManagement.createServerToClientEvents = function()

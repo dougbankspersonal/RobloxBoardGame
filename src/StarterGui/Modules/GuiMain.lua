@@ -14,6 +14,7 @@ local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local UIModes = require(RobloxBoardGameShared.Globals.UIModes)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
@@ -95,9 +96,7 @@ end
 
 
 local function setCurrentTableAndUIMode()
-    print("Doug: setCurrentTableAndUIMode localUserId = ", localUserId)
     currentTableDescription = TableDescriptions.getTableWithUserId(localUserId)
-    print("Doug: setCurrentTableAndUIMode currentTableDescription = ", currentTableDescription)
 
     -- The local player is not part of any table: we show them the "select/create table" UI.
     if not currentTableDescription then
@@ -140,10 +139,9 @@ end
     Updates UI to reflect current state.
 ]]
 GuiMain.updateUI = function()
+    Utils.debugPrint("Doug: GuiMain.updateUI")
     -- Figure out which, if any, table we're at, and from that we know what ui mode we are in.
     setCurrentTableAndUIMode()
-
-    print("Doug: updateUI currentTableDescription = ", currentTableDescription)
 
     -- Should never call this if we are still loading.
     assert(uiModeBasedOnTableDescriptions ~= UIModes.Loading, "Should not call updateUI while loading")
@@ -177,6 +175,10 @@ GuiMain.updateUI = function()
 end
 
 GuiMain.onTableCreated = function(tableDescription: CommonTypes.TableDescription)
+    Utils.debugPrint("Doug: GuiMain.onTableCreated")
+    assert(tableDescription, "tableDescription must be provided")
+    assert(typeof(tableDescription) == "table", "tableDescription must be a table")
+
     -- Sending table description from server to client messes with some types. Fix it.
     tableDescription = TableDescriptions.cleanUpTypes(tableDescription)
     TableDescriptions.addTableDescription(tableDescription)
@@ -188,7 +190,7 @@ GuiMain.onTableDestroyed = function(tableId: CommonTypes.TableId)
     if TableDescriptions.localPlayerIsAtTable(tableId) then
         local dialogConfig: CommonTypes.DialogConfig = {
             title = "Table Destroyed",
-            description = "The table you were seated at has been destroyed.",
+            description = "The table at which you were seated has been destroyed.",
             dialogButtonConfigs = {
                 {
                     text = "OK",

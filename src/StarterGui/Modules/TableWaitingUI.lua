@@ -198,7 +198,9 @@ TableWaitingUI.build = function(currentTableDescription: CommonTypes.TableDescri
     GuiUtils.addUIGradient(mainFrame, GuiConstants.whiteToGrayColorSequence)
     GuiUtils.addStandardMainFramePadding(mainFrame)
     GuiUtils.addLayoutOrderGenerator(mainFrame)
-    GuiUtils.addUIListLayout(mainFrame)
+    GuiUtils.addUIListLayout(mainFrame, {
+        Padding = UDim.new(0, GuiConstants.paddingBetweenRows),
+    })
 
     addGameAndHostInfo(mainFrame, gameDetails, currentTableDescription)
 
@@ -299,7 +301,6 @@ local updateGuests = function(parentOfRow: Frame, isHost: boolean, localUserId: 
 end
 
 local updateInvites = function(parentOfRow: Frame, isHost: boolean, currentTableDescription: CommonTypes.TableDescription)
-    print("Doug: updateInvites currentTableDescription = ", currentTableDescription)
     assert(parentOfRow, "Should have a mainFrame")
     assert(currentTableDescription, "Should have a currentTableDescription")
 
@@ -354,7 +355,6 @@ local updateTableControls = function(parentOfRow: Frame, currentTableDescription
 end
 
 TableWaitingUI.update = function(currentTableDescription: CommonTypes.TableDescription)
-    print("Doug: TableWaitingUI.update currentTableDescription = ", currentTableDescription)
     -- Make sure we have all the stuff we need.
     assert(currentTableDescription, "Should have a currentTableDescription")
     local mainFrame = GuiUtils.getMainFrame()

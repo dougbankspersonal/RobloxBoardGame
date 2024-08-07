@@ -20,13 +20,15 @@ GuiConstants.dialogBackgroundName = "DialogBackground"
 -- Font sizes
 GuiConstants.textLabelFontSize = 14
 GuiConstants.dialogTitleFontSize = 24
-GuiConstants.gameTextLabelFontSize = 10
+GuiConstants.gameTextLabelFontSize = 8
+GuiConstants.userTextLabelFontSize = 8
 GuiConstants.rowHeaderFontSize = 16
 
 -- Various measurements.
 GuiConstants.rowLabelWidth = 200
 GuiConstants.standardPadding = 5
 GuiConstants.mainFramePadding = 10
+GuiConstants.paddingBetweenRows = 14
 
 GuiConstants.gameImageX = 100
 GuiConstants.gameImageY = 100
@@ -35,7 +37,7 @@ GuiConstants.gameLabelHeight = 20
 GuiConstants.userImageX = 60
 GuiConstants.userImageY = 60
 GuiConstants.userLabelHeight = 20
-GuiConstants.userLabelWidth = 180
+GuiConstants.userLabelWidth = 130
 
 GuiConstants.gameWidgetX = GuiConstants.gameImageX + 2 * GuiConstants.standardPadding
 GuiConstants.gameWidgetY = GuiConstants.gameImageY + GuiConstants.gameLabelHeight + 3 * GuiConstants.standardPadding

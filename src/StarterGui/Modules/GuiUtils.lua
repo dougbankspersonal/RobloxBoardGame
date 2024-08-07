@@ -18,6 +18,7 @@ local Players = game:GetService("Players")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
@@ -374,7 +375,7 @@ local function addUserImageOverTextLabel(frame: GuiObject, userId: CommonTypes.U
     local imageLabel, textLabel = addImageOverTextLabel(frame)
 
     textLabel.Size = UDim2.new(1, 0, 0, GuiConstants.userLabelHeight)
-    textLabel.TextSize = GuiConstants.gameTextLabelFontSize
+    textLabel.TextSize = GuiConstants.userTextLabelFontSize
     textLabel.Text = ""
 
     imageLabel.Size = UDim2.fromOffset(GuiConstants.userImageX, GuiConstants.userImageX)
@@ -384,8 +385,10 @@ local function addUserImageOverTextLabel(frame: GuiObject, userId: CommonTypes.U
     task.spawn(function()
         -- FIXME(dbanks)
         -- Could do these in parallel, don't care right now.
-        local playerName = Players: GetNameFromUserIdAsync(userId)
-        local playerThumbnail = Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size60x60)
+        local mappedId = Utils.debugMapUserId(userId)
+
+        local playerName = Players: GetNameFromUserIdAsync(mappedId)
+        local playerThumbnail = Players:GetUserThumbnailAsync(mappedId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size60x60)
 
         assert(playerName, "playerName should exist")
         assert(playerThumbnail, "playerThumbnail should exist")
@@ -674,21 +677,9 @@ local makeWidgetContainer = function(parent:GuiObject, widgetType: string, _item
     return widgetContainer
 end
 
--- Make a widgetContainer containing a clickable button representing a table.
-GuiUtils.addTableButtonWidgetContainer = function(parent: Instance, tableId: number, onClick: () -> nil): Frame
-    local tableDescription = TableDescriptions.getTableDescription(tableId)
-    -- Should exist.
-    assert(tableDescription, "Should have a tableDescription")
-    local tableButtonContainer = makeWidgetContainer(parent, "Table", tableId)
-
-    GuiUtils.addTableButton(tableButtonContainer, tableDescription, onClick)
-
-    return tableButtonContainer
-end
-
 -- Make a widgetContainer containing a user (name, thumbnail, etc).
 -- If a callback is given, make it a button, else it's just a static frame.
-GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, onClick: ((userId) -> nil)?): Frame
+GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, onClick: ((userId: CommonTypes.UserId) -> nil)?): Frame
     -- So what will happen:
     -- We return a table button container with "loading" message.
     -- We fire off a fetch to get async info.
@@ -704,6 +695,23 @@ GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, onC
     else
         GuiUtils.addUserWidget(tableButtonContainer, userId)
     end
+
+    return tableButtonContainer
+end
+
+-- Make a widgetContainer containing a table (game name, host, etc.)
+GuiUtils.addTableButtonWidgetContainer = function(parent: Instance, tableId: number, onClick: () -> nil): Frame
+    local tableDescription = TableDescriptions.getTableDescription(tableId)
+    -- Should exist.
+    assert(tableDescription, "Should have a tableDescription")
+
+    local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
+    -- Should exist.
+    assert(gameDetails, "Should have a gameDetails")
+
+    local tableButtonContainer = makeWidgetContainer(parent, "Table", tableId)
+
+    GuiUtils.addGameButton(tableButtonContainer, gameDetails, onClick)
 
     return tableButtonContainer
 end

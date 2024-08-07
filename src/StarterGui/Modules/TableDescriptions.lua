@@ -8,6 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
+
 local Cryo = require(ReplicatedStorage.Cryo)
 
 local TableDescriptions = {
@@ -25,17 +27,14 @@ end
 
 TableDescriptions.addTableDescription = function(tableDescription: CommonTypes.TableDescription)
     TableDescriptions.tableDescriptionsByTableId[tableDescription.tableId] = tableDescription
-    print("Doug: addTableDescription: tableDescription = ", tableDescription)
 end
 
 TableDescriptions.removeTableDescription = function(tableId: CommonTypes.TableId)
     TableDescriptions.tableDescriptionsByTableId[tableId] = nil
-    print("Doug: removeTableDescription: tableId = ", tableId   )
 end
 
 TableDescriptions.updateTableDescription = function(tableDescription: CommonTypes.TableDescription)
     TableDescriptions.tableDescriptionsByTableId[tableDescription.tableId] = tableDescription
-    print("Doug: updateTableDescription: tableDescription = ", tableDescription)
 end
 
 -- Find the table this user belongs to.
@@ -55,31 +54,40 @@ TableDescriptions.getTableWithUserId = function(userId: number): CommonTypes.Tab
     return retVal
 end
 
-TableDescriptions.playerCanJoinInvitedTable = function(userId: CommonTypes.UserId, tableId: CommonTypes.TableId): boolean
-    local tableDescription = TableDescriptions.tableDescriptionsByTableId[tableId]
-    if not tableDescription then
-        return false
-    end
+TableDescriptions.playerCanJoinInvitedTable = function(userId: CommonTypes.UserId, tableDescription: CommonTypes.TableDescription): boolean
+    assert(userId, "userId must be provided")
+    assert(tableDescription, "tableDescription must be provided")
+
     if tableDescription.isPublic then
+        print("Doug: TableDescriptions.playerCanJoinInvitedTable 002")
         return false
     end
     if tableDescription.memberUserIds[userId] then
+        print("Doug: TableDescriptions.playerCanJoinInvitedTable 003")
         return false
     end
+
+    print("Doug: typeof(userId) = ", typeof(userId))
+    print("Doug: typeof(tableDescription.invitedUserIds) = ", typeof(tableDescription.invitedUserIds))
+
+    print("Doug: tableDescription.invitedUserIds[userId] = ", tableDescription.invitedUserIds[userId])
+    print("Doug: tableDescription.invitedUserIds[tostring(userId)]", tableDescription.invitedUserIds[tostring(userId)])
+
     if not tableDescription.invitedUserIds[userId] then
+        print("Doug: TableDescriptions.playerCanJoinInvitedTable 004")
         return false
     end
+    print("Doug: TableDescriptions.playerCanJoinInvitedTable tableDescription.gameTableState = ", tableDescription.gameTableState)
     return tableDescription.gameTableState == GameTableStates.WaitingForPlayers
 end
 
-TableDescriptions.playerCanJoinPublicTable = function(userId: CommonTypes.UserId, tableId: CommonTypes.TableId): boolean
-    local tableDescription = TableDescriptions.tableDescriptionsByTableId[tableId]
-    if not tableDescription then
-        return false
-    end
+TableDescriptions.playerCanJoinPublicTable = function(userId: CommonTypes.UserId, tableDescription: CommonTypes.TableDescription): boolean
+    assert(tableDescription, "tableDescription must be provided")
+
     if not tableDescription.isPublic then
         return false
     end
+
     if tableDescription.memberUserIds[userId] then
         return false
     end
@@ -96,13 +104,18 @@ end
 --
 -- Return an array of ids for these tables.
 TableDescriptions.getTableIdsForInvitedWaitingTables = function(userId: CommonTypes.UserId): { CommonTypes.TableId }
+    print("Doug: TableDescriptions.getTableIdsForInvitedWaitingTables")
+    assert(userId, "userId must be provided")
     local tableIds = {}
+    print("Doug: TableDescriptions.tableDescriptionsByTableId = ", TableDescriptions.tableDescriptionsByTableId)
     for _, tableDescription in pairs(TableDescriptions.tableDescriptionsByTableId) do
+        print("Doug: TableDescriptions.getTableIdsForInvitedWaitingTables tableDescription = ", tableDescription)
         if TableDescriptions.playerCanJoinInvitedTable(userId, tableDescription) then
             table.insert(tableIds, tableDescription.tableId)
         end
     end
 
+    print("Doug: TableDescriptions.getTableIdsForInvitedWaitingTables returning tableIds = ", tableIds)
     return tableIds
 end
 
@@ -111,8 +124,10 @@ end
 --   * Table is in the "waiting" state.
 --   * Table is not full.
 --
--- Return an array of ids for these tables.TableDescriptions.getTableIdsForPublicWaitingTables = function(): { CommonTypes.TableId }
+-- Return an array of ids for these tables.
 TableDescriptions.getTableIdsForPublicWaitingTables = function(userId: CommonTypes.UserId): { CommonTypes.TableId }
+    print("Doug: TableDescriptions.getTableIdsForPublicWaitingTables")
+    assert(userId, "userId must be provided")
     local tableIds = {}
     for _, tableDescription in pairs(TableDescriptions.tableDescriptionsByTableId) do
         if TableDescriptions.playerCanJoinPublicTable(userId, tableDescription) then
@@ -136,20 +151,16 @@ end
 TableDescriptions.cleanUpTypes = function(tableDescription: CommonTypes.TableDescription): CommonTypes.TableDescription
     local retVal = Cryo.Dictionary.join(tableDescription, {})
 
-    print("Doug: cleanUpTypes: tableDescription = ", tableDescription)
-    print("Doug: cleanUpTypes: 001 retVal = ", retVal)
     retVal.memberUserIds = {}
     for userId, v in tableDescription.memberUserIds do
         local userIdAsNumber = tonumber(userId)
         retVal.memberUserIds[userIdAsNumber] = v
     end
-    print("Doug: cleanUpTypes: 002 retVal = ", retVal)
 
     retVal.invitedUserIds = {}
     for userId, v in tableDescription.invitedUserIds do
         retVal.invitedUserIds[tonumber(userId)] = v
     end
-    print("Doug: cleanUpTypes: 003 retVal = ", retVal)
 
     if tableDescription.nonDefaultGameOptions then
         retVal.nonDefaultGameOptions = {}
@@ -157,25 +168,20 @@ TableDescriptions.cleanUpTypes = function(tableDescription: CommonTypes.TableDes
             retVal.nonDefaultGameOptions[tonumber(gameOptionId)] = v
         end
     end
-    print("Doug: cleanUpTypes: 004 retVal = ", retVal)
 
     return retVal
 end
 
 TableDescriptions.localPlayerIsAtTable = function(tableId: CommonTypes.TableId): boolean
-    print("Doug: localPlayerIsAtTable: TableDescriptions.tableDescriptionsByTableId = ", TableDescriptions.tableDescriptionsByTableId)
     local player = game.Players.LocalPlayer
     if not player then
-        print(("Doug: localPlayerIsAtTable: no local player. tableId = %d"):format(tableId))
         return false
     end
     local userId = player.UserId
     local tableDescription = TableDescriptions.tableDescriptionsByTableId[tableId]
     if not tableDescription then
-        print(("Doug: localPlayerIsAtTable: no table. tableId = %d"):format(tableId))
         return false
     end
-    print("Doug: localPlayerIsAtTable: memberUserIds = ", tableDescription.memberUserIds)
     return tableDescription.memberUserIds[userId] ~= nil
 end
 

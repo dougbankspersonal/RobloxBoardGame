@@ -63,7 +63,6 @@ end
 ClientEventManagement.destroyTable = function(tableId: CommonTypes.TableId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("DestroyTable")
     assert(event, "DestroyTable event missing")
-    print("Doug: client sends destroy table: ", tableId)
     event:FireServer(tableId)
 end
 
@@ -101,6 +100,14 @@ ClientEventManagement.removeInviteForTable = function(tableId: CommonTypes.Table
     local event = ReplicatedStorage.TableEvents:WaitForChild("RemoveInviteForTable")
     assert(event, "RemoveInviteForTable event missing")
     event:FireServer(tableId, userId)
+end
+
+ClientEventManagement.mockTable = function(isPublic: boolean)
+    if game:GetService("RunService"):IsStudio() then
+        local event = ReplicatedStorage.TableEvents:WaitForChild("MockTable")
+        assert(event, "MockTable event missing")
+        event:FireServer(isPublic)
+    end
 end
 
 return ClientEventManagement

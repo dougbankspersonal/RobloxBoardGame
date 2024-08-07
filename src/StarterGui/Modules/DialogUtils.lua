@@ -26,6 +26,15 @@ DialogUtils.cleanupDialog = function()
     dialogBackground:Destroy()
 end
 
+local function addStandardDialogPadding(frame: Frame)
+    GuiUtils.addPadding(frame, {
+        PaddingTop = UDim.new(0, GuiConstants.dialogOuterPadding),
+        PaddingBottom = UDim.new(0, GuiConstants.dialogOuterPadding),
+        PaddingLeft = UDim.new(0, GuiConstants.dialogOuterPadding),
+        PaddingRight = UDim.new(0, GuiConstants.dialogOuterPadding),
+    })
+end
+
 -- Throw up a dialog using the given config.
 -- Clicking any button in the config will kill the dialog and hit the associated callback.
 DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame?
@@ -47,13 +56,7 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     dialogBackground.ZIndex = GuiConstants.dialogBackgroundZIndex
     dialogBackground.AutomaticSize = Enum.AutomaticSize.XY
     dialogBackground.Text = ""
-
-    GuiUtils.addPadding(dialogBackground, {
-        PaddingTop = UDim.new(0, GuiConstants.dialogOuterPadding),
-        PaddingBottom = UDim.new(0, GuiConstants.dialogOuterPadding),
-        PaddingLeft = UDim.new(0, GuiConstants.dialogOuterPadding),
-        PaddingRight = UDim.new(0, GuiConstants.dialogOuterPadding),
-    })
+    dialogBackground.AutoButtonColor = false
 
     GuiUtils.addUIListLayout(dialogBackground, {
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -86,11 +89,12 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     contentFrame.BackgroundTransparency = 1
     contentFrame.BorderSizePixel = 0
 
-    GuiUtils.addPadding(contentFrame)
+    addStandardDialogPadding(contentFrame)
 
     GuiUtils.addUIListLayout(contentFrame, {
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
         VerticalAlignment = Enum.VerticalAlignment.Top,
+        Padding = UDim.new(0, GuiConstants.paddingBetweenRows),
     })
 
     local titleContent = GuiUtils.addRowAndReturnRowContent(contentFrame, "Row_Title")

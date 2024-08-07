@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
@@ -23,6 +24,7 @@ local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescrip
 local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
 local TableConfigDialog = require(RobloxBoardGameStarterGui.Modules.TableConfigDialog)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
+local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
 
 local TableSelectionUI = {}
 
@@ -32,24 +34,30 @@ local function updateInvitedTables(mainFrame: GuiObject)
 
     local invitedRowContent = GuiUtils.getRowContent(mainFrame, "Row_InvitedTables")
     assert(invitedRowContent, "Should have an invitedRowContent")
+    print("Doug: updateInvitedTables localUserId = ", localUserId)
     local tableIdsForInvitedWaitingTables = TableDescriptions.getTableIdsForInvitedWaitingTables(localUserId)
 
-    GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, function(parent: Frame, tableId: CommonTypes.TableId)
-        GuiUtils.addTableButtonWidgetContainer(parent, tableId, function()
+    GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, function(parent: Frame, tableId: CommonTypes.TableId): Frame
+        local wc = GuiUtils.addTableButtonWidgetContainer(parent, tableId, function()
             ClientEventManagement.joinTable(tableId)
         end)
+        return wc
     end, GuiUtils.italicize("No open invitations"))
 end
 
 local function updatePublicTables(mainFrame: GuiObject)
+    local localUserId = game.Players.LocalPlayer.UserId
+    assert(localUserId, "Should have a localUserId")
+
     local publicRowContent = GuiUtils.getRowContent(mainFrame, "Row_PublicTables")
     assert(publicRowContent, "Should have an publicRowContent")
-    local tableIdsForPublicWaitingTables = TableDescriptions.getTableIdsForPublicWaitingTables()
+    local tableIdsForPublicWaitingTables = TableDescriptions.getTableIdsForPublicWaitingTables(localUserId)
 
-    GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, function(parent: Frame, tableId: CommonTypes.TableId)
-        GuiUtils.addTableButtonWidgetContainer(parent, tableId, function()
+    GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, function(parent: Frame, tableId: CommonTypes.TableId): Frame
+        local wc = GuiUtils.addTableButtonWidgetContainer(parent, tableId, function()
             ClientEventManagement.joinTable(tableId)
         end)
+        return wc
     end, GuiUtils.italicize("No public tables"))
 end
 
@@ -75,6 +83,7 @@ TableSelectionUI.build = function()
 
     GuiUtils.addUIListLayout(mainFrame, {
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
+        Padding = UDim.new(0, GuiConstants.paddingBetweenRows),
     })
 
     -- Row to add a new table.
@@ -88,6 +97,32 @@ TableSelectionUI.build = function()
             ClientEventManagement.createTable(gameId, isPublic)
         end)
     end)
+
+
+    if game:GetService("RunService"):IsStudio() then
+        GuiUtils.addTextButtonWidgetContainer(rowContent, "Mocks", function()
+            local dialogConfig: CommonTypes.DialogConfig = {
+                title = "Mocks",
+                description = "Debug Tasks.",
+                dialogButtonConfigs = {
+                    {
+                        text = "Create Mock Public Table",
+                        callback = function()
+                            ClientEventManagement.mockTable(true)
+                        end
+                    } :: CommonTypes.DialogButtonConfig,
+                    {
+                        text = "Create Mock Private Table",
+                        callback = function()
+                            ClientEventManagement.mockTable(false)
+                        end
+                    } :: CommonTypes.DialogButtonConfig,
+                } :: {CommonTypes.DialogConfig},
+            }
+            DialogUtils.makeDialog(dialogConfig)
+        end)
+    end
+
 
     -- Row to show tables you are invited to.
     GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_InvitedTables", {
