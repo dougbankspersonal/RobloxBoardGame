@@ -160,36 +160,46 @@ end
 -- Try to add user as member of table.
 -- Return true iff successful.
 function GameTable:joinTable(userId: CommonTypes.UserId): boolean
+    assert(userId, "Should have a userId")
+
+    print("Doug: joinTable: 000")
     -- Host can't join his own table.
     if self:isHost(userId) then
+        print("Doug: joinTable: 001")
         return
     end
 
     -- Game already started, no.
     if self.tableDescription.gameTableState ~= GameTableStates.WaitingForPlayers then
+        print("Doug: joinTable: 002")
         return false
     end
 
     -- Already a member, no.
     if self:isMember(userId) then
+        print("Doug: joinTable: 003")
         return false
     end
 
     -- not public, not invited: no.
     if not self.tableDescription.isPublic and not self:isInvitedToTable(userId) then
+        print("Doug: joinTable: 004")
         return false
     end
 
     -- too many players already, no.
-    if self.gameDetails.MaxPlayers <= Utils.tableSize(self.tableDescription.memberUserIds) then
+    if self.gameDetails.maxPlayers <= Utils.tableSize(self.tableDescription.memberUserIds) then
+        print("Doug: joinTable: 005")
         return false
     end
 
-    table.insert(self.tableDescription.memberUserIds, userId)
+    self.tableDescription.memberUserIds[userId] = true
 
+    print("Doug: joinTable: 006")
     -- Once a player is a memebr they are no longer invited.
     self.tableDescription.invitedUserIds[userId] = nil
 
+    print("Doug: joinTable: 007")
     return true
 end
 
@@ -295,10 +305,10 @@ function GameTable:startGame(userId: CommonTypes.UserId): boolean
 
     -- Right number of players?
     local numPlayers = Utils.tableSize(self.tableDescription.memberUserIds)
-    if numPlayers < self.gameDetails.MinPlayers then
+    if numPlayers < self.gameDetails.minPlayers then
         return false
     end
-    if numPlayers > self.gameDetails.MaxPlayers then
+    if numPlayers > self.gameDetails.maxPlayers then
         return false
     end
 

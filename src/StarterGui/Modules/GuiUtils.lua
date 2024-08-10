@@ -446,7 +446,6 @@ GuiUtils.addTableButton = function(parent: Instance, tableDescription: CommonTyp
 
     configureGameTextLabel(gameTextLabel, gameDetails)
     local formatString = "<i>Hosted by</i> %s"
-    print("Doug: addTableButton tableDescription = ", tableDescription)
     configureUserTextLabel(hostTextLabel, tableDescription.hostUserId, formatString)
 
     configureGameImage(imageLabel, gameDetails)

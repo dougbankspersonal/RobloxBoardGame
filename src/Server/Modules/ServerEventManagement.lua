@@ -128,7 +128,9 @@ ServerEventManagement.createClientToServerEvents = function()
 
     -- Event to join a table.
     createGameTableRemoteEvent("JoinTable", function(player, gameTable)
+        print("Doug: server got JoinTable = ", gameTable.tableDescription.tableId)
         if gameTable:joinTable(player.UserId) then
+            print("Doug: server sending table updated: tableDescription = ", gameTable:getTableDescription())
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end
     end)

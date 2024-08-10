@@ -43,7 +43,6 @@ end
 
 -- Murder all outstanding tweens.
 TweenHandling.killOutstandingTweens = function()
-    print("Doug: killOutstandingTweens")
     local plainTweens = Cryo.Dictionary.values(tweensToKill)
     tweensToKill = {}
     for _, tween in plainTweens do
@@ -57,7 +56,6 @@ end
 TweenHandling.saveTweens = function(newTweensToKill: CommonTypes.TweensToKill)
     for key, tween in newTweensToKill do
         tween.Completed:Connect(function(_)
-            print("Doug: tween completed")
             tweensToKill[key] = nil
         end)
     end

@@ -69,6 +69,7 @@ end
 ClientEventManagement.joinTable = function(tableId: CommonTypes.TableId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("JoinTable")
     assert(event, "JoinTable event missing")
+    print("Doug: client firing JoinTable = ", tableId)
     event:FireServer(tableId)
 end
 

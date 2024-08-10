@@ -177,8 +177,6 @@ GuiMain.onTableCreated = function(tableDescription: CommonTypes.TableDescription
     assert(tableDescription, "tableDescription must be provided")
     assert(typeof(tableDescription) == "table", "tableDescription must be a table")
 
-    print("Doug: GuiMain.onTableCreated tableDescription = ", tableDescription)
-
     -- Sending table description from server to client messes with some types. Fix it.
     tableDescription = TableDescriptions.cleanUpTypes(tableDescription)
     TableDescriptions.addTableDescription(tableDescription)
