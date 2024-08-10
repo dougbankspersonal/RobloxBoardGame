@@ -29,6 +29,7 @@ export type GameTable = {
     gameDetails: CommonTypes.GameDetails,
     gameInstance: GameInstance.GameInstance?,
     tableDescription: CommonTypes.TableDescription,
+    isMock: boolean,
 
     -- static functions.
     new: (hostUserId: CommonTypes.UserId, gameDetails: CommonTypes.GameDetails, isPublic: boolean) -> GameTable,
@@ -71,6 +72,8 @@ GameTable.new = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.Gam
 
     local tableId = nextGameTableId
     nextGameTableId = nextGameTableId + 1
+
+    self.isMock = false
 
     -- Fill in table description.
     self.tableDescription = {
@@ -193,39 +196,31 @@ end
 -- Try to add user as invitee of table.
 -- Return true iff successful.
 function GameTable:inviteToTable(userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId): boolean
-    print("Doug: inviteToTable 001 userID = ", userId, " inviteeId = ", inviteeId)
     -- Must be the host.
     if not self:isHost(userId) then
-        print("Doug: inviteToTable 002")
         return false
     end
 
     -- Can't invite self.
     if userId == inviteeId then
-        print("Doug: inviteToTable 003")
         return false
     end
 
     -- Game already started, no.
     if self.tableDescription.gameTableState ~= GameTableStates.WaitingForPlayers then
-        print("Doug: inviteToTable 004")
-        print("Doug: self.tableDescription.gameTableState = ", self.tableDescription.gameTableState)
         return false
     end
 
     -- Already a member, no.
     if self:isMember(inviteeId) then
-        print("Doug: inviteToTable 005")
         return false
     end
 
     -- Already invited, no.
     if self:isInvitedToTable(inviteeId) then
-        print("Doug: inviteToTable 006")
         return false
     end
 
-    print("Doug: inviteToTable 007")
     self.tableDescription.invitedUserIds[inviteeId] = true
     return true
 end

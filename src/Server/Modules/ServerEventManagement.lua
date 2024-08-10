@@ -183,7 +183,19 @@ ServerEventManagement.createClientToServerEvents = function()
     end)
 
     if game:GetService("RunService"):IsStudio() then
-        -- Mock tables for testing.
+        -- Destroy all Mock Tables.
+        createRemoteEvent("TableEvents", "DestroyAllMockTables", function(player)
+            Utils.debugPrint("Doug; Destroying all Mock Tables")
+            local allTables = GameTable.getAllGameTables()
+            for tableId, gameTable in allTables do
+                if gameTable.isMock then
+                    gameTable:destroyTable(player.UserId)
+                    sendToAllPlayers("TableDestroyed", tableId)
+                end
+            end
+        end)
+
+        -- Make a mock table.
         createRemoteEvent("TableEvents", "MockTable", function(player, isPublic)
             Utils.debugPrint("Doug; Mocking Table")
             -- Make a random table.
@@ -202,6 +214,8 @@ ServerEventManagement.createClientToServerEvents = function()
             if not isPublic then
                 gameTable:inviteToTable(mockHostId, player.UserId)
             end
+
+            gameTable.isMock = true
 
             local tableDescription = gameTable:getTableDescription()
 

@@ -59,25 +59,15 @@ TableDescriptions.playerCanJoinInvitedTable = function(userId: CommonTypes.UserI
     assert(tableDescription, "tableDescription must be provided")
 
     if tableDescription.isPublic then
-        print("Doug: TableDescriptions.playerCanJoinInvitedTable 002")
         return false
     end
     if tableDescription.memberUserIds[userId] then
-        print("Doug: TableDescriptions.playerCanJoinInvitedTable 003")
         return false
     end
-
-    print("Doug: typeof(userId) = ", typeof(userId))
-    print("Doug: typeof(tableDescription.invitedUserIds) = ", typeof(tableDescription.invitedUserIds))
-
-    print("Doug: tableDescription.invitedUserIds[userId] = ", tableDescription.invitedUserIds[userId])
-    print("Doug: tableDescription.invitedUserIds[tostring(userId)]", tableDescription.invitedUserIds[tostring(userId)])
 
     if not tableDescription.invitedUserIds[userId] then
-        print("Doug: TableDescriptions.playerCanJoinInvitedTable 004")
         return false
     end
-    print("Doug: TableDescriptions.playerCanJoinInvitedTable tableDescription.gameTableState = ", tableDescription.gameTableState)
     return tableDescription.gameTableState == GameTableStates.WaitingForPlayers
 end
 
@@ -104,18 +94,14 @@ end
 --
 -- Return an array of ids for these tables.
 TableDescriptions.getTableIdsForInvitedWaitingTables = function(userId: CommonTypes.UserId): { CommonTypes.TableId }
-    print("Doug: TableDescriptions.getTableIdsForInvitedWaitingTables")
     assert(userId, "userId must be provided")
     local tableIds = {}
-    print("Doug: TableDescriptions.tableDescriptionsByTableId = ", TableDescriptions.tableDescriptionsByTableId)
     for _, tableDescription in pairs(TableDescriptions.tableDescriptionsByTableId) do
-        print("Doug: TableDescriptions.getTableIdsForInvitedWaitingTables tableDescription = ", tableDescription)
         if TableDescriptions.playerCanJoinInvitedTable(userId, tableDescription) then
             table.insert(tableIds, tableDescription.tableId)
         end
     end
 
-    print("Doug: TableDescriptions.getTableIdsForInvitedWaitingTables returning tableIds = ", tableIds)
     return tableIds
 end
 
@@ -126,7 +112,6 @@ end
 --
 -- Return an array of ids for these tables.
 TableDescriptions.getTableIdsForPublicWaitingTables = function(userId: CommonTypes.UserId): { CommonTypes.TableId }
-    print("Doug: TableDescriptions.getTableIdsForPublicWaitingTables")
     assert(userId, "userId must be provided")
     local tableIds = {}
     for _, tableDescription in pairs(TableDescriptions.tableDescriptionsByTableId) do

@@ -30,6 +30,97 @@ local mainScreenGui: ScreenGui = nil
 
 local globalLayoutOrder = 0
 
+-- An "item" is a user or a game.
+-- We have a standard notion of size/style for an image for an item.
+local addItemImage = function(parent: GuiObject): ImageLabel
+    local imageLabel = Instance.new("ImageLabel")
+    imageLabel.Name = "ItemImage"
+    imageLabel.ScaleType = Enum.ScaleType.Fit
+    imageLabel.BackgroundTransparency = 1
+    imageLabel.Parent = parent
+    imageLabel.LayoutOrder = 1
+    imageLabel.ZIndex = GuiConstants.iotlImageZIndex
+    GuiUtils.addCorner(imageLabel)
+    return imageLabel
+end
+
+-- An "item" is a user or a game.
+-- We have a standard notion of size/style for a text label for an item.
+local addItemTextLabel = function(parent:GuiObject): TextLabel
+    local userTextLabel = GuiUtils.addTextLabel(parent, "", {
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+    })
+    userTextLabel.AutomaticSize = Enum.AutomaticSize.None
+    userTextLabel.LayoutOrder = 2
+    userTextLabel.Name = "ItemText"
+    userTextLabel.ZIndex = GuiConstants.iotlTextZIndex
+    return userTextLabel
+end
+
+-- Standard notion of displaying a user name in a label.
+-- Start with basic "item text", tweak the size, deal with async nature of loading the name.
+local configureUserTextLabel = function(textLabel:TextLabel, userId: CommonTypes.UserId, opt_formatString: string?)
+    assert(textLabel, "Should have textLabel")
+    assert(userId, "Should have userId")
+
+    textLabel.Size = UDim2.new(1, 0, 0, GuiConstants.userLabelHeight)
+    textLabel.TextSize = GuiConstants.userTextLabelFontSize
+    textLabel.Text = ""
+
+    -- Async get and set the contents of name
+    task.spawn(function()
+        local mappedId = Utils.debugMapUserId(userId)
+
+        local playerName = Players: GetNameFromUserIdAsync(mappedId)
+
+        assert(playerName, "playerName should exist")
+
+        local formatString = if opt_formatString then opt_formatString else "%s"
+        local formattedString = string.format(formatString, playerName)
+        textLabel.Text = formattedString
+    end)
+end
+
+-- Standard notion of displaying a user image.
+-- Start with basic "item image", tweak the size, deal with async nature of loading the image.
+local configureUserImage = function(imageLabel:ImageLabel, userId: CommonTypes.UserId)
+    assert(imageLabel, "Should have imageLabel")
+    assert(userId, "Should have userId")
+
+    imageLabel.Size = UDim2.fromOffset(GuiConstants.userImageX, GuiConstants.userImageX)
+    imageLabel.Image = ""
+
+    -- Async get and set the contents of image.
+    task.spawn(function()
+        local mappedId = Utils.debugMapUserId(userId)
+
+        local playerThumbnail = Players:GetUserThumbnailAsync(mappedId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size60x60)
+
+        assert(playerThumbnail, "playerThumbnail should exist")
+        imageLabel.Image = playerThumbnail
+    end)
+end
+
+-- Standard notion of displaying a game name in text.
+-- Start with basic "item text", tweak the size, set the name.
+local configureGameTextLabel = function(textLabel:TextLabel, gameDetails: CommonTypes.GameDetails)
+    assert(textLabel, "Should have textLabel")
+    assert(gameDetails, "Should have gameDetails")
+    textLabel.Size = UDim2.new(1, 0, 0, GuiConstants.gameLabelHeight)
+    textLabel.TextSize = GuiConstants.gameTextLabelFontSize
+    textLabel.Text = gameDetails.name
+end
+
+-- Standard notion of displaying a game image in text.
+-- Start with basic "item image", tweak the size, set the image.
+local configureGameImage = function(imageLabel: ImageLabel, gameDetails: GameDetails): ImageLabel
+    assert(imageLabel, "Should have imageLabel")
+    assert(gameDetails, "Should have gameDetails")
+    imageLabel.Size = UDim2.fromOffset(GuiConstants.gameImageX, GuiConstants.gameImageY)
+    imageLabel.Image = gameDetails.gameImage
+end
+
 GuiUtils.getMainScreenGui = function(): ScreenGui
     assert(mainScreenGui, "Should have a mainScreenGui")
     return mainScreenGui
@@ -202,6 +293,8 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
         HorizontalAlignment = rowOptions.horizontalAlignment or Enum.HorizontalAlignment.Left,
     })
 
+    local contentWidthOffset = 0
+
     if rowOptions.labelText then
         local labelText = "<b>" .. rowOptions.labelText .. "</b>"
         GuiUtils.addTextLabel(row, labelText, {
@@ -211,6 +304,7 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
             Size = UDim2.fromOffset(GuiConstants.rowLabelWidth, 0),
             TextXAlignment = Enum.TextXAlignment.Right,
         })
+        contentWidthOffset = GuiConstants.rowLabelWidth + GuiConstants.standardPadding
     end
 
     local rowContent
@@ -226,8 +320,8 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
         rowContent = Instance.new("Frame")
     end
     rowContent.Parent = row
-    rowContent.Size = UDim2.fromScale(0, 0)
-    rowContent.AutomaticSize = Enum.AutomaticSize.XY
+    rowContent.Size = UDim2.new(1, -contentWidthOffset, 0, 0)
+    rowContent.AutomaticSize = Enum.AutomaticSize.Y
     rowContent.Position = UDim2.fromScale(0, 0)
     rowContent.Name = GuiConstants.rowContentName
     rowContent.LayoutOrder = 2
@@ -261,7 +355,7 @@ end
 GuiUtils.addCorner = function(parent: Frame): UICorner
     local uiCorner = Instance.new("UICorner")
     uiCorner.Parent = parent
-    uiCorner.CornerRadius = UDim.new(0, 4)
+    uiCorner.CornerRadius = UDim.new(0, GuiConstants.standardCornerSize)
     return uiCorner
 end
 
@@ -321,16 +415,43 @@ end
     Make a clickable button representing a game table.
 ]]
 GuiUtils.addTableButton = function(parent: Instance, tableDescription: CommonTypes.TableDescription, onButtonCiicked: () -> nil): GuiObject
-    -- FIXME(dbanks)
-    -- Someday a nice large button with image of game, name, host, description, etc.
-    -- For now just host name and game name as a text button.
-   local hostName = GuiUtils.getPlayerName(tableDescription.hostUserId)
-    local gameName = GuiUtils.getGameName(tableDescription.gameId)
-    assert(hostName, "No host name for " .. tableDescription.hostUserId)
-    assert(gameName, "No game name for " .. tableDescription.gameId)
-    local buttonText = "\"" .. gameName .. "\" hosted by " .. hostName
+    local button = Instance.new("TextButton")
+    button.Parent = parent
 
-    return GuiUtils.addTextButton(parent, buttonText, onButtonCiicked)
+    button.Text = ""
+    button.Name = "TableButton"
+    button.Activated:Connect(onButtonCiicked)
+
+    local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
+    assert(gameDetails, "Should have gameDetails")
+
+    button.Size = UDim2.fromOffset(GuiConstants.tableWidgetX, GuiConstants.tableWidgetY)
+
+    button.BackgroundColor3 = Color3.new(1, 1, 1)
+
+    GuiUtils.addUIGradient(button, GuiConstants.whiteToGrayColorSequence)
+    GuiUtils.addCorner(button)
+    GuiUtils.addUIListLayout(button, {
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+    })
+    GuiUtils.addPadding(button)
+
+    local imageLabel = addItemImage()
+
+    local gameTextLabel = addItemTextLabel(button)
+    local hostTextLabel = addItemTextLabel(button)
+    hostTextLabel.LayoutOrder = 3
+    hostTextLabel.RichText = true
+
+    configureGameTextLabel(gameTextLabel, gameDetails)
+    local formatString = "<i>Hosted by</i> %s"
+    print("Doug: addTableButton tableDescription = ", tableDescription)
+    configureUserTextLabel(hostTextLabel, tableDescription.hostUserId, formatString)
+
+    configureGameImage(imageLabel, gameDetails)
+
+    return button
+
 end
 
 local addImageOverTextLabel = function(frame: GuiObject): (ImageLabel, TextLabel)
@@ -345,24 +466,8 @@ local addImageOverTextLabel = function(frame: GuiObject): (ImageLabel, TextLabel
     })
     GuiUtils.addPadding(frame)
 
-    local imageLabel = Instance.new("ImageLabel")
-    imageLabel.Name = "ItemImage"
-    imageLabel.ScaleType = Enum.ScaleType.Fit
-    imageLabel.BackgroundTransparency = 1
-    imageLabel.Parent = frame
-    imageLabel.LayoutOrder = 1
-    imageLabel.ZIndex = GuiConstants.iotlImageZIndex
-    GuiUtils.addCorner(imageLabel)
-
-    local textLabel = GuiUtils.addTextLabel(frame, "", {
-        TextXAlignment = Enum.TextXAlignment.Center,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-    })
-
-    textLabel.AutomaticSize = Enum.AutomaticSize.None
-    textLabel.LayoutOrder = 2
-    textLabel.Name = "ItemText"
-    textLabel.ZIndex = GuiConstants.iotlTextZIndex
+    local imageLabel = addItemImage(frame)
+    local textLabel = addItemTextLabel(frame)
 
     return imageLabel, textLabel
 end
@@ -374,28 +479,8 @@ local function addUserImageOverTextLabel(frame: GuiObject, userId: CommonTypes.U
 
     local imageLabel, textLabel = addImageOverTextLabel(frame)
 
-    textLabel.Size = UDim2.new(1, 0, 0, GuiConstants.userLabelHeight)
-    textLabel.TextSize = GuiConstants.userTextLabelFontSize
-    textLabel.Text = ""
-
-    imageLabel.Size = UDim2.fromOffset(GuiConstants.userImageX, GuiConstants.userImageX)
-    imageLabel.Image = ""
-
-    -- Async get and set the contents of name and image.
-    task.spawn(function()
-        -- FIXME(dbanks)
-        -- Could do these in parallel, don't care right now.
-        local mappedId = Utils.debugMapUserId(userId)
-
-        local playerName = Players: GetNameFromUserIdAsync(mappedId)
-        local playerThumbnail = Players:GetUserThumbnailAsync(mappedId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size60x60)
-
-        assert(playerName, "playerName should exist")
-        assert(playerThumbnail, "playerThumbnail should exist")
-        imageLabel.Image = playerThumbnail
-
-        textLabel.Text = playerName
-    end)
+    configureUserTextLabel(textLabel, userId)
+    configureUserImage(imageLabel, userId)
 
     return imageLabel, textLabel
 end
@@ -407,12 +492,8 @@ local function addGameImageOverTextLabel(frame: GuiObject, gameDetails: CommonTy
 
     local imageLabel, textLabel = addImageOverTextLabel(frame)
 
-    textLabel.Size = UDim2.new(1, 0, 0, GuiConstants.gameLabelHeight)
-    textLabel.TextSize = GuiConstants.gameTextLabelFontSize
-    textLabel.Text = gameDetails.name
-
-    imageLabel.Size = UDim2.fromOffset(GuiConstants.gameImageX, GuiConstants.gameImageY)
-    imageLabel.Image = gameDetails.gameImage
+    configureGameTextLabel(textLabel, gameDetails)
+    configureGameImage(imageLabel, gameDetails)
 
     return imageLabel, textLabel
 end
@@ -521,7 +602,7 @@ end
 -- a child "itemType" string value and a child "itemId" number value.
 -- <type, id> should be globally unique.
 -- Name is just "WidgetContainer_<type>_<id>
-GuiUtils.constructWidgetContainerName = function(itemType: string, itemId: number): string
+GuiUtils.constructWidgetContainerName = function(itemType: string, itemId: numbe): string
     assert(itemType, "Should have a itemType")
     assert(itemId, "Should have a itemId")
     return "WidgetContainer_" .. itemType .. "_" .. tostring(itemId)
@@ -552,7 +633,7 @@ GuiUtils.isAWidgetContainer = function(instance: Instance): boolean
     end
     local expectedName = GuiUtils.getExpectedWidgetContainerName(instance)
     if not expectedName then
-        return false
+            return false
     end
     return expectedName == instance.Name
 end
@@ -568,6 +649,43 @@ local function makeTweenKey(widgetContainer: Instance): string
     return "Tween_" .. itemType.Value .. "_" .. tostring(itemId.Value)
 end
 
+local collectWidgetContainers = function(parent: GuiObjet): {GuiObject}
+    assert(parent, "Should have a parent")
+    local widgetContainers = {} :: {GuiObject}
+    local allKids = parent:GetChildren()
+    for _, kid in allKids do
+        if GuiUtils.isAWidgetContainer(kid) then
+            table.insert(widgetContainers, kid)
+        end
+    end
+    return widgetContainers
+end
+
+local collectWidgetsTweeningOut = function(parent: GuiObject): {GuiObject}
+    assert(parent, "Should have a parent")
+    local deadMeatFrames = {} :: {GuiObject}
+    local allKids = parent:GetChildren()
+    for _, kid in allKids do
+        if kid.Name == GuiConstants.deadMeatTweeningOutName then
+            table.insert(deadMeatFrames, kid)
+        end
+    end
+    return deadMeatFrames
+end
+
+GuiUtils.updateNilWidgetContainer = function(parentFrame: Frame, renderEmptyList: (Frame) -> nil, cleanupEmptyList: (Frame) -> nil)
+    -- How many non-nil widget containers, or guys tweening out?
+    assert(parentFrame, "Should have a parentFrame")
+    local widgetContainers = collectWidgetContainers(parentFrame)
+    local widgetsTweeningOut = collectWidgetsTweeningOut(parentFrame)
+
+    if #widgetContainers == 0 and #widgetsTweeningOut == 0 then
+        renderEmptyList(parentFrame)
+    else
+        cleanupEmptyList(parentFrame)
+    end
+end
+
 -- Any WidgetContainer has a type (e.g. "game button") and an id, unique within the type.
 -- We have a parent frame with zero or more WidgetContainer children, all the same type.
 -- We have a new/updated list of itemIds within the same type.
@@ -576,25 +694,20 @@ end
 -- Return a list of any tweens we created so we can murder them later if we need to.
 GuiUtils.updateWidgetContainerChildren = function(parentFrame:Frame,
         itemIds:{number},
-        makeWidgetContainerForItem: (Instance, number) -> Instance)
+        makeWidgetContainerForItem: (Instance, number) -> Instance,
+        renderEmptyList: (Frame) -> nil,
+        cleanupEmptyList: (Frame) -> nil)
     local tweensToKill = {} :: CommonTypes.TweensToKill
-
-    local allKids = parentFrame:GetChildren()
-
-    -- Get all the existing widgets.
-    local widgetContainers = {}
-    for _, kid in allKids do
-        if GuiUtils.isAWidgetContainer(kid) then
-            table.insert(widgetContainers, kid)
-        end
-    end
+    assert(parentFrame, "parentFrame should exist")
+    -- Get all the existing widgets containers.
+    local widgetContainers = collectWidgetContainers(parentFrame)
 
     -- Figure out which widgets need to go, and what new widgets we need.
     local widgetContainersOut = getWidgetContainersOut(widgetContainers, itemIds)
     local itemIdsIn = getItemIdsIn(widgetContainers, itemIds)
 
     -- Just for giggles, instead of stuff just popping in/out, make it a nice tween.
-    local tweenInfo = TweenInfo.new(0.5)
+    local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Circular)
 
     -- Tween out unused widgets.
     for _, widgetContainer in widgetContainersOut do
@@ -607,15 +720,21 @@ GuiUtils.updateWidgetContainerChildren = function(parentFrame:Frame,
         end
         local tween = TweenService:Create(uiScale, tweenInfo, {Scale = 0})
         local key = makeTweenKey(widgetContainer)
+        -- Cancel any existing tweens on this fool.
+        TweenHandling.cancelTween(key)
+
         tweensToKill[key] = tween
+
+        -- Rename them so we don't find them again and re-tween.
+        widgetContainer.Name = GuiConstants.deadMeatTweeningOutName
 
         tween.Completed:Connect(function(_)
             widgetContainer:Destroy()
+            GuiUtils.updateNilWidgetContainer(parentFrame, renderEmptyList, cleanupEmptyList)
         end)
         tween:Play()
     end
 
-    -- Tween in new widgets.
     for _, itemId in itemIdsIn do
         local itemWidgetContainer = makeWidgetContainerForItem(parentFrame, itemId)
         assert(itemWidgetContainer, "Should have widgetContainer")
@@ -638,17 +757,19 @@ GuiUtils.updateWidgetContainerChildren = function(parentFrame:Frame,
 
     -- store the tweens.
     TweenHandling.saveTweens(tweensToKill)
+
+    GuiUtils.updateNilWidgetContainer(parentFrame, renderEmptyList, cleanupEmptyList)
 end
 
 local genericIdGenerator = 0
 
-local makeWidgetContainer = function(parent:GuiObject, widgetType: string, _itemId: number?): GuiObject
+local makeWidgetContainer = function(parent:GuiObject, widgetType: string, opt_itemId: number?): GuiObject
     assert(parent, "Should have a parent")
     assert(widgetType, "Should have a widgetType")
 
     local itemId
-    if _itemId then
-        itemId = _itemId
+    if opt_itemId then
+        itemId = opt_itemId
     else
         itemId = genericIdGenerator
         genericIdGenerator = genericIdGenerator + 1
@@ -686,32 +807,55 @@ GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, onC
     -- When that resolves we remove loading message and add the real info.
     -- FIXME(dbanks)
     -- Make nicer: loading message could be a swirly or whatever.
-    local tableButtonContainer = makeWidgetContainer(parent, "User", userId)
+    local userWidgetContainer = makeWidgetContainer(parent, "User", userId)
 
     if onClick then
-        GuiUtils.addUserButton(tableButtonContainer, userId, function()
+        GuiUtils.addUserButton(userWidgetContainer, userId, function()
             onClick(userId)
         end)
     else
-        GuiUtils.addUserWidget(tableButtonContainer, userId)
+        GuiUtils.addUserWidget(userWidgetContainer, userId)
     end
 
-    return tableButtonContainer
+    return userWidgetContainer
 end
 
--- Make a widgetContainer containing a table (game name, host, etc.)
+GuiUtils.removeNullWidget = function(parent:Instance)
+    if parent:FindFirstChild(GuiConstants.nullWidgetName) then
+        parent:FindFirstChild(GuiConstants.nullWidgetName):Destroy()
+    end
+end
+
+-- Make standard "nothing there" indicator.
+-- Idempotent: will remove old/previous one if present.
+GuiUtils.addNullWidget = function(parent: Instance, message: string): Frame
+    -- Make sure old widget is gone.
+    GuiUtils.removeNullWidget(parent)
+    local textLabel = GuiUtils.addTextLabel(parent, message, {
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        RichText = true,
+        TextWrapped = true,
+        BackgroundTransparency = 0,
+        BackgroundColor3 = Color3.new(1, 1, 1),
+    })
+    GuiUtils.addUIGradient(textLabel, GuiConstants.whiteToGrayColorSequence)
+    GuiUtils.addCorner(textLabel)
+    GuiUtils.addPadding(textLabel)
+
+    textLabel.Name = GuiConstants.nullWidgetName
+    return textLabel
+end
+
+-- Make a widgetContainer containing a button you click to join a game.
 GuiUtils.addTableButtonWidgetContainer = function(parent: Instance, tableId: number, onClick: () -> nil): Frame
     local tableDescription = TableDescriptions.getTableDescription(tableId)
     -- Should exist.
     assert(tableDescription, "Should have a tableDescription")
 
-    local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
-    -- Should exist.
-    assert(gameDetails, "Should have a gameDetails")
-
     local tableButtonContainer = makeWidgetContainer(parent, "Table", tableId)
 
-    GuiUtils.addGameButton(tableButtonContainer, gameDetails, onClick)
+    GuiUtils.addTableButton(tableButtonContainer, tableDescription, onClick)
 
     return tableButtonContainer
 end

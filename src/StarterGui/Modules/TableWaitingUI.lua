@@ -255,7 +255,7 @@ end
 --   * Hit the callback when button is clicked
 -- Return a list of any tweens generated.
 local updateUserRow = function(parentOfRow: Frame, rowName: string, userIds: {CommonTypes.UserId}, isButton: (userId: CommonTypes.UserId) -> boolean,
-        buttonCallback: (CommonTypes.UserId) -> nil)
+        buttonCallback: (CommonTypes.UserId) -> nil, renderEmptyList: (Frame) -> nil, cleanupEmptyList: (Frame) -> nil)
     local rowContent = GuiUtils.getRowContent(parentOfRow, rowName)
     assert(rowContent, "Should have a rowContent")
 
@@ -270,7 +270,7 @@ local updateUserRow = function(parentOfRow: Frame, rowName: string, userIds: {Co
         return userWidgetContainer
     end
 
-    GuiUtils.updateWidgetContainerChildren(rowContent, userIds, makeUserWidgetContainer, GuiUtils.italicize("None"))
+    GuiUtils.updateWidgetContainerChildren(rowContent, userIds, makeUserWidgetContainer, renderEmptyList, cleanupEmptyList)
 end
 
 local updateGuests = function(parentOfRow: Frame, isHost: boolean, localUserId: CommonTypes.UserId, currentTableDescription: CommonTypes.TableDescription)
@@ -297,7 +297,10 @@ local updateGuests = function(parentOfRow: Frame, isHost: boolean, localUserId: 
     -- We don't want to display the host as a member, remove him.
     local memberUserIdsWithoutHost = TableDescriptions.getMembersWithoutHost(currentTableDescription)
 
-    updateUserRow(parentOfRow, "Row_Members", Cryo.Dictionary.keys(memberUserIdsWithoutHost), canRemoveGuest, removeGuestCallback)
+    updateUserRow(parentOfRow, "Row_Members", Cryo.Dictionary.keys(memberUserIdsWithoutHost), canRemoveGuest,
+        removeGuestCallback, function(parent)
+            GuiUtils.addNullWidget(parent, "<i>No players have joined yet.</i>")
+        end, GuiUtils.removeNullWidget)
 end
 
 local updateInvites = function(parentOfRow: Frame, isHost: boolean, currentTableDescription: CommonTypes.TableDescription)
@@ -320,7 +323,10 @@ local updateInvites = function(parentOfRow: Frame, isHost: boolean, currentTable
             end)
     end
 
-    updateUserRow(parentOfRow, "Row_Invites", Cryo.Dictionary.keys(currentTableDescription.invitedUserIds), canRemoveInvite, removeInviteCallback)
+    updateUserRow(parentOfRow, "Row_Invites", Cryo.Dictionary.keys(currentTableDescription.invitedUserIds),
+        canRemoveInvite, removeInviteCallback,function(parent)
+            GuiUtils.addNullWidget(parent, "<i>No players have been invited yet.</i>")
+        end, GuiUtils.removeNullWidget)
 end
 
 local updateTableControls = function(parentOfRow: Frame, currentTableDescription: CommonTypes.TableDescription, isHost: boolean)

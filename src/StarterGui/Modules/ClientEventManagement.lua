@@ -110,4 +110,12 @@ ClientEventManagement.mockTable = function(isPublic: boolean)
     end
 end
 
+ClientEventManagement.destroyAllMockTables = function()
+    if game:GetService("RunService"):IsStudio() then
+        local event = ReplicatedStorage.TableEvents:WaitForChild("DestroyAllMockTables")
+        assert(event, "DestroyAllMockTables event missing")
+        event:FireServer()
+    end
+end
+
 return ClientEventManagement

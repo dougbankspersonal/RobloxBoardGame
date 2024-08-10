@@ -139,7 +139,6 @@ end
     Updates UI to reflect current state.
 ]]
 GuiMain.updateUI = function()
-    Utils.debugPrint("Doug: GuiMain.updateUI")
     -- Figure out which, if any, table we're at, and from that we know what ui mode we are in.
     setCurrentTableAndUIMode()
 
@@ -175,9 +174,10 @@ GuiMain.updateUI = function()
 end
 
 GuiMain.onTableCreated = function(tableDescription: CommonTypes.TableDescription)
-    Utils.debugPrint("Doug: GuiMain.onTableCreated")
     assert(tableDescription, "tableDescription must be provided")
     assert(typeof(tableDescription) == "table", "tableDescription must be a table")
+
+    print("Doug: GuiMain.onTableCreated tableDescription = ", tableDescription)
 
     -- Sending table description from server to client messes with some types. Fix it.
     tableDescription = TableDescriptions.cleanUpTypes(tableDescription)

@@ -28,21 +28,23 @@ local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
 
 local TableSelectionUI = {}
 
+local makeWidgetContainerForTable = function(parent: Frame, tableId: CommonTypes.TableId): Frame
+    return GuiUtils.addTableButtonWidgetContainer(parent, tableId, function()
+        ClientEventManagement.joinTable(tableId)
+    end)
+end
+
 local function updateInvitedTables(mainFrame: GuiObject)
     local localUserId = game.Players.LocalPlayer.UserId
     assert(localUserId, "Should have a localUserId")
 
     local invitedRowContent = GuiUtils.getRowContent(mainFrame, "Row_InvitedTables")
     assert(invitedRowContent, "Should have an invitedRowContent")
-    print("Doug: updateInvitedTables localUserId = ", localUserId)
     local tableIdsForInvitedWaitingTables = TableDescriptions.getTableIdsForInvitedWaitingTables(localUserId)
 
-    GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, function(parent: Frame, tableId: CommonTypes.TableId): Frame
-        local wc = GuiUtils.addTableButtonWidgetContainer(parent, tableId, function()
-            ClientEventManagement.joinTable(tableId)
-        end)
-        return wc
-    end, GuiUtils.italicize("No open invitations"))
+    GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, makeWidgetContainerForTable, function(parent)
+        GuiUtils.addNullWidget(parent, "<i>Sorry, no table invites right now.</i>")
+    end, GuiUtils.removeNullWidget)
 end
 
 local function updatePublicTables(mainFrame: GuiObject)
@@ -53,12 +55,39 @@ local function updatePublicTables(mainFrame: GuiObject)
     assert(publicRowContent, "Should have an publicRowContent")
     local tableIdsForPublicWaitingTables = TableDescriptions.getTableIdsForPublicWaitingTables(localUserId)
 
-    GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, function(parent: Frame, tableId: CommonTypes.TableId): Frame
-        local wc = GuiUtils.addTableButtonWidgetContainer(parent, tableId, function()
-            ClientEventManagement.joinTable(tableId)
-        end)
-        return wc
-    end, GuiUtils.italicize("No public tables"))
+    GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, makeWidgetContainerForTable, function(parent)
+        GuiUtils.addNullWidget(parent, "<i>Sorry, no public tables to join right now.</i>")
+    end, GuiUtils.removeNullWidget)
+end
+
+local function addTableRow(frame:UIObject, label:string, name:string) : Frame
+    local instanceOptions = {
+        AutomaticSize = Enum.AutomaticSize.None,
+        Size = UDim2.new(1, -GuiConstants.rowLabelWidth - GuiConstants.standardPadding, 0, GuiConstants.tableWidgetY + 2 * GuiConstants.standardPadding),
+        ClipsDescendants = true,
+        BorderSizePixel = 0,
+        BorderColor3 = Color3.new(0.5, 0.5, 0.5),
+        BorderMode = Enum.BorderMode.Outline,
+        BackgroundColor3 = Color3.new(0.9, 0.9, 0.9),
+        BackgroundTransparency = 0,
+    }
+
+    local rowOptions = {
+        isScrolling = true,
+        useGridLayout = true,
+        gridCellSize = UDim2.fromOffset(GuiConstants.tableWidgetX, GuiConstants.tableWidgetY),
+        labelText = label,
+    }
+
+    -- Row to show tables you are invited to.
+    local rowContent = GuiUtils.addRowAndReturnRowContent(frame, name, rowOptions, instanceOptions)
+    local gridLayout = rowContent:FindFirstChildWhichIsA("UIGridLayout", true)
+    assert(gridLayout, "Should have gridLayout")
+    gridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+    gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+
+    GuiUtils.addPadding(rowContent)
+    return rowContent
 end
 
 --[[
@@ -117,25 +146,20 @@ TableSelectionUI.build = function()
                             ClientEventManagement.mockTable(false)
                         end
                     } :: CommonTypes.DialogButtonConfig,
+                    {
+                        text = "Destroy Mock Tables",
+                        callback = function()
+                            ClientEventManagement.destroyAllMockTables(false)
+                        end
+                    } :: CommonTypes.DialogButtonConfig,
                 } :: {CommonTypes.DialogConfig},
             }
             DialogUtils.makeDialog(dialogConfig)
         end)
     end
 
-
-    -- Row to show tables you are invited to.
-    GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_InvitedTables", {
-        isScrolling = true,
-        useGridLayout = true,
-        labelText = "Open Invitations:",
-    })
-    -- Row to show public tables.
-    GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_PublicTables", {
-        isScrolling = true,
-        useGridLayout = true,
-        labelText = "Public Tables:",
-    })
+    addTableRow(mainFrame, "Open Invitations:", "Row_InvitedTables")
+    addTableRow(mainFrame, "Public Tables:", "Row_PublicTables")
 end
 
 -- update ui elements for the table creation/selection ui.
