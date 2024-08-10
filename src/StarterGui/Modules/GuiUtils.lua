@@ -33,6 +33,7 @@ local globalLayoutOrder = 0
 -- An "item" is a user or a game.
 -- We have a standard notion of size/style for an image for an item.
 local addItemImage = function(parent: GuiObject): ImageLabel
+    assert(parent, "Should have parent")
     local imageLabel = Instance.new("ImageLabel")
     imageLabel.Name = "ItemImage"
     imageLabel.ScaleType = Enum.ScaleType.Fit
@@ -436,7 +437,7 @@ GuiUtils.addTableButton = function(parent: Instance, tableDescription: CommonTyp
     })
     GuiUtils.addPadding(button)
 
-    local imageLabel = addItemImage()
+    local imageLabel = addItemImage(button)
 
     local gameTextLabel = addItemTextLabel(button)
     local hostTextLabel = addItemTextLabel(button)
@@ -707,7 +708,7 @@ GuiUtils.updateWidgetContainerChildren = function(parentFrame:Frame,
     local itemIdsIn = getItemIdsIn(widgetContainers, itemIds)
 
     -- Just for giggles, instead of stuff just popping in/out, make it a nice tween.
-    local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Circular)
+    local tweenInfo = TweenInfo.new(GuiConstants.standardTweenTime, Enum.EasingStyle.Circular)
 
     -- Tween out unused widgets.
     for _, widgetContainer in widgetContainersOut do

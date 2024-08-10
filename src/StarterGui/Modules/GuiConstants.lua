@@ -26,7 +26,7 @@ GuiConstants.gameTextLabelFontSize = 8
 GuiConstants.userTextLabelFontSize = 8
 GuiConstants.rowHeaderFontSize = 16
 
--- Various measurements.
+-- Various pixel measurements.
 GuiConstants.standardCornerSize = 10
 
 GuiConstants.rowLabelWidth = 200
@@ -71,6 +71,9 @@ GuiConstants.iotlNextZIndex = 4
 GuiConstants.whiteToGrayColorSequence = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(0.8, 0.8, 0.8))
 GuiConstants.scrollBackgroundGradient = ColorSequence.new(Color3.new(0.8, 0.8, 0.8), Color3.new(0.6, 0.6, 0.6))
 GuiConstants.blueColorSequence = ColorSequence.new(Color3.new(0.5, 0.6, 0.8), Color3.new(0.2, 0.3, 0.5))
+
+-- Times
+GuiConstants.standardTweenTime = 0.25
 
 -- Images
 GuiConstants.redXImage = "http://www.roblox.com/asset/?id=171846064"
