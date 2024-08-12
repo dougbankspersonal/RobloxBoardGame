@@ -119,4 +119,28 @@ ClientEventManagement.destroyAllMockTables = function()
     end
 end
 
+ClientEventManagement.addMockMember = function(tableId: CommonTypes.TableId)
+    if game:GetService("RunService"):IsStudio() then
+        local event = ReplicatedStorage.TableEvents:WaitForChild("AddMockMember")
+        assert(event, "AddMockMember event missing")
+        event:FireServer(tableId)
+    end
+end
+
+ClientEventManagement.addMockInvite = function(tableId: CommonTypes.TableId)
+    if game:GetService("RunService"):IsStudio() then
+        local event = ReplicatedStorage.TableEvents:WaitForChild("AddMockInvite")
+        assert(event, "AddMockInvite event missing")
+        event:FireServer(tableId)
+    end
+end
+
+ClientEventManagement.mockInviteAcceptance = function(tableId: CommonTypes.TableId)
+    if game:GetService("RunService"):IsStudio() then
+        local event = ReplicatedStorage.TableEvents:WaitForChild("MockInviteAcceptance")
+        assert(event, "MockInviteAcceptance event missing")
+        event:FireServer(tableId)
+    end
+end
+
 return ClientEventManagement

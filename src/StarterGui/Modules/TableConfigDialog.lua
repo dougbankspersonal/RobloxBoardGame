@@ -55,7 +55,7 @@ local function _makeRowAndAddCustomControls(parent: Frame, gameDetailsByGameId: 
         gridCellSize = UDim2.fromOffset(GuiConstants.gameWidgetX, GuiConstants.gameWidgetY),
     }
 
-    local rowContent = GuiUtils.addRowAndReturnRowContent(parent, "Row_Controls", rowOptions, {
+    local rowContent = GuiUtils.addRowAndReturnRowContent(parent, "Row_Controls", nil, rowOptions, {
         AutomaticSize = Enum.AutomaticSize.None,
         ClipsDescendants = true,
         BorderSizePixel = 0,

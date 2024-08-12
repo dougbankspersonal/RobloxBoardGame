@@ -114,8 +114,9 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     assert(not (hasDialogButtonConfigs and hasMakeRowAndAddCustomControls), "Should not have both dialogButtonConfigs hasMakeRowAndAddCustomControls")
 
     if hasDialogButtonConfigs then
-        local rowContent = GuiUtils.addRowAndReturnRowContent(contentFrame, "Row_Controls", {
+        local rowContent = GuiUtils.addRowAndReturnRowContent(contentFrame, "Row_Controls", nil, {
             horizontalAlignment = Enum.HorizontalAlignment.Center,
+            wraps = true,
         })
 
         for _, dialogButtonConfig in ipairs(dialogConfig.dialogButtonConfigs) do

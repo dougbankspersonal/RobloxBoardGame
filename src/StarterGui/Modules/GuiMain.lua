@@ -26,6 +26,7 @@ local TableWaitingUI = require(RobloxBoardGameStarterGui.Modules.TableWaitingUI)
 local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
+local ClientEventManagement= require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
 
 -- Globals
 local localUserId = Players.LocalPlayer.UserId
@@ -39,6 +40,63 @@ local cleanupFunctionsForCurrentUIMode = {}:: {() -> nil}
 local uiModeBasedOnTableDescriptions: CommonTypes.UIMode = UIModes.Loading
 -- Iff local user is at a table (either waiting, playing, or finished), this describes that table.
 local currentTableDescription: CommonTypes.TableDescription? = nil
+
+local function summonMocksDialog()
+    local dialogButtonConfigs = {
+        {
+            text = "Create Mock Public Table",
+            callback = function()
+                ClientEventManagement.mockTable(true)
+            end
+        } :: CommonTypes.DialogButtonConfig,
+        {
+            text = "Create Mock Private Table",
+            callback = function()
+                ClientEventManagement.mockTable(false)
+            end
+        } :: CommonTypes.DialogButtonConfig,
+        {
+            text = "Destroy Mock Tables",
+            callback = function()
+                ClientEventManagement.destroyAllMockTables(false)
+            end
+        } :: CommonTypes.DialogButtonConfig,
+    } :: {CommonTypes.DialogConfig}
+
+    local currentTableDescription = TableDescriptions.getTableWithUserId(localUserId)
+    if currentTableDescription then
+        local tableId = currentTableDescription.tableId
+        assert(tableId, "Should have a tableId")
+        if currentTableDescription.isPublic then
+            table.insert(dialogButtonConfigs, {
+                text = "Add Mock Member",
+                callback = function()
+                    ClientEventManagement.addMockMember(tableId)
+                end
+            } :: CommonTypes.DialogButtonConfig)
+        else
+            table.insert(dialogButtonConfigs, {
+                text = "Add Mock Invite",
+                callback = function()
+                    ClientEventManagement.addMockInvite(tableId)
+                end
+            } :: CommonTypes.DialogButtonConfig)
+            table.insert(dialogButtonConfigs, {
+                text = "Mock Invite Acceptance",
+                callback = function()
+                    ClientEventManagement.mockInviteAcceptance(tableId)
+                end
+            } :: CommonTypes.DialogButtonConfig)
+
+    end
+
+    local dialogConfig: CommonTypes.DialogConfig = {
+        title = "Mocks",
+        description = "Debug Tasks.",
+        dialogButtonConfigs = dialogButtonConfigs,
+    }
+    DialogUtils.makeDialog(dialogConfig)
+end
 
 GuiMain.makeContaintingScrollingFrame = function()
     local mainScreenGui = GuiUtils.getMainScreenGui()
@@ -54,6 +112,16 @@ GuiMain.makeContaintingScrollingFrame = function()
     containingScrollingFrame.CanvasSize = UDim2.fromScale(1, 0)
     containingScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     containingScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(0.5, 0.5, 0.5)
+
+    -- Throw on a button with a very high z index to summon mocks.
+    if game:GetService("RunService"):IsStudio() then
+        local textButton = GuiUtils.addTextButton(containingScrollingFrame, "Mocks", summonMocksDialog)
+        textButton.Name = GuiConstants.persistentNameStart .. "MocksButton"
+        textButton.AnchorPoint = Vector2.new(1, 1)
+        textButton.Position = UDim2.new(1, -10, 1, -10)
+        textButton.ZIndex = 1000
+    end
+
     return containingScrollingFrame
 end
 
@@ -73,8 +141,10 @@ GuiMain.makeMainFrame = function(): Frame
     mainFrame.Parent = containingScrollingFrame
     mainFrame.Name = GuiConstants.mainFrameName
     mainFrame.BorderSizePixel= 0
+    mainFrame.AutomaticSize = Enum.AutomaticSize.Y
 
     return mainFrame
+
 end
 
 local function buildTablePlayingUI(): nil
@@ -126,6 +196,12 @@ local cleanupCurrentUI = function()
     local mainFrame = GuiUtils.getMainFrame()
     local children = mainFrame:GetChildren()
     for _, child in children do
+        -- Skip persistent children.
+        print("Doug: child.Name  = " .. child.Name)
+        print("Doug: GuiConstants.persistentNameStart  = " .. GuiConstants.persistentNameStart)
+        if Utils.stringStartsWith(child.Name, GuiConstants.persistentNameStart) then
+            continue
+        end
         child:Destroy()
     end
 end
@@ -167,7 +243,7 @@ GuiMain.updateUI = function()
     if currentUIMode == UIModes.TableSelection then
         TableSelectionUI.update()
     elseif currentUIMode == UIModes.TableWaitingForPlayers then
-        TableWaitingUI.update(currentTableDescription)
+        TableWaitingUI.update()
     elseif currentUIMode == UIModes.TablePlaying then
         updateTablePlayingUI()
     end

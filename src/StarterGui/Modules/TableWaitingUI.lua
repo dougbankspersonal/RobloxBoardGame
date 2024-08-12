@@ -35,29 +35,28 @@ local TableWaitingUI = {}
 local startButtonWidgetContainerName: string
 local gameOptionsWidgetContainerName: string
 
+TableWaitingUI.justBuilt = false
+
 -- Called when first building the UI.
 -- Game and host info don't change so we can fill that in.
 -- Config options will change so that gets filled in in update, but we can create space for it now.
 local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameDetails, currentTableDescription: CommonTypes.TableDescription)
     -- Game info and host info will not change, might as well fill them in now.
-    local rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Game", {
-        labelText = "Game:",
-    })
-
+    local rowContent = GuiUtils.addRowOfUniformItems(frame, "Row_Game", "Game: ", GuiConstants.gameWidgetY)
     GuiUtils.addGameWidget(rowContent, gameDetails, true)
 
     -- Num players row.
-    rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_NumPlayers", {
-        labelText = "Players:",
-    })
+    local rowOptions = {
+        horizontalAlignment = Enum.HorizontalAlignment.Left,
+    }
+    rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_NumPlayers", "Players:", rowOptions)
     GuiUtils.addTextLabelWidgetContainer(rowContent, GuiUtils.italicize(GuiUtils.getTableSizeString(gameDetails)), {
         RichText = true,
     })
 
     -- Visiblility row.
-    rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Visibility", {
-        labelText = "Visibility:",
-    })
+    rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Visibility", "Visibility:", rowOptions)
+
     local value = currentTableDescription.isPublic and "Public" or "Private"
     value = GuiUtils.italicize(value)
     GuiUtils.addTextLabelWidgetContainer(rowContent, value, {
@@ -67,9 +66,8 @@ local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameD
     -- If there are gameOptions, add a widget to contain that info.
     -- It will be filled in later.
     if gameDetails.gameOptions and #gameDetails.gameOptions > 0 then
-        rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_GameOptions", {
-            labelText = "Game Options:",
-        })
+        rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_GameOptions", "Game Options:", rowOptions)
+
         local selectedOptionsString = GuiUtils.getSelectedGameOptionsString(currentTableDescription)
         assert(selectedOptionsString, "selectedOptionsString should exist")
         selectedOptionsString = GuiUtils.italicize(selectedOptionsString)
@@ -83,9 +81,7 @@ local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameD
         gameOptionsWidgetContainerName = gameOptionsLabelWidgetContainer.Name
     end
 
-    rowContent  = GuiUtils.addRowAndReturnRowContent(frame, "Row_Host", {
-        labelText = "Host:",
-    })
+    rowContent = GuiUtils.addRowOfUniformItems(frame, "Row_Host", "Host: ", GuiConstants.userWidgetY)
     GuiUtils.addUserWidget(rowContent, currentTableDescription.hostUserId)
 end
 
@@ -133,7 +129,7 @@ end
 
 local addTableControls = function (frame: Frame, currentTableDescription: CommonTypes.TableDescription, isHost: boolean)
     -- Make a row for controls.
-    local rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Controls", {
+    local rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Controls", nil, {
         horizontalAlignment = Enum.HorizontalAlignment.Center,
     })
 
@@ -206,17 +202,14 @@ TableWaitingUI.build = function(currentTableDescription: CommonTypes.TableDescri
 
     -- Make a row for members (players who have joined), invites (players invited who have not yet joined)
     -- but do not fill in as this info will change: we set this in update function.
-    GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_Members", {
-        labelText = "Members:",
-    })
+    GuiUtils.addRowOfUniformItems(mainFrame, "Row_Members", "Members: ", GuiConstants.userWidgetY)
 
     if not currentTableDescription.isPublic then
-        GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_Invites", {
-            labelText = "Invites:",
-        })
+        GuiUtils.addRowOfUniformItems(mainFrame, "Row_Invites", "Invites: ", GuiConstants.userWidgetY)
     end
 
     addTableControls(mainFrame, currentTableDescription, isHost)
+    TableWaitingUI.justBuilt = true
 end
 
 -- Parent frame of whole UI and table we're seated at.
@@ -270,7 +263,7 @@ local updateUserRow = function(parentOfRow: Frame, rowName: string, userIds: {Co
         return userWidgetContainer
     end
 
-    GuiUtils.updateWidgetContainerChildren(rowContent, userIds, makeUserWidgetContainer, renderEmptyList, cleanupEmptyList)
+    GuiUtils.updateWidgetContainerChildren(rowContent, userIds, makeUserWidgetContainer, renderEmptyList, cleanupEmptyList, TableWaitingUI.justBuilt)
 end
 
 local updateGuests = function(parentOfRow: Frame, isHost: boolean, localUserId: CommonTypes.UserId, currentTableDescription: CommonTypes.TableDescription)
@@ -299,7 +292,9 @@ local updateGuests = function(parentOfRow: Frame, isHost: boolean, localUserId: 
 
     updateUserRow(parentOfRow, "Row_Members", Cryo.Dictionary.keys(memberUserIdsWithoutHost), canRemoveGuest,
         removeGuestCallback, function(parent)
-            GuiUtils.addNullWidget(parent, "<i>No players have joined yet.</i>")
+            GuiUtils.addNullWidget(parent, "<i>No players have joined yet.</i>", {
+                Size = UDim2.fromOffset(GuiConstants.userWidgetX, GuiConstants.userWidgetY)
+            })
         end, GuiUtils.removeNullWidget)
 end
 
@@ -325,7 +320,9 @@ local updateInvites = function(parentOfRow: Frame, isHost: boolean, currentTable
 
     updateUserRow(parentOfRow, "Row_Invites", Cryo.Dictionary.keys(currentTableDescription.invitedUserIds),
         canRemoveInvite, removeInviteCallback,function(parent)
-            GuiUtils.addNullWidget(parent, "<i>No players have been invited yet.</i>")
+            GuiUtils.addNullWidget(parent, "<i>No outstanding invitations.</i>", {
+                Size = UDim2.fromOffset(GuiConstants.userWidgetX, GuiConstants.userWidgetY)
+            })
         end, GuiUtils.removeNullWidget)
 end
 
@@ -360,7 +357,8 @@ local updateTableControls = function(parentOfRow: Frame, currentTableDescription
 
 end
 
-TableWaitingUI.update = function(currentTableDescription: CommonTypes.TableDescription)
+TableWaitingUI.update = function()
+    local currentTableDescription = TableDescriptions.getTableWithUserId(game.Players.LocalPlayer.UserId)
     -- Make sure we have all the stuff we need.
     assert(currentTableDescription, "Should have a currentTableDescription")
     local mainFrame = GuiUtils.getMainFrame()
@@ -383,6 +381,8 @@ TableWaitingUI.update = function(currentTableDescription: CommonTypes.TableDescr
 
     -- Keep controls up to date.
     updateTableControls(mainFrame, currentTableDescription, isHost)
+    -- This is not longer "just built".
+    TableWaitingUI.justBuilt = false
 end
 
 return TableWaitingUI

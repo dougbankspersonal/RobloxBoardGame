@@ -19,6 +19,8 @@ GuiConstants.dialogBackgroundName = "DialogBackground"
 GuiConstants.nullWidgetName = "NullWidget"
 GuiConstants.deadMeatTweeningOutName = "DeadMeatTweeningOut"
 
+GuiConstants.persistentNameStart = "Persistent_"
+
 -- Font sizes
 GuiConstants.textLabelFontSize = 14
 GuiConstants.dialogTitleFontSize = 24

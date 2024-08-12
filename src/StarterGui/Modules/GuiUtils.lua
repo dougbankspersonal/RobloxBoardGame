@@ -26,6 +26,8 @@ local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescrip
 local TweenHandling = require(RobloxBoardGameStarterGui.Modules.TweenHandling)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 
+local Cryo = require(ReplicatedStorage.Cryo)
+
 local mainScreenGui: ScreenGui = nil
 
 local globalLayoutOrder = 0
@@ -272,7 +274,7 @@ end
 --  |   of row      |  | widget | widget
 --  |               |  +--------+--------
 --  +--------------------------------------------
-GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, opt_rowOptions: CommonTypes.RowOptions?, opt_instanceOptions: CommonTypes.InstanceOptions?): GuiObject
+GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, opt_rowLabelText: string?, opt_rowOptions: CommonTypes.RowOptions?, opt_instanceOptions: CommonTypes.InstanceOptions?): GuiObject
     assert(parent, "Should have a parent")
     assert(rowName, "Should have a rowName")
 
@@ -289,15 +291,15 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
     row.AutomaticSize = Enum.AutomaticSize.Y
     row.BackgroundTransparency = 1.0
 
-    GuiUtils.addUIListLayout(row, {
-        FillDirection = Enum.FillDirection.Horizontal,
-        HorizontalAlignment = rowOptions.horizontalAlignment or Enum.HorizontalAlignment.Left,
-    })
-
     local contentWidthOffset = 0
 
-    if rowOptions.labelText then
-        local labelText = "<b>" .. rowOptions.labelText .. "</b>"
+    if opt_rowLabelText then
+        GuiUtils.addUIListLayout(row, {
+            FillDirection = Enum.FillDirection.Horizontal,
+            HorizontalAlignment = rowOptions.horizontalAlignment or Enum.HorizontalAlignment.Left,
+        })
+
+        local labelText = "<b>" .. opt_rowLabelText .. "</b>"
         GuiUtils.addTextLabel(row, labelText, {
             RichText = true,
             TextSize = GuiConstants.rowHeaderFontSize,
@@ -344,7 +346,9 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
         end
     else
         GuiUtils.addUIListLayout(rowContent, {
-            FillDirection = Enum.FillDirection.Horizontal,
+            FillDirection = rowOptions.fillDirection or Enum.FillDirection.Horizontal,
+            Wraps = rowOptions.wraps or false,
+            HorizontalAlignment = rowOptions.horizontalAlignment or Enum.HorizontalAlignment.Center,
         })
     end
 
@@ -363,6 +367,7 @@ end
 -- Parent contains rows.
 -- Find row with given name, return the rowContent frame for that row.
 GuiUtils.getRowContent = function(parent: GuiObject, rowName: string): Frame
+    print("Doug: getRowContent rowName = ", rowName)
     local row = parent:FindFirstChild(rowName)
     assert(row, "row should exist")
     local rowContent = row:FindFirstChild(GuiConstants.rowContentName)
@@ -692,11 +697,13 @@ end
 -- We want to make sure widgets in row match new set of ids.
 -- Update the parent to remove/add widgets so the widgets match the incoming list of things.
 -- Return a list of any tweens we created so we can murder them later if we need to.
+-- If "skipTweens" is true, just slap things in there, no tweens.
 GuiUtils.updateWidgetContainerChildren = function(parentFrame:Frame,
         itemIds:{number},
         makeWidgetContainerForItem: (Instance, number) -> Instance,
         renderEmptyList: (Frame) -> nil,
-        cleanupEmptyList: (Frame) -> nil)
+        cleanupEmptyList: (Frame) -> nil,
+        skipTweens: boolean)
     local tweensToKill = {} :: CommonTypes.TweensToKill
     assert(parentFrame, "parentFrame should exist")
     -- Get all the existing widgets containers.
@@ -706,53 +713,73 @@ GuiUtils.updateWidgetContainerChildren = function(parentFrame:Frame,
     local widgetContainersOut = getWidgetContainersOut(widgetContainers, itemIds)
     local itemIdsIn = getItemIdsIn(widgetContainers, itemIds)
 
-    -- Just for giggles, instead of stuff just popping in/out, make it a nice tween.
-    local tweenInfo = TweenInfo.new(GuiConstants.standardTweenTime, Enum.EasingStyle.Circular)
+    if skipTweens then
+        -- Remove the old, add the new.
+        for _, widgetContainer in widgetContainersOut do
+            widgetContainer:Destroy()
+        end
+        for _, itemId in itemIdsIn do
+            local itemWidgetContainer = makeWidgetContainerForItem(parentFrame, itemId)
+            assert(itemWidgetContainer, "Should have widgetContainer")
+            -- It is required that the widget container has an int value child with
+            -- name "ItemId" and value equal to itemId.
+            assert(itemWidgetContainer.ItemId, "WidgetContainer should have an ItemId")
+            assert(itemWidgetContainer.ItemId.Value == itemId, "WidgetContainer.ItemId.Value should be itemId")
 
-    -- Tween out unused widgets.
-    for _, widgetContainer in widgetContainersOut do
-        local uiScale = widgetContainer:FindFirstChild("UIScale")
-        if not uiScale then
-            uiScale = Instance.new("UIScale")
+            local uiScale = Instance.new("UIScale")
             uiScale.Name = "UIScale"
-            uiScale.Parent = widgetContainer
+            uiScale.Parent = itemWidgetContainer
             uiScale.Scale = 1
         end
-        local tween = TweenService:Create(uiScale, tweenInfo, {Scale = 0})
-        local key = makeTweenKey(widgetContainer)
-        -- Cancel any existing tweens on this fool.
-        TweenHandling.cancelTween(key)
 
-        tweensToKill[key] = tween
+        GuiUtils.updateNilWidgetContainer(parentFrame, renderEmptyList, cleanupEmptyList)
+    else
+        local tweenInfo = TweenInfo.new(GuiConstants.standardTweenTime, Enum.EasingStyle.Circular)
+        -- Tween out unused widgets.
+        for _, widgetContainer in widgetContainersOut do
+            local uiScale = widgetContainer:FindFirstChild("UIScale")
+            if not uiScale then
+                uiScale = Instance.new("UIScale")
+                uiScale.Name = "UIScale"
+                uiScale.Parent = widgetContainer
+                uiScale.Scale = 1
+            end
+            local tween = TweenService:Create(uiScale, tweenInfo, {Scale = 0})
+            local key = makeTweenKey(widgetContainer)
+            -- Cancel any existing tweens on this fool.
+            TweenHandling.cancelTween(key)
 
-        -- Rename them so we don't find them again and re-tween.
-        widgetContainer.Name = GuiConstants.deadMeatTweeningOutName
+            tweensToKill[key] = tween
 
-        tween.Completed:Connect(function(_)
-            widgetContainer:Destroy()
-            GuiUtils.updateNilWidgetContainer(parentFrame, renderEmptyList, cleanupEmptyList)
-        end)
-        tween:Play()
-    end
+            -- Rename them so we don't find them again and re-tween.
+            widgetContainer.Name = GuiConstants.deadMeatTweeningOutName
 
-    for _, itemId in itemIdsIn do
-        local itemWidgetContainer = makeWidgetContainerForItem(parentFrame, itemId)
-        assert(itemWidgetContainer, "Should have widgetContainer")
-        -- It is required that the widget container has an int value child with
-        -- name "ItemId" and value equal to itemId.
-        assert(itemWidgetContainer.ItemId, "WidgetContainer should have an ItemId")
-        assert(itemWidgetContainer.ItemId.Value == itemId, "WidgetContainer.ItemId.Value should be itemId")
+            tween.Completed:Connect(function(_)
+                widgetContainer:Destroy()
+                GuiUtils.updateNilWidgetContainer(parentFrame, renderEmptyList, cleanupEmptyList)
+            end)
+            tween:Play()
+        end
 
-        local uiScale = Instance.new("UIScale")
-        uiScale.Name = "UIScale"
-        uiScale.Parent = itemWidgetContainer
-        uiScale.Scale = 0
+        for _, itemId in itemIdsIn do
+            local itemWidgetContainer = makeWidgetContainerForItem(parentFrame, itemId)
+            assert(itemWidgetContainer, "Should have widgetContainer")
+            -- It is required that the widget container has an int value child with
+            -- name "ItemId" and value equal to itemId.
+            assert(itemWidgetContainer.ItemId, "WidgetContainer should have an ItemId")
+            assert(itemWidgetContainer.ItemId.Value == itemId, "WidgetContainer.ItemId.Value should be itemId")
 
-        local tween = TweenService:Create(itemWidgetContainer.UIScale, tweenInfo, {Scale = 1})
-        local key = makeTweenKey(itemWidgetContainer)
-        tweensToKill[key] = tween
+            local uiScale = Instance.new("UIScale")
+            uiScale.Name = "UIScale"
+            uiScale.Parent = itemWidgetContainer
+            uiScale.Scale = 0
 
-        tween:Play()
+            local tween = TweenService:Create(itemWidgetContainer.UIScale, tweenInfo, {Scale = 1})
+            local key = makeTweenKey(itemWidgetContainer)
+            tweensToKill[key] = tween
+
+            tween:Play()
+        end
     end
 
     -- store the tweens.
@@ -828,17 +855,20 @@ end
 
 -- Make standard "nothing there" indicator.
 -- Idempotent: will remove old/previous one if present.
-GuiUtils.addNullWidget = function(parent: Instance, message: string): Frame
+GuiUtils.addNullWidget = function(parent: Instance, message: string, opt_instanceOptions: CommonTypes.InstanceOptions): Frame
     -- Make sure old widget is gone.
     GuiUtils.removeNullWidget(parent)
-    local textLabel = GuiUtils.addTextLabel(parent, message, {
+    local instanceOptions = opt_instanceOptions or {}
+    instanceOptions = Cryo.Dictionary.join(instanceOptions, {
         TextXAlignment = Enum.TextXAlignment.Center,
         TextYAlignment = Enum.TextYAlignment.Center,
         RichText = true,
         TextWrapped = true,
         BackgroundTransparency = 0,
         BackgroundColor3 = Color3.new(1, 1, 1),
+        AutomaticSize = Enum.AutomaticSize.None,
     })
+    local textLabel = GuiUtils.addTextLabel(parent, message, instanceOptions)
     GuiUtils.addUIGradient(textLabel, GuiConstants.whiteToGrayColorSequence)
     GuiUtils.addCorner(textLabel)
     GuiUtils.addPadding(textLabel)
@@ -956,6 +986,41 @@ end
 
 GuiUtils.getTableSizeString = function(gameDetails: CommonTypes.GameDetails): string
     return tostring(gameDetails.minPlayers) .. " - " .. tostring(gameDetails.maxPlayers)
+end
+
+-- A row with a text label and a row of same-size items.
+-- Row is just one item high. Will add scrollbar if needed.
+GuiUtils.addRowOfUniformItems = function(frame: Frame, name: string, labelText: string, itemHeight: number): Frame
+    assert(frame, "Should have frame")
+    assert(name, "Should have name")
+    assert(labelText, "Should have labelText")
+    assert(itemHeight, "Should have itemHeight")
+
+    print("Doug: itemHeight = ", itemHeight)
+    print("Doug: GuiConstants.standardPadding = ", GuiConstants.standardPadding)
+    local instanceOptions = {
+        AutomaticSize = Enum.AutomaticSize.None,
+        Size = UDim2.new(1, -GuiConstants.rowLabelWidth - GuiConstants.standardPadding, 0, itemHeight + 2 * GuiConstants.standardPadding),
+        ClipsDescendants = true,
+        BorderSizePixel = 0,
+        BorderColor3 = Color3.new(0.5, 0.5, 0.5),
+        BorderMode = Enum.BorderMode.Outline,
+        BackgroundColor3 = Color3.new(0.9, 0.9, 0.9),
+        BackgroundTransparency = 0,
+        ScrollingDirection = Enum.ScrollingDirection.X,
+    }
+
+    local rowOptions = {
+        isScrolling = true,
+        horizontalAlignment = Enum.HorizontalAlignment.Left,
+    }
+
+    local rowContent = GuiUtils.addRowAndReturnRowContent(frame, name, labelText, rowOptions, instanceOptions)
+    GuiUtils.addPadding(rowContent, {
+        PaddingTop = UDim.new(0, 0),
+        PaddingBottom = UDim.new(0, 0),
+    })
+    return rowContent
 end
 
 return GuiUtils

@@ -13,6 +13,11 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 
 local Utils = {}
 
+-- String starts with given start.
+Utils.stringStartsWith = function(str: string, start: string): boolean
+    return str:sub(1, #start) == start
+end
+
 -- verify two tables have the same set of keys.
 Utils.tablesHaveSameKeys = function(table1: {[any]: any}, table2: {[any]: any}): boolean
     for key, _ in table1 do

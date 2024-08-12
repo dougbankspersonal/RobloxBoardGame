@@ -8,7 +8,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
-local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 local Cryo = require(ReplicatedStorage.Cryo)
 

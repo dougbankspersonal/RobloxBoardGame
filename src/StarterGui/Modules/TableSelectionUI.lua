@@ -15,7 +15,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
-local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
@@ -43,7 +42,9 @@ local function updateInvitedTables(mainFrame: GuiObject)
     local tableIdsForInvitedWaitingTables = TableDescriptions.getTableIdsForInvitedWaitingTables(localUserId)
 
     GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, makeWidgetContainerForTable, function(parent)
-        GuiUtils.addNullWidget(parent, "<i>Sorry, no table invites right now.</i>")
+        GuiUtils.addNullWidget(parent, "<i>Sorry, no table invites right now.</i>", {
+            Size = UDim2.fromOffset(GuiConstants.tableWidgetX, GuiConstants.tableWidgetY)
+        })
     end, GuiUtils.removeNullWidget)
 end
 
@@ -56,38 +57,10 @@ local function updatePublicTables(mainFrame: GuiObject)
     local tableIdsForPublicWaitingTables = TableDescriptions.getTableIdsForPublicWaitingTables(localUserId)
 
     GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, makeWidgetContainerForTable, function(parent)
-        GuiUtils.addNullWidget(parent, "<i>Sorry, no public tables to join right now.</i>")
+        GuiUtils.addNullWidget(parent, "<i>Sorry, no public tables to join right now.</i>", {
+            Size = UDim2.fromOffset(GuiConstants.tableWidgetX, GuiConstants.tableWidgetY)
+        })
     end, GuiUtils.removeNullWidget)
-end
-
-local function addTableRow(frame:UIObject, label:string, name:string) : Frame
-    local instanceOptions = {
-        AutomaticSize = Enum.AutomaticSize.None,
-        Size = UDim2.new(1, -GuiConstants.rowLabelWidth - GuiConstants.standardPadding, 0, GuiConstants.tableWidgetY + 2 * GuiConstants.standardPadding),
-        ClipsDescendants = true,
-        BorderSizePixel = 0,
-        BorderColor3 = Color3.new(0.5, 0.5, 0.5),
-        BorderMode = Enum.BorderMode.Outline,
-        BackgroundColor3 = Color3.new(0.9, 0.9, 0.9),
-        BackgroundTransparency = 0,
-    }
-
-    local rowOptions = {
-        isScrolling = true,
-        useGridLayout = true,
-        gridCellSize = UDim2.fromOffset(GuiConstants.tableWidgetX, GuiConstants.tableWidgetY),
-        labelText = label,
-    }
-
-    -- Row to show tables you are invited to.
-    local rowContent = GuiUtils.addRowAndReturnRowContent(frame, name, rowOptions, instanceOptions)
-    local gridLayout = rowContent:FindFirstChildWhichIsA("UIGridLayout", true)
-    assert(gridLayout, "Should have gridLayout")
-    gridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-    gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-
-    GuiUtils.addPadding(rowContent)
-    return rowContent
 end
 
 --[[
@@ -116,7 +89,7 @@ TableSelectionUI.build = function()
     })
 
     -- Row to add a new table.
-    local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_CreateTable", {
+    local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_CreateTable", nil, {
         horizontalAlignment = Enum.HorizontalAlignment.Center,
     })
     GuiUtils.addTextButtonWidgetContainer(rowContent, "Host a new Table", function()
@@ -127,39 +100,8 @@ TableSelectionUI.build = function()
         end)
     end)
 
-
-    if game:GetService("RunService"):IsStudio() then
-        GuiUtils.addTextButtonWidgetContainer(rowContent, "Mocks", function()
-            local dialogConfig: CommonTypes.DialogConfig = {
-                title = "Mocks",
-                description = "Debug Tasks.",
-                dialogButtonConfigs = {
-                    {
-                        text = "Create Mock Public Table",
-                        callback = function()
-                            ClientEventManagement.mockTable(true)
-                        end
-                    } :: CommonTypes.DialogButtonConfig,
-                    {
-                        text = "Create Mock Private Table",
-                        callback = function()
-                            ClientEventManagement.mockTable(false)
-                        end
-                    } :: CommonTypes.DialogButtonConfig,
-                    {
-                        text = "Destroy Mock Tables",
-                        callback = function()
-                            ClientEventManagement.destroyAllMockTables(false)
-                        end
-                    } :: CommonTypes.DialogButtonConfig,
-                } :: {CommonTypes.DialogConfig},
-            }
-            DialogUtils.makeDialog(dialogConfig)
-        end)
-    end
-
-    addTableRow(mainFrame, "Open Invitations:", "Row_InvitedTables")
-    addTableRow(mainFrame, "Public Tables:", "Row_PublicTables")
+    GuiUtils.addRowOfUniformItems(mainFrame, "Row_InvitedTables", "Open Invitations:", GuiConstants.tableWidgetY)
+    GuiUtils.addRowOfUniformItems(mainFrame, "Row_PublicTables", "Public Tables:", GuiConstants.tableWidgetY)
 end
 
 -- update ui elements for the table creation/selection ui.

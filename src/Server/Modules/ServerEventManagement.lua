@@ -9,13 +9,20 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 
+local Cryo = require(ReplicatedStorage.Cryo)
+
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
 local GameTable = require(RobloxBoardGameServer.Classes.GameTable)
 
 local ServerEventManagement = {}
 
-local mockHostId = 2000000
+local _mockUserId = 2000000
+
+local function getNextMockUserId()
+    _mockUserId = _mockUserId + 1
+    return _mockUserId
+end
 
 -- Notify every player of an event.
 local function sendToAllPlayers(eventName, data)
@@ -158,7 +165,7 @@ ServerEventManagement.createClientToServerEvents = function()
 
     -- Event to leave a table.
     createGameTableRemoteEvent("LeaveTable", function(player, gameTable)
-        if gameTable:leave(player.UserId) then
+        if gameTable:leaveTable(player.UserId) then
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end
     end)
@@ -185,6 +192,42 @@ ServerEventManagement.createClientToServerEvents = function()
     end)
 
     if game:GetService("RunService"):IsStudio() then
+        createRemoteEvent("TableEvents", "AddMockMember", function(_, gameTable)
+            Utils.debugPrint("Doug; Adding mock member")
+            if not gameTable.tableDescription.isPublic then
+                return
+            end
+            if not gameTable:joinTable(getNextMockUserId()) then
+                return
+            end
+            sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
+        end)
+
+        createRemoteEvent("TableEvents", "AddMockInvite", function(_, gameTable)
+            Utils.debugPrint("Doug; Adding mock member")
+            if gameTable.tableDescription.isPublic then
+                return
+            end
+            if not gameTable:inviteToTable(getNextMockUserId()) then
+                return
+            end
+            sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
+        end)
+
+        createRemoteEvent("TableEvents", "MockInviteAcceptance", function(_, gameTable)
+            if gameTable.tableDescription.isPublic then
+                return
+            end
+            local keys = Cryo.Dictionary.keys(gameTable.tableDescription.invitedUserIds)
+            if #keys == 0 then
+                return
+            end
+            local accepteeId = keys[0]
+            if gameTable:joinTable(accepteeId) then
+                sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
+            end
+        end)
+
         -- Destroy all Mock Tables.
         createRemoteEvent("TableEvents", "DestroyAllMockTables", function(player)
             Utils.debugPrint("Doug; Destroying all Mock Tables")
@@ -201,12 +244,12 @@ ServerEventManagement.createClientToServerEvents = function()
         createRemoteEvent("TableEvents", "MockTable", function(player, isPublic)
             Utils.debugPrint("Doug; Mocking Table")
             -- Make a random table.
-            mockHostId = mockHostId + 1
             -- Get a random game id.
             local gameDetailsByGameId = GameDetails.getAllGameDetails()
             local gameId = Utils.getRandomKey(gameDetailsByGameId)
 
-            local gameTable = GameTable.createNewTable(mockHostId, gameId, isPublic)
+            local mockUserId = getNextMockUserId()
+            local gameTable = GameTable.createNewTable(mockUserId, gameId, isPublic)
             if not gameTable then
                 Utils.debugPrint("Doug; Mocking Table: no table")
                 return
@@ -214,7 +257,7 @@ ServerEventManagement.createClientToServerEvents = function()
 
             -- If not public, invite the player who sent the mock.
             if not isPublic then
-                gameTable:inviteToTable(mockHostId, player.UserId)
+                gameTable:inviteToTable(mockUserId, player.UserId)
             end
 
             gameTable.isMock = true

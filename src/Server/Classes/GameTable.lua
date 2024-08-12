@@ -37,7 +37,7 @@ export type GameTable = {
     createNewTable: (hostUserId: CommonTypes.UserId, isPublic: boolean) -> GameTable?,
     getAllGameTables: () -> { [CommonTypes.TableId]: GameTable },
 
-    -- member  functions.
+    -- const member  functions.
     -- Shortcuts to ask questions about table.
     isMember: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
     isInvitedToTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
@@ -46,7 +46,7 @@ export type GameTable = {
     getTableId: (self: GameTable) -> CommonTypes.TableId,
     getGameId: (self: GameTable) -> CommonTypes.GameId,
 
-    -- Perhaps modify table state.  Each returns true iff something changed.
+    -- non-const functions.  Each returns true iff something changed.
     destroyTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
     joinTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
     inviteToTable: (self: GameTable, userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId) -> boolean,
