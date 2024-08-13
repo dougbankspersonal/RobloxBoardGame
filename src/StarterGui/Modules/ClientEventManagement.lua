@@ -43,7 +43,10 @@ ClientEventManagement.listenToServerEvents = function(onTableCreated: (tableDesc
     local event
     event = tableEvents:WaitForChild("TableCreated")
     assert(event, "TableCreated event missing")
-    event.OnClientEvent:Connect(onTableCreated)
+    event.OnClientEvent:Connect(function(...)
+        print("Doug: broadcasting new table: client")
+        onTableCreated(...)
+    end)
 
     event = tableEvents:WaitForChild("TableDestroyed")
     assert(event, "TableDestroyed event missing")
@@ -57,19 +60,20 @@ end
 ClientEventManagement.createTable = function(gameId: CommonTypes.GameId, isPublic: boolean)
     local event = ReplicatedStorage.TableEvents:WaitForChild("CreateNewTable")
     assert(event, "CreateNewTable event missing")
+    print("Doug: creating new table: client")
     event:FireServer(gameId, isPublic)
 end
 
 ClientEventManagement.destroyTable = function(tableId: CommonTypes.TableId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("DestroyTable")
     assert(event, "DestroyTable event missing")
+    print("Doug: DestroyTable: client tableId = ", tableId)
     event:FireServer(tableId)
 end
 
 ClientEventManagement.joinTable = function(tableId: CommonTypes.TableId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("JoinTable")
     assert(event, "JoinTable event missing")
-    print("Doug: client firing JoinTable = ", tableId)
     event:FireServer(tableId)
 end
 

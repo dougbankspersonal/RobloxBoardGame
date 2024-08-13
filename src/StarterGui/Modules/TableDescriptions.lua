@@ -53,6 +53,15 @@ TableDescriptions.getTableWithUserId = function(userId: number): CommonTypes.Tab
     return retVal
 end
 
+TableDescriptions.getNumberOfPlayersAtTable = function(tableDescription: CommonTypes.TableDescription): number
+    -- the '1' is for host
+    return 1 + Cryo.Dictionary.size(tableDescription.memberUserIds)
+end
+
+TableDescriptions.tableHasRoom = function(tableDescription: CommonTypes.TableDescription): boolean
+    return tableDescription.maxPlayers > TableDescriptions.getNumberOfPlayersAtTable(tableDescription)
+end
+
 TableDescriptions.playerCanJoinInvitedTable = function(userId: CommonTypes.UserId, tableDescription: CommonTypes.TableDescription): boolean
     assert(userId, "userId must be provided")
     assert(tableDescription, "tableDescription must be provided")
@@ -60,6 +69,7 @@ TableDescriptions.playerCanJoinInvitedTable = function(userId: CommonTypes.UserI
     if tableDescription.isPublic then
         return false
     end
+
     if tableDescription.memberUserIds[userId] then
         return false
     end
@@ -67,6 +77,11 @@ TableDescriptions.playerCanJoinInvitedTable = function(userId: CommonTypes.UserI
     if not tableDescription.invitedUserIds[userId] then
         return false
     end
+
+    if not TableDescriptions.tableHasRoom(tableDescription) then
+        return false
+    end
+
     return tableDescription.gameTableState == GameTableStates.WaitingForPlayers
 end
 
@@ -78,6 +93,10 @@ TableDescriptions.playerCanJoinPublicTable = function(userId: CommonTypes.UserId
     end
 
     if tableDescription.memberUserIds[userId] then
+        return false
+    end
+
+    if not TableDescriptions.tableHasRoom(tableDescription) then
         return false
     end
 

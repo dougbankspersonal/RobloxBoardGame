@@ -33,7 +33,7 @@ GuiConstants.standardCornerSize = 10
 
 GuiConstants.rowLabelWidth = 200
 GuiConstants.standardPadding = 5
-GuiConstants.mainFramePadding = 10
+GuiConstants.mainFramePadding = 20
 GuiConstants.paddingBetweenRows = 14
 
 GuiConstants.gameImageX = 100

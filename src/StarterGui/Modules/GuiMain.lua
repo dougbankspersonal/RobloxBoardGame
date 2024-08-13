@@ -41,7 +41,7 @@ local uiModeBasedOnTableDescriptions: CommonTypes.UIMode = UIModes.Loading
 -- Iff local user is at a table (either waiting, playing, or finished), this describes that table.
 local currentTableDescription: CommonTypes.TableDescription? = nil
 
-local function summonMocksDialog()
+local summonMocksDialog = function()
     local dialogButtonConfigs = {
         {
             text = "Create Mock Public Table",
@@ -63,10 +63,11 @@ local function summonMocksDialog()
         } :: CommonTypes.DialogButtonConfig,
     } :: {CommonTypes.DialogConfig}
 
-    local currentTableDescription = TableDescriptions.getTableWithUserId(localUserId)
-    if currentTableDescription then
+    -- Mocks to add/remove invites and members while waiting.
+    if currentTableDescription and currentUIMode == UIModes.TableWaitingForPlayers then
         local tableId = currentTableDescription.tableId
         assert(tableId, "Should have a tableId")
+
         if currentTableDescription.isPublic then
             table.insert(dialogButtonConfigs, {
                 text = "Add Mock Member",
@@ -87,12 +88,12 @@ local function summonMocksDialog()
                     ClientEventManagement.mockInviteAcceptance(tableId)
                 end
             } :: CommonTypes.DialogButtonConfig)
-
+        end
     end
 
     local dialogConfig: CommonTypes.DialogConfig = {
         title = "Mocks",
-        description = "Debug Tasks.",
+        description = "Various debug options.",
         dialogButtonConfigs = dialogButtonConfigs,
     }
     DialogUtils.makeDialog(dialogConfig)
@@ -112,15 +113,6 @@ GuiMain.makeContaintingScrollingFrame = function()
     containingScrollingFrame.CanvasSize = UDim2.fromScale(1, 0)
     containingScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     containingScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(0.5, 0.5, 0.5)
-
-    -- Throw on a button with a very high z index to summon mocks.
-    if game:GetService("RunService"):IsStudio() then
-        local textButton = GuiUtils.addTextButton(containingScrollingFrame, "Mocks", summonMocksDialog)
-        textButton.Name = GuiConstants.persistentNameStart .. "MocksButton"
-        textButton.AnchorPoint = Vector2.new(1, 1)
-        textButton.Position = UDim2.new(1, -10, 1, -10)
-        textButton.ZIndex = 1000
-    end
 
     return containingScrollingFrame
 end
@@ -144,7 +136,6 @@ GuiMain.makeMainFrame = function(): Frame
     mainFrame.AutomaticSize = Enum.AutomaticSize.Y
 
     return mainFrame
-
 end
 
 local function buildTablePlayingUI(): nil
@@ -197,8 +188,6 @@ local cleanupCurrentUI = function()
     local children = mainFrame:GetChildren()
     for _, child in children do
         -- Skip persistent children.
-        print("Doug: child.Name  = " .. child.Name)
-        print("Doug: GuiConstants.persistentNameStart  = " .. GuiConstants.persistentNameStart)
         if Utils.stringStartsWith(child.Name, GuiConstants.persistentNameStart) then
             continue
         end
@@ -250,6 +239,7 @@ GuiMain.updateUI = function()
 end
 
 GuiMain.onTableCreated = function(tableDescription: CommonTypes.TableDescription)
+    print("Doug: broadcasting new table: client")
     assert(tableDescription, "tableDescription must be provided")
     assert(typeof(tableDescription) == "table", "tableDescription must be a table")
 
@@ -285,6 +275,18 @@ GuiMain.onTableUpdated = function(tableDescription: CommonTypes.TableDescription
 
     TableDescriptions.updateTableDescription(tableDescription)
     GuiMain.updateUI()
+end
+
+GuiMain.addMocksButton = function(screenGui: ScreenGui)
+    -- Throw on a button with a very high z index to summon mocks.
+    if game:GetService("RunService"):IsStudio() then
+        local textButton = GuiUtils.addTextButton(screenGui, "Mocks", summonMocksDialog)
+        textButton.Name = GuiConstants.persistentNameStart .. "MocksButton"
+        textButton.AnchorPoint = Vector2.new(1, 1)
+        textButton.Position = UDim2.new(1, -10, 1, -10)
+        textButton.ZIndex = 1000
+        textButton.BackgroundColor3 = Color3.new(0.5, 0.9, 0.5)
+    end
 end
 
 return GuiMain

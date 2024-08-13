@@ -67,4 +67,32 @@ Utils.getRandomKey = function(table: {[any]: any}): any
     return keys[randomIndex]
 end
 
+Utils.sanityCheckGameDetailsByGameId = function(gameDetailsByGameId: CommonTypes.GameDetailsByGameId)
+    assert(gameDetailsByGameId ~= nil, "Should have non-nil gameDetailsByGameId")
+    for gameId, gameDetails in pairs(gameDetailsByGameId) do
+        assert(gameDetails.gameId == gameId, "gameId should match key")
+        assert(gameDetails.gameImage ~= nil, "Should have non-nil gameImage")
+        assert(gameDetails.name ~= nil, "Should have non-nil name")
+        assert(gameDetails.description ~= nil, "Should have non-nil description")
+        assert(gameDetails.maxPlayers ~= nil, "Should have non-nil maxPlayers")
+        assert(gameDetails.minPlayers ~= nil, "Should have non-nil minPlayers")
+    end
+end
+
+Utils.sanityCheckGameUIsByGameId = function(gameUIsByGameId: CommonTypes.GameUIsByGameId)
+    assert(gameUIsByGameId ~= nil, "Should have non-nil gameUIsByGameId")
+    for _, gameUIs in pairs(gameUIsByGameId) do
+        assert(gameUIs.setupUI ~= nil, "Should have non-nil setupUI")
+    end
+end
+
+Utils.sanityCheckGameInstanceFunctionsByGameId = function(gameInstanceFunctionsByGameId: CommonTypes.GameInstanceFunctionsByGameId)
+    assert(gameInstanceFunctionsByGameId ~= nil, "Should have non-nil gameUIsByGameId")
+    for _, gameInstanceFunctions in pairs(gameInstanceFunctionsByGameId) do
+        assert(gameInstanceFunctions.onPlay ~= nil, "Should have non-nil onPlay")
+        assert(gameInstanceFunctions.onEnd ~= nil, "Should have non-nil onPlay")
+        assert(gameInstanceFunctions.onPlayerLeft ~= nil, "Should have non-nil onPlay")
+    end
+end
+
 return Utils

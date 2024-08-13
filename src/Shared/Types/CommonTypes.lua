@@ -144,7 +144,7 @@ export type GameDetails = {
     -- the user as a set of checkboxes, and pass the selections on to the game.
     -- It is up to the game to make sense of any conficting/confusing/nonsensical selections
     -- and message the user about it.
-    gameOptions: {GameOption},
+    gameOptions: {GameOption}?,
 }
 
 export type GameDetailsByGameId = {

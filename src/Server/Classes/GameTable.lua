@@ -105,6 +105,7 @@ GameTable.createNewTable = function(hostUserId: CommonTypes.UserId, gameId: Comm
     -- You cannot create a new table while you are joined to a table.
     for _, gameTable in pairs(gameTables) do
         if gameTable.tableDescription.memberUserIds[hostUserId] then
+            print("Doug: createNewTable fail 001")
             return nil
         end
     end
@@ -112,10 +113,12 @@ GameTable.createNewTable = function(hostUserId: CommonTypes.UserId, gameId: Comm
     -- Game must exist.
     local gameDetails = GameDetails.getGameDetails(gameId)
     if not gameDetails then
+        print("Doug: createNewTable fail 002")
         return nil
     end
 
     local newGameTable = GameTable.new(hostUserId, gameId, isPublic)
+    print("Doug: createNewTable success 003")
     return newGameTable
 end
 
@@ -141,11 +144,15 @@ end
 
 function GameTable:destroyTable(userId: CommonTypes.UserId): boolean
     assert(userId, "Should have a userId")
+    print("Doug: GameTable:destroyTable: server 001")
+
     -- Must be the host.
     if not self:isHost(userId) then
+        print("Doug: GameTable:destroyTable: server 002")
         return false
     end
 
+    print("Doug: GameTable:destroyTable: server 003")
     -- Kill any ongoing game.
     if self.gameInstance then
         self.gameInstance:destroy()
@@ -154,6 +161,7 @@ function GameTable:destroyTable(userId: CommonTypes.UserId): boolean
 
     gameTables[self:getTableId()] = nil
 
+    print("Doug: GameTable:destroyTable: server 004")
     return true
 end
 
@@ -162,44 +170,36 @@ end
 function GameTable:joinTable(userId: CommonTypes.UserId): boolean
     assert(userId, "Should have a userId")
 
-    print("Doug: joinTable: 000")
     -- Host can't join his own table.
     if self:isHost(userId) then
-        print("Doug: joinTable: 001")
         return
     end
 
     -- Game already started, no.
     if self.tableDescription.gameTableState ~= GameTableStates.WaitingForPlayers then
-        print("Doug: joinTable: 002")
         return false
     end
 
     -- Already a member, no.
     if self:isMember(userId) then
-        print("Doug: joinTable: 003")
         return false
     end
 
     -- not public, not invited: no.
     if not self.tableDescription.isPublic and not self:isInvitedToTable(userId) then
-        print("Doug: joinTable: 004")
         return false
     end
 
     -- too many players already, no.
     if self.gameDetails.maxPlayers <= Utils.tableSize(self.tableDescription.memberUserIds) then
-        print("Doug: joinTable: 005")
         return false
     end
 
     self.tableDescription.memberUserIds[userId] = true
 
-    print("Doug: joinTable: 006")
     -- Once a player is a memebr they are no longer invited.
     self.tableDescription.invitedUserIds[userId] = nil
 
-    print("Doug: joinTable: 007")
     return true
 end
 

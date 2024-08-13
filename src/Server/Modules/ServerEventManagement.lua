@@ -90,7 +90,7 @@ local function makeFetchTableDescriptionsByTableIdRemoteFunction()
             retVal[tableId] = gameTable:getTableDescription()
         end
         -- Add some fake delay so I can see the loading screen...
-        for _ = 1, 2 do
+        for _ = 1, 5 do
             Utils.debugPrint("Doug: Fake waiting for FetchTableDescriptionsByTableId...")
             task.wait(1)
         end
@@ -111,14 +111,17 @@ ServerEventManagement.createClientToServerEvents = function()
         -- Try to make the table. It will fail if something is wrong:
         -- * gameId is invalid.
         -- * player is already in a table.
+        print("Doug: creating new table: server")
         local gameTable = GameTable.createNewTable(player.UserId, gameId, isPublic)
         if not gameTable then
+            print("Doug: creating new table failed: server")
             return
         end
 
         local tableDescription = gameTable:getTableDescription()
 
         -- Broadcast the new table to all players
+        print("Doug: broadcasting new table: server")
         sendToAllPlayers("TableCreated", tableDescription)
     end)
 
@@ -128,16 +131,17 @@ ServerEventManagement.createClientToServerEvents = function()
         assert(gameTable.tableDescription, "Should have a tableDescription")
         local gameTableId = gameTable:getTableId()
         assert(gameTableId, "Should have a gameTableId")
+        print("Doug: DestroyTable: server gameTableId = ", gameTableId)
+
         if gameTable:destroyTable(player.UserId) then
+            print("Doug: DestroyTable: server success")
             sendToAllPlayers("TableDestroyed", gameTableId)
         end
     end)
 
     -- Event to join a table.
     createGameTableRemoteEvent("JoinTable", function(player, gameTable)
-        print("Doug: server got JoinTable = ", gameTable.tableDescription.tableId)
         if gameTable:joinTable(player.UserId) then
-            print("Doug: server sending table updated: tableDescription = ", gameTable:getTableDescription())
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end
     end)
@@ -192,7 +196,7 @@ ServerEventManagement.createClientToServerEvents = function()
     end)
 
     if game:GetService("RunService"):IsStudio() then
-        createRemoteEvent("TableEvents", "AddMockMember", function(_, gameTable)
+        createGameTableRemoteEvent("AddMockMember", function(_, gameTable)
             Utils.debugPrint("Doug; Adding mock member")
             if not gameTable.tableDescription.isPublic then
                 return
@@ -203,7 +207,7 @@ ServerEventManagement.createClientToServerEvents = function()
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end)
 
-        createRemoteEvent("TableEvents", "AddMockInvite", function(_, gameTable)
+        createGameTableRemoteEvent("AddMockInvite", function(_, gameTable)
             Utils.debugPrint("Doug; Adding mock member")
             if gameTable.tableDescription.isPublic then
                 return
@@ -214,7 +218,7 @@ ServerEventManagement.createClientToServerEvents = function()
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end)
 
-        createRemoteEvent("TableEvents", "MockInviteAcceptance", function(_, gameTable)
+        createGameTableRemoteEvent("MockInviteAcceptance", function(_, gameTable)
             if gameTable.tableDescription.isPublic then
                 return
             end

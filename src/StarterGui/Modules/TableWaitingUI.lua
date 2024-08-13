@@ -43,6 +43,7 @@ TableWaitingUI.justBuilt = false
 local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameDetails, currentTableDescription: CommonTypes.TableDescription)
     -- Game info and host info will not change, might as well fill them in now.
     local rowContent = GuiUtils.addRowOfUniformItems(frame, "Row_Game", "Game: ", GuiConstants.gameWidgetY)
+    rowContent.BackgroundTransparency = 1
     GuiUtils.addGameWidget(rowContent, gameDetails, true)
 
     -- Num players row.
@@ -82,6 +83,7 @@ local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameD
     end
 
     rowContent = GuiUtils.addRowOfUniformItems(frame, "Row_Host", "Host: ", GuiConstants.userWidgetY)
+    rowContent.BackgroundTransparency = 1
     GuiUtils.addUserWidget(rowContent, currentTableDescription.hostUserId)
 end
 

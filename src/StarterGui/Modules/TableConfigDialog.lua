@@ -15,6 +15,8 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
+local Cryo = require(ReplicatedStorage.Cryo)
+
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
@@ -77,10 +79,16 @@ local function _makeRowAndAddCustomControls(parent: Frame, gameDetailsByGameId: 
     local totalHeight = 2 * cellHeight + 3 * GuiConstants.standardPadding
     rowContent.Size = UDim2.new(1, 0, 0, totalHeight)
 
-    for gid, gameDetails in gameDetailsByGameId do
+    local gameDetailsArray = Cryo.Dictionary.values(gameDetailsByGameId)
+     table.sort(gameDetailsArray, function(a, b)
+        return a.name < b.name
+     end)
+    for _, gameDetails in gameDetailsArray do
+        print("Doug: gameDetails.name = ", gameDetails.name)
+        print("Doug: gameDetails.gameId = ", gameDetails.gameId)
         GuiUtils.addGameButton(rowContent, gameDetails, function()
             DialogUtils.cleanupDialog()
-            selectPublicOrPrivate(gid, onTableConfigSelected)
+            selectPublicOrPrivate(gameDetails.gameId, onTableConfigSelected)
         end)
     end
 end

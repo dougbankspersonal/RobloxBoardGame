@@ -28,6 +28,11 @@ ServerStartUp.ServerStartUp = function(gameDetailsByGameId: CommonTypes.GameDeta
     assert(Utils.tablesHaveSameKeys(gameDetailsByGameId, gameInstanceFunctionsByGameId), "tables should have same keys")
     assert(Utils.tableSize(gameDetailsByGameId) > 0, "Should have at least one game")
 
+
+    -- Sanity check on tables coming in from client of RobloxBoardGame library.
+    Utils.sanityCheckGameDetailsByGameId(gameDetailsByGameId)
+    Utils.sanityCheckGameInstanceFunctionsByGameId(gameInstanceFunctionsByGameId)
+
     GameDetails.setAllGameDetails(gameDetailsByGameId)
     GameInstanceFunctions.setAllGameInstanceFunctions(gameInstanceFunctionsByGameId)
     createRemoteEvents()

@@ -48,6 +48,10 @@ ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId
     assert(numGames > 0, "Should have at least one game")
     assert(Utils.tablesHaveSameKeys(gameDetailsByGameId, gameUIsByGameId), "tables should have same keys")
 
+    -- Sanity check on tables coming in from client of RobloxBoardGame library.
+    Utils.sanityCheckGameDetailsByGameId(gameDetailsByGameId)
+    Utils.sanityCheckGameUIsByGameId(gameUIsByGameId)
+
     -- Set up globals.
     GameDetails.setAllGameDetails(gameDetailsByGameId)
     GameUIs.setAllGameUIs(gameUIsByGameId)
@@ -56,6 +60,8 @@ ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId
     configureForBoardGames()
 
     GuiUtils.setMainScreenGui(screenGui)
+
+    GuiMain.addMocksButton(screenGui)
     GuiMain.makeContaintingScrollingFrame()
     GuiMain.makeMainFrame()
 

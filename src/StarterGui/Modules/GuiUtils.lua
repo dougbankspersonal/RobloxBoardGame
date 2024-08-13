@@ -367,7 +367,6 @@ end
 -- Parent contains rows.
 -- Find row with given name, return the rowContent frame for that row.
 GuiUtils.getRowContent = function(parent: GuiObject, rowName: string): Frame
-    print("Doug: getRowContent rowName = ", rowName)
     local row = parent:FindFirstChild(rowName)
     assert(row, "row should exist")
     local rowContent = row:FindFirstChild(GuiConstants.rowContentName)
@@ -996,8 +995,6 @@ GuiUtils.addRowOfUniformItems = function(frame: Frame, name: string, labelText: 
     assert(labelText, "Should have labelText")
     assert(itemHeight, "Should have itemHeight")
 
-    print("Doug: itemHeight = ", itemHeight)
-    print("Doug: GuiConstants.standardPadding = ", GuiConstants.standardPadding)
     local instanceOptions = {
         AutomaticSize = Enum.AutomaticSize.None,
         Size = UDim2.new(1, -GuiConstants.rowLabelWidth - GuiConstants.standardPadding, 0, itemHeight + 2 * GuiConstants.standardPadding),
