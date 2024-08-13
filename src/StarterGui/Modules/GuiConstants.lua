@@ -65,9 +65,10 @@ GuiConstants.dialogBackgroundZIndex = 3
 GuiConstants.dialogInputSinkZIndex = 4
 GuiConstants.dialogZIndex = 5
 
-GuiConstants.iotlImageZIndex = 2
-GuiConstants.iotlTextZIndex = 3
-GuiConstants.iotlNextZIndex = 4
+-- itemWidget = a widget for a user, game, or user.  Has images, text, and possible button overlays.
+GuiConstants.itemWidgetImageZIndex = 2
+GuiConstants.itemWidgetTextZIndex = 3
+GuiConstants.itemWidgetOverlayZIndex = 4
 
 -- Colors
 GuiConstants.whiteToGrayColorSequence = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(0.8, 0.8, 0.8))

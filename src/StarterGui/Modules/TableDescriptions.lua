@@ -54,8 +54,11 @@ TableDescriptions.getTableWithUserId = function(userId: number): CommonTypes.Tab
 end
 
 TableDescriptions.getNumberOfPlayersAtTable = function(tableDescription: CommonTypes.TableDescription): number
-    -- the '1' is for host
-    return 1 + Cryo.Dictionary.size(tableDescription.memberUserIds)
+    assert(tableDescription, "tableDescription must be provided")
+    assert(tableDescription.memberUserIds, "tableDescription.memberUserIds must be provided")
+    assert(tableDescription.hostUserId, "tableDescription.hostUserId must be provided")
+    assert(tableDescription.memberUserIds[tableDescription.hostUserId], "hostUserId must be in memberUserIds")
+    return Cryo.Dictionary.size(tableDescription.memberUserIds)
 end
 
 TableDescriptions.tableHasRoom = function(tableDescription: CommonTypes.TableDescription): boolean

@@ -42,7 +42,7 @@ local addItemImage = function(parent: GuiObject): ImageLabel
     imageLabel.BackgroundTransparency = 1
     imageLabel.Parent = parent
     imageLabel.LayoutOrder = 1
-    imageLabel.ZIndex = GuiConstants.iotlImageZIndex
+    imageLabel.ZIndex = GuiConstants.itemWidgetImageZIndex
     GuiUtils.addCorner(imageLabel)
     return imageLabel
 end
@@ -57,7 +57,7 @@ local addItemTextLabel = function(parent:GuiObject): TextLabel
     userTextLabel.AutomaticSize = Enum.AutomaticSize.None
     userTextLabel.LayoutOrder = 2
     userTextLabel.Name = "ItemText"
-    userTextLabel.ZIndex = GuiConstants.iotlTextZIndex
+    userTextLabel.ZIndex = GuiConstants.itemWidgetTextZIndex
     return userTextLabel
 end
 
@@ -74,9 +74,7 @@ local configureUserTextLabel = function(textLabel:TextLabel, userId: CommonTypes
     -- Async get and set the contents of name
     task.spawn(function()
         local mappedId = Utils.debugMapUserId(userId)
-
         local playerName = Players: GetNameFromUserIdAsync(mappedId)
-
         assert(playerName, "playerName should exist")
 
         local formatString = if opt_formatString then opt_formatString else "%s"
@@ -548,15 +546,6 @@ GuiUtils.addUserButton = function(parent: Instance, userId: CommonTypes.UserId, 
 
     addUserImageOverTextLabel(textButton, userId)
 
-    -- The only reason we ever use this button is to kick the user out.  Put a little x indicator on the button.
-    local xImage = Instance.new("ImageButton")
-    xImage.Parent = textButton
-    xImage.Size = UDim2.fromOffset(GuiConstants.redXSize, GuiConstants.redXSize)
-    xImage.Position = UDim2.new(1, -(GuiConstants.redXSize + GuiConstants.redXMargin), 0, GuiConstants.redXMargin)
-    xImage.Image = GuiConstants.redXImage
-    xImage.BackgroundTransparency = 1
-    xImage.ZIndex = GuiConstants.iotlOtherZIndex
-
     return textButton
 end
 
@@ -839,6 +828,15 @@ GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, onC
         GuiUtils.addUserButton(userWidgetContainer, userId, function()
             onClick(userId)
         end)
+
+        -- The only reason we ever use this button is to kick the user out.  Put a little x indicator on the button.
+        local xImage = Instance.new("ImageButton")
+        xImage.Parent = userWidgetContainer
+        xImage.Size = UDim2.fromOffset(GuiConstants.redXSize, GuiConstants.redXSize)
+        xImage.Position = UDim2.new(1, -(GuiConstants.redXSize + GuiConstants.redXMargin), 0, GuiConstants.redXMargin)
+        xImage.Image = GuiConstants.redXImage
+        xImage.BackgroundTransparency = 1
+        xImage.ZIndex = GuiConstants.itemWidgetOverlayZIndex
     else
         GuiUtils.addUserWidget(userWidgetContainer, userId)
     end

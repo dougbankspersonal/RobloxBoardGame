@@ -156,6 +156,7 @@ ServerEventManagement.createClientToServerEvents = function()
     -- Event to remove someone to table.
     createGameTableRemoteEvent("RemoveGuestFromTable", function(player, gameTable, userId)
         if gameTable:removeGuestFromTable(player.UserId, userId) then
+            print("Doug: RemoveGuestFromTable triggering TableUpdated: tableDescription = ", gameTable:getTableDescription())
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end
     end)

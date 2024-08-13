@@ -14,6 +14,7 @@ UI Shows:
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
@@ -283,8 +284,12 @@ local updateGuests = function(parentOfRow: Frame, isHost: boolean, localUserId: 
     end
 
     local function removeGuestCallback(userId: CommonTypes.UserId)
-        DialogUtils.showConfirmationDialog("Remove Player?",
-            "Please confirm you want to remove this player from the table.", function()
+        local mappedId = Utils.debugMapUserId(userId)
+        local playerName = Players: GetNameFromUserIdAsync(mappedId)
+
+        local title = string.format("Remove %s?", playerName)
+        local desc = string.format("Please confirm you want to remove %s from the table.", playerName)
+        DialogUtils.showConfirmationDialog(title, desc, function()
                 ClientEventManagement.removeGuestFromTable(currentTableDescription.tableId, userId)
             end)
     end

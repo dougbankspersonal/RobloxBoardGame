@@ -38,6 +38,8 @@ end
 -- Throw up a dialog using the given config.
 -- Clicking any button in the config will kill the dialog and hit the associated callback.
 DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame?
+    print("Doug: DialogUtils.makeDialog dialogConfig = ", dialogConfig)
+
     local containingScrollingFrame = GuiUtils.getContainingScrollingFrame()
     -- Can't have two dialogs up at once.
     local existingDialogBackground = DialogUtils.getDialogBackground()
@@ -164,7 +166,10 @@ DialogUtils.showConfirmationDialog = function(title: string, description: string
         dialogButtonConfigs = dialogButtonConfigs,
     } :: CommonTypes.DialogConfig
 
-    DialogUtils.makeDialog(game.Players.LocalPlayer:WaitForChild("PlayerGui"), dialogConfig)
+
+    print("Doug: DialogUtils.showConfirmationDialog dialogConfig = ", dialogConfig)
+
+    DialogUtils.makeDialog(dialogConfig)
 end
 
 return DialogUtils

@@ -197,7 +197,7 @@ function GameTable:joinTable(userId: CommonTypes.UserId): boolean
 
     self.tableDescription.memberUserIds[userId] = true
 
-    -- Once a player is a memebr they are no longer invited.
+    -- Once a player is a Member they are no longer invited.
     self.tableDescription.invitedUserIds[userId] = nil
 
     return true
@@ -236,37 +236,46 @@ function GameTable:inviteToTable(userId: CommonTypes.UserId, inviteeId: CommonTy
 end
 
 function GameTable:removeGuestFromTable(userId: CommonTypes.UserId, guestId: CommonTypes.UserId): boolean
+    assert(userId, "userId must be provided")
+    assert(guestId, "guestId must be provided")
+
     -- Must be the host.
     if not self:isHost(userId) then
+        print("Doug: GameTable:removeGuestFromTable 001")
         return false
     end
 
     -- Can't remove self.
     if userId == guestId then
+        print("Doug: GameTable:removeGuestFromTable 002")
         return false
     end
 
     -- Can't remove a non-member.
     if not self:isMember(guestId) then
+        print("Doug: GameTable:removeGuestFromTable 003")
         return false
     end
 
+    print("Doug: GameTable:removeGuestFromTable 004")
+    self.tableDescription.memberUserIds[guestId] = nil
+    -- Just for kicks remove the invite too.
     self.tableDescription.invitedUserIds[guestId] = nil
     return true
 end
 
-function GameTable:removeInviteForTable(userId: CommonTypes.UserId, guestId: CommonTypes.UserId): boolean
+function GameTable:removeInviteForTable(userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId): boolean
     -- Must be the host.
     if not self:isHost(userId) then
         return false
     end
 
     -- Must be an invitee.
-    if not self:isInvitedToTable(guestId) then
+    if not self:isInvitedToTable(inviteeId) then
         return false
     end
 
-    self.invitedUserIds[guestId] = nil
+    self.invitedUserIds[inviteeId] = nil
     return true
 end
 

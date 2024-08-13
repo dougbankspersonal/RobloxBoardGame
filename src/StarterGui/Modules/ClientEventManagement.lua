@@ -98,6 +98,7 @@ end
 ClientEventManagement.removeGuestFromTable = function(tableId: CommonTypes.TableId, userId: CommonTypes.UserId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("RemoveGuestFromTable")
     assert(event, "RemoveGuestFromTable event missing")
+    print("Doug: ClientEventManagement.removeGuestFromTable: tableId = ", tableId, " userId = ", userId)
     event:FireServer(tableId, userId)
 end
 
