@@ -8,6 +8,7 @@ local GuiMain = {}
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
@@ -41,7 +42,7 @@ local uiModeBasedOnTableDescriptions: CommonTypes.UIMode = UIModes.Loading
 -- Iff local user is at a table (either waiting, playing, or finished), this describes that table.
 local currentTableDescription: CommonTypes.TableDescription? = nil
 
-local summonMocksDialog = function()
+local summonMocksDialog = function(): Frame?
     local dialogButtonConfigs = {
         {
             text = "Create Mock Public Table",
@@ -96,7 +97,7 @@ local summonMocksDialog = function()
         description = "Various debug options.",
         dialogButtonConfigs = dialogButtonConfigs,
     }
-    DialogUtils.makeDialog(dialogConfig)
+    return DialogUtils.makeDialog(dialogConfig)
 end
 
 GuiMain.makeContaintingScrollingFrame = function()
@@ -239,7 +240,6 @@ GuiMain.updateUI = function()
 end
 
 GuiMain.onTableCreated = function(tableDescription: CommonTypes.TableDescription)
-    print("Doug: broadcasting new table: client")
     assert(tableDescription, "tableDescription must be provided")
     assert(typeof(tableDescription) == "table", "tableDescription must be a table")
 
@@ -280,7 +280,7 @@ end
 
 GuiMain.addMocksButton = function(screenGui: ScreenGui)
     -- Throw on a button with a very high z index to summon mocks.
-    if game:GetService("RunService"):IsStudio() then
+    if RunService:IsStudio() then
         local textButton = GuiUtils.addTextButton(screenGui, "Mocks", summonMocksDialog)
         textButton.Name = GuiConstants.persistentNameStart .. "MocksButton"
         textButton.AnchorPoint = Vector2.new(1, 1)

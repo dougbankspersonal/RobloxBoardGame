@@ -30,6 +30,8 @@ local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEv
 local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
+local FriendSelectionDialog = require(RobloxBoardGameStarterGui.Modules.FriendSelectionDialog)
+local UserGuiUtils = require(RobloxBoardGameStarterGui.Modules.UserGuiUtils)
 
 local TableWaitingUI = {}
 
@@ -43,7 +45,7 @@ TableWaitingUI.justBuilt = false
 -- Config options will change so that gets filled in in update, but we can create space for it now.
 local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameDetails, currentTableDescription: CommonTypes.TableDescription)
     -- Game info and host info will not change, might as well fill them in now.
-    local rowContent = GuiUtils.addRowOfUniformItems(frame, "Row_Game", "Game: ", GuiConstants.gameWidgetY)
+    local rowContent = GuiUtils.addRowOfUniformItems(frame, "Row_Game", "Game: ", GuiConstants.gameWidgetHeight)
     rowContent.BackgroundTransparency = 1
     GuiUtils.addGameWidget(rowContent, gameDetails, true)
 
@@ -88,46 +90,18 @@ local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameD
     GuiUtils.addUserWidget(rowContent, currentTableDescription.hostUserId)
 end
 
-local selectFriend = function(onFriendSelected: (userId: CommonTypes.UserId?)
-    -> nil)
-    -- FIXME(dbanks)
-    -- Pure hackery for test purposes only.
-    -- What we really need is some widget that:
-    -- * shows all friends.
-    -- * search widget to filter.
-    -- * can select one or more friends.
-    -- * reports back set of selected friends.
-    -- I have to believe this exists somewhere, can't find it.
-    -- Bonus if it also invites said friends to the experience.
-    local dialogButtonConfigs = {} :: {CommonTypes.DialogButtonConfig}
-
-    -- FIXME(dbanks)
-    -- Add the ids of the non-local players you get when you run in Studio.
-
-    table.insert(dialogButtonConfigs, {
-        {
-            text = "Cancel",
-            callback = function()
-                onFriendSelected()
-            end,
-        }
-    })
-
-    local dialogConfig = {
-        title = "Select a friend",
-        description = "Select a friend to invite to the table.",
-        dialogButtonConfigs = dialogButtonConfigs,
-    } :: CommonTypes.DialogConfig
-    DialogUtils.makeDialog(dialogConfig)
-end
-
-local onAddInviteClicked = function(tableId: CommonTypes.TableId)
-    assert(tableId, "Should have a tableId")
-    selectFriend(function (userId: CommonTypes.UserId?)
-        if userId then
-            ClientEventManagement.invitePlayerToTable(tableId, userId)
-        end
-    end)
+local onAddInviteClicked = function(currentTableDescription: CommonTypes.TableDescription)
+    assert(currentTableDescription, "Should have a currentTableDescription")
+    local inviteeIds = Cryo.Dictionary.keys(currentTableDescription.invitedUserIds)
+    FriendSelectionDialog.selectFriends("Select a friend",
+        "Select a friend to invite to the table.",
+        true,
+        inviteeIds,
+        function (userIds: {CommonTypes.UserId}?)
+            if userIds then
+                ClientEventManagement.invitePlayersToTable(currentTableDescription.tableId, userIds)
+            end
+        end)
 end
 
 local addTableControls = function (frame: Frame, currentTableDescription: CommonTypes.TableDescription, isHost: boolean)
@@ -152,12 +126,14 @@ local addTableControls = function (frame: Frame, currentTableDescription: Common
         startButtonWidgetContainerName = startButtonWidgetContainer.Name
 
         GuiUtils.addTextButtonWidgetContainer(rowContent, "Destroy Table", function()
-            ClientEventManagement.destroyTable(currentTableDescription.tableId)
+            DialogUtils.showConfirmationDialog("Destroy Table?", "Please confirm you want to destroy this table.", function()
+                ClientEventManagement.destroyTable(currentTableDescription.tableId)
+            end)
         end)
 
         if not currentTableDescription.isPublic then
             GuiUtils.addTextButtonWidgetContainer(rowContent, "Add Invites", function()
-                onAddInviteClicked(currentTableDescription.tableId)
+                onAddInviteClicked(currentTableDescription)
             end)
         end
 
@@ -240,35 +216,6 @@ local updateGameOptions = function(parentOfRow: Frame, currentTableDescription: 
     GuiUtils.updateTextLabelWidgetContainer(gameOptionsContainerWidget, selectedOptionsString)
 end
 
--- Utility:
--- Our UI has a row of users under given frame.
--- We have a set of userIds describing the users we want in the row.
--- Compare the widgets in the row to widgets we want to have.
--- Tween in new widgets, tween out old widgets.
--- Futher complications: sometimes the widget is just a static widget, but sometimes it's a button.
--- If it's a button:
---   * Make the widget a button.
---   * Hit the callback when button is clicked
--- Return a list of any tweens generated.
-local updateUserRow = function(parentOfRow: Frame, rowName: string, userIds: {CommonTypes.UserId}, isButton: (userId: CommonTypes.UserId) -> boolean,
-        buttonCallback: (CommonTypes.UserId) -> nil, renderEmptyList: (Frame) -> nil, cleanupEmptyList: (Frame) -> nil)
-    local rowContent = GuiUtils.getRowContent(parentOfRow, rowName)
-    assert(rowContent, "Should have a rowContent")
-
-    local makeUserWidgetContainer = function(frame: Frame, userId: CommonTypes.UserId): Frame
-        local userWidgetContainer
-        -- For host, if user is not himself, this widget is a button that lets you kick person out of table.
-        if isButton() then
-            userWidgetContainer = GuiUtils.addUserWidgetContainer(frame, userId, buttonCallback)
-        else
-            userWidgetContainer = GuiUtils.addUserWidgetContainer(frame, userId)
-        end
-        return userWidgetContainer
-    end
-
-    GuiUtils.updateWidgetContainerChildren(rowContent, userIds, makeUserWidgetContainer, renderEmptyList, cleanupEmptyList, TableWaitingUI.justBuilt)
-end
-
 local updateGuests = function(parentOfRow: Frame, isHost: boolean, localUserId: CommonTypes.UserId, currentTableDescription: CommonTypes.TableDescription)
     assert(parentOfRow, "Should have a parentOfRow")
     assert(localUserId, "Should have a localUserId")
@@ -297,7 +244,7 @@ local updateGuests = function(parentOfRow: Frame, isHost: boolean, localUserId: 
     -- We don't want to display the host as a member, remove him.
     local memberUserIdsWithoutHost = TableDescriptions.getMembersWithoutHost(currentTableDescription)
 
-    updateUserRow(parentOfRow, "Row_Members", Cryo.Dictionary.keys(memberUserIdsWithoutHost), canRemoveGuest,
+    UserGuiUtils.updateUserRow(parentOfRow, "Row_Members", TableWaitingUI.justBuilt, Cryo.Dictionary.keys(memberUserIdsWithoutHost), canRemoveGuest,
         removeGuestCallback, function(parent)
             GuiUtils.addNullWidget(parent, "<i>No players have joined yet.</i>", {
                 Size = UDim2.fromOffset(GuiConstants.userWidgetX, GuiConstants.userWidgetY)
@@ -319,14 +266,16 @@ local updateInvites = function(parentOfRow: Frame, isHost: boolean, currentTable
     end
 
     local function removeInviteCallback(userId: CommonTypes.UserId)
+        print("Doug: removeInviteCallback 001 userId = ", userId)
         DialogUtils.showConfirmationDialog("Remove Invitation?",
             "Please confirm you want to remove this player''s invitation to the table.", function()
+                print("Doug: removeInviteCallback 002 userId = ", userId)
                 ClientEventManagement.removeInviteForTable(currentTableDescription.tableId, userId)
             end)
     end
 
-    updateUserRow(parentOfRow, "Row_Invites", Cryo.Dictionary.keys(currentTableDescription.invitedUserIds),
-        canRemoveInvite, removeInviteCallback,function(parent)
+    UserGuiUtils.updateUserRow(parentOfRow, "Row_Invites", TableWaitingUI.justBuilt, Cryo.Dictionary.keys(currentTableDescription.invitedUserIds),
+        canRemoveInvite, removeInviteCallback, function(parent)
             GuiUtils.addNullWidget(parent, "<i>No outstanding invitations.</i>", {
                 Size = UDim2.fromOffset(GuiConstants.userWidgetX, GuiConstants.userWidgetY)
             })
@@ -336,6 +285,7 @@ end
 local updateTableControls = function(parentOfRow: Frame, currentTableDescription: CommonTypes.TableDescription, isHost: boolean)
     assert(parentOfRow, "Should have a mainFrame")
     assert(currentTableDescription, "Should have a currentTableDescription")
+    print("Doug: updateTableControls 001")
 
     -- Non-host controls never change.
     if not isHost then
@@ -352,6 +302,7 @@ local updateTableControls = function(parentOfRow: Frame, currentTableDescription
     assert(gameDetails.maxPlayers >= numMembers, "Somehow we have too many members")
 
     local startEnabled = numMembers >= gameDetails.minPlayers
+    print("Doug: updateTableControls startEnabled = ", startEnabled)
 
     assert(startButtonWidgetContainerName, "Should have startButtonWidgetContainerName")
 

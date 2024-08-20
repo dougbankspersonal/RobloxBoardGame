@@ -2,6 +2,7 @@
 Client side event management: listening to events from the server, sending events to server.
 ]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
@@ -44,7 +45,6 @@ ClientEventManagement.listenToServerEvents = function(onTableCreated: (tableDesc
     event = tableEvents:WaitForChild("TableCreated")
     assert(event, "TableCreated event missing")
     event.OnClientEvent:Connect(function(...)
-        print("Doug: broadcasting new table: client")
         onTableCreated(...)
     end)
 
@@ -60,14 +60,12 @@ end
 ClientEventManagement.createTable = function(gameId: CommonTypes.GameId, isPublic: boolean)
     local event = ReplicatedStorage.TableEvents:WaitForChild("CreateNewTable")
     assert(event, "CreateNewTable event missing")
-    print("Doug: creating new table: client")
     event:FireServer(gameId, isPublic)
 end
 
 ClientEventManagement.destroyTable = function(tableId: CommonTypes.TableId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("DestroyTable")
     assert(event, "DestroyTable event missing")
-    print("Doug: DestroyTable: client tableId = ", tableId)
     event:FireServer(tableId)
 end
 
@@ -98,18 +96,18 @@ end
 ClientEventManagement.removeGuestFromTable = function(tableId: CommonTypes.TableId, userId: CommonTypes.UserId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("RemoveGuestFromTable")
     assert(event, "RemoveGuestFromTable event missing")
-    print("Doug: ClientEventManagement.removeGuestFromTable: tableId = ", tableId, " userId = ", userId)
     event:FireServer(tableId, userId)
 end
 
 ClientEventManagement.removeInviteForTable = function(tableId: CommonTypes.TableId, userId: CommonTypes.UserId)
+    print("Doug: ClientEventManagement.removeInviteForTable 001 userId = ", userId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("RemoveInviteForTable")
     assert(event, "RemoveInviteForTable event missing")
     event:FireServer(tableId, userId)
 end
 
 ClientEventManagement.mockTable = function(isPublic: boolean)
-    if game:GetService("RunService"):IsStudio() then
+    if RunService:IsStudio() then
         local event = ReplicatedStorage.TableEvents:WaitForChild("MockTable")
         assert(event, "MockTable event missing")
         event:FireServer(isPublic)
@@ -117,7 +115,7 @@ ClientEventManagement.mockTable = function(isPublic: boolean)
 end
 
 ClientEventManagement.destroyAllMockTables = function()
-    if game:GetService("RunService"):IsStudio() then
+    if RunService:IsStudio() then
         local event = ReplicatedStorage.TableEvents:WaitForChild("DestroyAllMockTables")
         assert(event, "DestroyAllMockTables event missing")
         event:FireServer()
@@ -125,7 +123,7 @@ ClientEventManagement.destroyAllMockTables = function()
 end
 
 ClientEventManagement.addMockMember = function(tableId: CommonTypes.TableId)
-    if game:GetService("RunService"):IsStudio() then
+    if RunService:IsStudio() then
         local event = ReplicatedStorage.TableEvents:WaitForChild("AddMockMember")
         assert(event, "AddMockMember event missing")
         event:FireServer(tableId)
@@ -133,7 +131,7 @@ ClientEventManagement.addMockMember = function(tableId: CommonTypes.TableId)
 end
 
 ClientEventManagement.addMockInvite = function(tableId: CommonTypes.TableId)
-    if game:GetService("RunService"):IsStudio() then
+    if RunService:IsStudio() then
         local event = ReplicatedStorage.TableEvents:WaitForChild("AddMockInvite")
         assert(event, "AddMockInvite event missing")
         event:FireServer(tableId)
@@ -141,7 +139,7 @@ ClientEventManagement.addMockInvite = function(tableId: CommonTypes.TableId)
 end
 
 ClientEventManagement.mockInviteAcceptance = function(tableId: CommonTypes.TableId)
-    if game:GetService("RunService"):IsStudio() then
+    if RunService:IsStudio() then
         local event = ReplicatedStorage.TableEvents:WaitForChild("MockInviteAcceptance")
         assert(event, "MockInviteAcceptance event missing")
         event:FireServer(tableId)

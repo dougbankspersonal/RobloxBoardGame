@@ -94,7 +94,7 @@ TableSelectionUI.build = function()
     })
     GuiUtils.addTextButtonWidgetContainer(rowContent, "Host a new Table", function()
         -- user must select a game and whether it is public or invite-only.
-        TableConfigDialog.promptForTableConfig(function(gameId, isPublic)
+        TableConfigDialog.makeGameSelectionDialog(function(gameId, isPublic)
             -- Send all this along to the server.
             ClientEventManagement.createTable(gameId, isPublic)
         end)

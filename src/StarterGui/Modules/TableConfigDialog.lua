@@ -23,7 +23,7 @@ local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
 local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 
-local selectPublicOrPrivate = function(gameId: CommonTypes.GameId, onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
+local makePublicOrPrivateDialog = function(gameId: CommonTypes.GameId, onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
     -- Put up a UI to get public or private.
     -- FIXME(dbanks): this is horrible temp hack using an array of buttons to pick from a set of two options.
     -- Implement a proper toggle switch (or radio buttons or whatever)
@@ -50,50 +50,22 @@ local selectPublicOrPrivate = function(gameId: CommonTypes.GameId, onTableConfig
 end
 
 -- Helper for non-standard controls in the dialog.
-local function _makeRowAndAddCustomControls(parent: Frame, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
-    local rowOptions = {
-        isScrolling = true,
-        useGridLayout = true,
-        gridCellSize = UDim2.fromOffset(GuiConstants.gameWidgetX, GuiConstants.gameWidgetY),
-    }
-
-    local rowContent = GuiUtils.addRowAndReturnRowContent(parent, "Row_Controls", nil, rowOptions, {
-        AutomaticSize = Enum.AutomaticSize.None,
-        ClipsDescendants = true,
-        BorderSizePixel = 0,
-        BorderColor3 = Color3.new(0.5, 0.5, 0.5),
-        BorderMode = Enum.BorderMode.Outline,
-        BackgroundColor3 = Color3.new(0.9, 0.9, 0.9),
-        BackgroundTransparency = 0,
-    })
-
-    GuiUtils.addUIGradient(rowContent, GuiConstants.scrollBackgroundGradient)
-    GuiUtils.addPadding(rowContent, {
-        PaddingLeft = UDim.new(0, 0),
-        PaddingRight = UDim.new(0, 0),
-    })
-
-    local gridLayout = rowContent:FindFirstChildWhichIsA("UIGridLayout", true)
-    assert(gridLayout, "Should have gridLayout")
-    local cellHeight = gridLayout.CellSize.Y.Offset
-    local totalHeight = 2 * cellHeight + 3 * GuiConstants.standardPadding
-    rowContent.Size = UDim2.new(1, 0, 0, totalHeight)
+local function _makeCustomDialogContent(parent: Frame, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
+    local rowContent = GuiUtils.addRowWithItemGridAndReturnRowContent(parent, "Row_Controls", GuiConstants.gameWidgetWidth, GuiConstants.gameWidgetHeight)
 
     local gameDetailsArray = Cryo.Dictionary.values(gameDetailsByGameId)
      table.sort(gameDetailsArray, function(a, b)
         return a.name < b.name
      end)
     for _, gameDetails in gameDetailsArray do
-        print("Doug: gameDetails.name = ", gameDetails.name)
-        print("Doug: gameDetails.gameId = ", gameDetails.gameId)
         GuiUtils.addGameButton(rowContent, gameDetails, function()
             DialogUtils.cleanupDialog()
-            selectPublicOrPrivate(gameDetails.gameId, onTableConfigSelected)
+            makePublicOrPrivateDialog(gameDetails.gameId, onTableConfigSelected)
         end)
     end
 end
 
-TableConfigDialog.promptForTableConfig = function(onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
+TableConfigDialog.makeGameSelectionDialog = function(onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
     local gameDetailsByGameId = GameDetails.getAllGameDetails()
     assert(gameDetailsByGameId, "Should have gameDetailsByGameId")
     local numGames = Utils.tableSize(gameDetailsByGameId)
@@ -109,14 +81,13 @@ TableConfigDialog.promptForTableConfig = function(onTableConfigSelected: (gameId
         end
         assert(gameId ~= nil, "Should have a gameId")
         assert(type(gameId) == "number", "gameId should be a number")
-        selectPublicOrPrivate(gameId, onTableConfigSelected)
-        return
+        makePublicOrPrivateDialog(gameId, onTableConfigSelected)
     else
         local dialogConfig: CommonTypes.DialogConfig = {
             title = "Select a game",
             description = "Click the game you want to play",
-            makeRowAndAddCustomControls = function(parent: Frame)
-                _makeRowAndAddCustomControls(parent, gameDetailsByGameId, onTableConfigSelected)
+            makeCustomDialogContent = function(parent: Frame)
+                _makeCustomDialogContent(parent, gameDetailsByGameId, onTableConfigSelected)
             end
         }
 

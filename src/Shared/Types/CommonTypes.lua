@@ -45,7 +45,7 @@ export type DialogConfig = {
     title: string,
     description: string,
     dialogButtonConfigs: {DialogButtonConfig}?,
-    makeRowAndAddCustomControls: ((parent: Frame) -> GuiObject)?,
+    makeCustomDialogContent: ((parent: Frame) -> nil)?,
 }
 
 export type GameOptionId = string

@@ -89,7 +89,7 @@ local configureUserImage = function(imageLabel:ImageLabel, userId: CommonTypes.U
     assert(imageLabel, "Should have imageLabel")
     assert(userId, "Should have userId")
 
-    imageLabel.Size = UDim2.fromOffset(GuiConstants.userImageX, GuiConstants.userImageX)
+    imageLabel.Size = UDim2.fromOffset(GuiConstants.userImageWidth, GuiConstants.userImageWidth)
     imageLabel.Image = ""
 
     -- Async get and set the contents of image.
@@ -118,7 +118,7 @@ end
 local configureGameImage = function(imageLabel: ImageLabel, gameDetails: GameDetails): ImageLabel
     assert(imageLabel, "Should have imageLabel")
     assert(gameDetails, "Should have gameDetails")
-    imageLabel.Size = UDim2.fromOffset(GuiConstants.gameImageX, GuiConstants.gameImageY)
+    imageLabel.Size = UDim2.fromOffset(GuiConstants.gameImageWidth, GuiConstants.gameImageHeight)
     imageLabel.Image = gameDetails.gameImage
 end
 
@@ -388,10 +388,29 @@ GuiUtils.addTextButton = function(parent: Instance, text: string, callback: () -
         end
         callback()
     end)
+    button.TextColor3 = GuiConstants.enabledButtonTextColor
+    button.AutoButtonColor = true
+    button.Active = true
 
     GuiUtils.addCorner(button)
-
     GuiUtils.addPadding(button)
+
+    -- Listen for enabled/disabled.
+    button.Changed:Connect(function(propertyName)
+        print("Doug: Button changed 001")
+        if propertyName == "Active" then
+            print("Doug: Button changed 002")
+            if button.Active then
+                print("Doug: Button changed 004")
+                button.TextColor3 = GuiConstants.enabledButtonTextColor
+                button.AutoButtonColor = true
+            else
+                button.TextColor3 = GuiConstants.disabledButtonTextColor
+                print("Doug: Button changed 003")
+                button.AutoButtonColor = false
+            end
+        end
+    end)
 
     return button
 end
@@ -490,7 +509,7 @@ end
 local function addGameImageOverTextLabel(frame: GuiObject, gameDetails: CommonTypes.GameDetails): (ImageLabel, TextLabel)
     assert(gameDetails, "Should have gameDetails")
     assert(frame, "Should have frame")
-    frame.Size = UDim2.fromOffset(GuiConstants.gameWidgetX, GuiConstants.gameWidgetY)
+    frame.Size = UDim2.fromOffset(GuiConstants.gameWidgetWidth, GuiConstants.gameWidgetHeight)
 
     local imageLabel, textLabel = addImageOverTextLabel(frame)
 
@@ -815,7 +834,7 @@ end
 
 -- Make a widgetContainer containing a user (name, thumbnail, etc).
 -- If a callback is given, make it a button, else it's just a static frame.
-GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, onClick: ((userId: CommonTypes.UserId) -> nil)?): Frame
+GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, opt_onClick: ((userId: CommonTypes.UserId) -> nil)?): Frame
     -- So what will happen:
     -- We return a table button container with "loading" message.
     -- We fire off a fetch to get async info.
@@ -824,19 +843,21 @@ GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, onC
     -- Make nicer: loading message could be a swirly or whatever.
     local userWidgetContainer = makeWidgetContainer(parent, "User", userId)
 
-    if onClick then
+    if opt_onClick then
+        print("Doug: addUserWidgetContainer 001")
         GuiUtils.addUserButton(userWidgetContainer, userId, function()
-            onClick(userId)
+            print("Doug: addUserWidgetContainer 002")
+            opt_onClick(userId)
         end)
 
         -- The only reason we ever use this button is to kick the user out.  Put a little x indicator on the button.
-        local xImage = Instance.new("ImageButton")
-        xImage.Parent = userWidgetContainer
-        xImage.Size = UDim2.fromOffset(GuiConstants.redXSize, GuiConstants.redXSize)
-        xImage.Position = UDim2.new(1, -(GuiConstants.redXSize + GuiConstants.redXMargin), 0, GuiConstants.redXMargin)
-        xImage.Image = GuiConstants.redXImage
-        xImage.BackgroundTransparency = 1
-        xImage.ZIndex = GuiConstants.itemWidgetOverlayZIndex
+        local redXImage = Instance.new("ImageLabel")
+        redXImage.Parent = userWidgetContainer
+        redXImage.Size = UDim2.fromOffset(GuiConstants.redXSize, GuiConstants.redXSize)
+        redXImage.Position = UDim2.new(1, -(GuiConstants.redXSize + GuiConstants.redXMargin), 0, GuiConstants.redXMargin)
+        redXImage.Image = GuiConstants.redXImage
+        redXImage.BackgroundTransparency = 1
+        redXImage.ZIndex = GuiConstants.itemWidgetOverlayZIndex
     else
         GuiUtils.addUserWidget(userWidgetContainer, userId)
     end
@@ -912,9 +933,11 @@ GuiUtils.updateTextLabelWidgetContainer = function(widgetContainer: Frame, text:
 end
 
 GuiUtils.updateTextButtonEnabledInWidgetContainer = function(widgetContainer: Frame, enabled: boolean)
+    print("Doug: updateTextButtonEnabledInWidgetContainer ", enabled)
     assert(widgetContainer, "Should have a widgetContainer")
     local textButton = widgetContainer:FindFirstChild(GuiConstants.textButtonName)
     assert(textButton, "Should have a textButton")
+    print("Doug: textButton.Active ", textButton.Active)
     textButton.Active = enabled
 end
 
@@ -1017,5 +1040,38 @@ GuiUtils.addRowOfUniformItems = function(frame: Frame, name: string, labelText: 
     })
     return rowContent
 end
+
+GuiUtils.addRowWithItemGridAndReturnRowContent = function(parent:GuiObject, rowName: string, itemHeight: number, itemWidth: number)
+    local rowOptions = {
+        isScrolling = true,
+        useGridLayout = true,
+        gridCellSize = UDim2.fromOffset(itemWidth, itemHeight),
+    }
+
+    local rowContent = GuiUtils.addRowAndReturnRowContent(parent,rowName, nil, rowOptions, {
+        AutomaticSize = Enum.AutomaticSize.None,
+        ClipsDescendants = true,
+        BorderSizePixel = 0,
+        BorderColor3 = Color3.new(0.5, 0.5, 0.5),
+        BorderMode = Enum.BorderMode.Outline,
+        BackgroundColor3 = Color3.new(0.9, 0.9, 0.9),
+        BackgroundTransparency = 0,
+    })
+
+    GuiUtils.addUIGradient(rowContent, GuiConstants.scrollBackgroundGradient)
+    GuiUtils.addPadding(rowContent, {
+        PaddingLeft = UDim.new(0, 0),
+        PaddingRight = UDim.new(0, 0),
+    })
+
+    local gridLayout = rowContent:FindFirstChildWhichIsA("UIGridLayout", true)
+    assert(gridLayout, "Should have gridLayout")
+    local cellHeight = gridLayout.CellSize.Y.Offset
+    local totalHeight = 2 * cellHeight + 3 * GuiConstants.standardPadding
+    rowContent.Size = UDim2.new(1, 0, 0, totalHeight)
+
+    return rowContent
+end
+
 
 return GuiUtils

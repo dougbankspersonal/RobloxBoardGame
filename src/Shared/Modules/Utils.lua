@@ -5,11 +5,12 @@ https://roblox.github.io/cryo-internal/api-reference
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Cryo = require(ReplicatedStorage.Cryo)
+local RunService = game:GetService("RunService")
 
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+local Cryo = require(ReplicatedStorage.Cryo)
 
 local Utils = {}
 
@@ -46,14 +47,14 @@ Utils.tableSize = function(table: {[any]: any}): number
 end
 
 Utils.debugPrint = function(...)
-    if game:GetService("RunService"):IsStudio() then
+    if RunService:IsStudio() then
         print(...)
     end
 end
 
 Utils.debugMapUserId = function(userId: CommonTypes.UserId): CommonTypes.UserId
     -- In studio we use mock userIds. When we try to get name or picture of that user things break.
-    if game:GetService("RunService"):IsStudio() then
+    if RunService:IsStudio() then
         if userId < 0 then
             return userId + 1000000
         end

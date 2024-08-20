@@ -36,23 +36,24 @@ GuiConstants.standardPadding = 5
 GuiConstants.mainFramePadding = 20
 GuiConstants.paddingBetweenRows = 14
 
-GuiConstants.gameImageX = 100
-GuiConstants.gameImageY = 100
+GuiConstants.gameImageWidth = 60
+GuiConstants.gameImageHeight = 60
+GuiConstants.gameLabelWidth = 130
 GuiConstants.gameLabelHeight = 20
 
-GuiConstants.userImageX = 60
-GuiConstants.userImageY = 60
-GuiConstants.userLabelHeight = 20
+GuiConstants.userImageWidth = 60
+GuiConstants.userImageHeight = 60
 GuiConstants.userLabelWidth = 130
+GuiConstants.userLabelHeight = 20
 
-GuiConstants.gameWidgetX = GuiConstants.gameImageX + 2 * GuiConstants.standardPadding
-GuiConstants.gameWidgetY = GuiConstants.gameImageY + GuiConstants.gameLabelHeight + 3 * GuiConstants.standardPadding
+GuiConstants.gameWidgetWidth = math.max(GuiConstants.gameImageWidth, GuiConstants.gameLabelWidth) + 2 * GuiConstants.standardPadding
+GuiConstants.gameWidgetHeight = GuiConstants.gameImageHeight + GuiConstants.gameLabelHeight + 3 * GuiConstants.standardPadding
 
-GuiConstants.userWidgetX = GuiConstants.userLabelWidth + 2 * GuiConstants.standardPadding
-GuiConstants.userWidgetY = GuiConstants.userImageY + GuiConstants.userLabelHeight + 3 * GuiConstants.standardPadding
+GuiConstants.userWidgetX = math.max(GuiConstants.userImageWidth, GuiConstants.userLabelWidth) + 2 * GuiConstants.standardPadding
+GuiConstants.userWidgetY = GuiConstants.userImageHeight + GuiConstants.userLabelHeight + 3 * GuiConstants.standardPadding
 
 GuiConstants.tableWidgetX = GuiConstants.userWidgetX
-GuiConstants.tableWidgetY = GuiConstants.gameImageY + GuiConstants.gameLabelHeight + GuiConstants.userLabelHeight + 4 * GuiConstants.standardPadding
+GuiConstants.tableWidgetY = GuiConstants.gameImageHeight + GuiConstants.gameLabelHeight + GuiConstants.userLabelHeight + 4 * GuiConstants.standardPadding
 
 GuiConstants.redXSize = 20
 GuiConstants.redXMargin = 5
@@ -74,6 +75,9 @@ GuiConstants.itemWidgetOverlayZIndex = 4
 GuiConstants.whiteToGrayColorSequence = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(0.8, 0.8, 0.8))
 GuiConstants.scrollBackgroundGradient = ColorSequence.new(Color3.new(0.8, 0.8, 0.8), Color3.new(0.6, 0.6, 0.6))
 GuiConstants.blueColorSequence = ColorSequence.new(Color3.new(0.5, 0.6, 0.8), Color3.new(0.2, 0.3, 0.5))
+
+GuiConstants.disabledButtonTextColor = Color3.new(0.35, 0.35, 0.35)
+GuiConstants.enabledButtonTextColor = Color3.new(0, 0, 0)
 
 -- Times
 GuiConstants.standardTweenTime = 0.25

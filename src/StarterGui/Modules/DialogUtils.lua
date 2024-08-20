@@ -13,9 +13,9 @@ local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 local DialogUtils = {}
 
 DialogUtils.getDialogBackground = function(): Frame?
-    local containingScrollingFrame = GuiUtils.getContainingScrollingFrame()
-    assert(containingScrollingFrame, "ScreenGui not found")
-    return containingScrollingFrame:FindFirstChild(GuiConstants.dialogBackgroundName, true)
+    local mainScreenGui = GuiUtils.getMainScreenGui()
+    assert(mainScreenGui, "ScreenGui not found")
+    return mainScreenGui:FindFirstChild(GuiConstants.dialogBackgroundName, true)
 end
 
 DialogUtils.cleanupDialog = function()
@@ -38,9 +38,7 @@ end
 -- Throw up a dialog using the given config.
 -- Clicking any button in the config will kill the dialog and hit the associated callback.
 DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame?
-    print("Doug: DialogUtils.makeDialog dialogConfig = ", dialogConfig)
-
-    local containingScrollingFrame = GuiUtils.getContainingScrollingFrame()
+    local mainScreenGui = GuiUtils.getMainScreenGui()
     -- Can't have two dialogs up at once.
     local existingDialogBackground = DialogUtils.getDialogBackground()
     if existingDialogBackground then
@@ -53,7 +51,7 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     dialogBackground.Size = UDim2.fromScale(1, 1)
     dialogBackground.BackgroundColor3 = Color3.new(0, 0, 0)
     dialogBackground.BackgroundTransparency = 0.5
-    dialogBackground.Parent = containingScrollingFrame
+    dialogBackground.Parent = mainScreenGui
     dialogBackground.Name = GuiConstants.dialogBackgroundName
     dialogBackground.ZIndex = GuiConstants.dialogBackgroundZIndex
     dialogBackground.AutomaticSize = Enum.AutomaticSize.XY
@@ -109,11 +107,14 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
         TextWrapped = true,
     })
 
-    -- There should be exactly one of dialogButtonConfigs or makeRowAndAddCustomControls
+    -- There should be at least one of dialogButtonConfigs or makeCustomDialogContent
     local hasDialogButtonConfigs = dialogConfig.dialogButtonConfigs and #dialogConfig.dialogButtonConfigs > 0
-    local hasMakeRowAndAddCustomControls = dialogConfig.makeRowAndAddCustomControls
-    assert(hasDialogButtonConfigs or hasMakeRowAndAddCustomControls, "Should at least one of dialogButtonConfigs or hasMakeRowAndAddCustomControls")
-    assert(not (hasDialogButtonConfigs and hasMakeRowAndAddCustomControls), "Should not have both dialogButtonConfigs hasMakeRowAndAddCustomControls")
+    local hasMakeCustomDialogContent = dialogConfig.makeCustomDialogContent
+    assert(hasDialogButtonConfigs or hasMakeCustomDialogContent, "Should at least one of dialogButtonConfigs or hasMakeCustomDialogContent")
+
+    if hasMakeCustomDialogContent then
+        dialogConfig.makeCustomDialogContent(contentFrame)
+    end
 
     if hasDialogButtonConfigs then
         local rowContent = GuiUtils.addRowAndReturnRowContent(contentFrame, "Row_Controls", nil, {
@@ -121,6 +122,7 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
             wraps = true,
         })
 
+        print("Doug: dialogConfig.dialogButtonConfigs = ", dialogConfig.dialogButtonConfigs)
         for _, dialogButtonConfig in ipairs(dialogConfig.dialogButtonConfigs) do
             GuiUtils.addTextButtonWidgetContainer(rowContent, dialogButtonConfig.text, function()
                 -- Destroy the dialog.
@@ -131,8 +133,6 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
                 end
             end)
         end
-    else
-        dialogConfig.makeRowAndAddCustomControls(contentFrame)
     end
 
     -- Put a cancel button in upper right corner.
@@ -150,7 +150,7 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     return dialog
 end
 
-DialogUtils.showConfirmationDialog = function(title: string, description: string, onConfirm: () -> nil)
+DialogUtils.showConfirmationDialog = function(title: string, description: string, onConfirm: () -> nil): Frame?
     local dialogButtonConfigs = {} :: {CommonTypes.DialogButtonConfig}
     table.insert(dialogButtonConfigs, {
         text = "Cancel",
@@ -166,10 +166,7 @@ DialogUtils.showConfirmationDialog = function(title: string, description: string
         dialogButtonConfigs = dialogButtonConfigs,
     } :: CommonTypes.DialogConfig
 
-
-    print("Doug: DialogUtils.showConfirmationDialog dialogConfig = ", dialogConfig)
-
-    DialogUtils.makeDialog(dialogConfig)
+    return DialogUtils.makeDialog(dialogConfig)
 end
 
 return DialogUtils
