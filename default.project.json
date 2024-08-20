@@ -1,0 +1,93 @@
+{
+    "name": "RobloxBoardGame",
+      "tree": {
+          "$className": "DataModel",
+
+          "ReplicatedStorage": {
+              "$className": "ReplicatedStorage",
+              "Cryo": {
+                  "$path": "../cryo/default.project.json"
+              },
+              "RobloxBoardGameShared": {
+                  "$path": "src/Shared/default.project.json"
+              }
+          },
+
+          "ServerScriptService": {
+              "$className": "ServerScriptService",
+              "SRBGCServer": {
+                  "$path": "src/SRBGCServer"
+              },
+              "RobloxBoardGameServer": {
+                  "$path": "src/Server/default.project.json"
+              }
+          },
+
+          "StarterGui": {
+              "$className": "StarterGui",
+              "MainScreenGui": {
+                  "$className": "ScreenGui",
+          "SRBGCClient": {
+            "$path": "src/SRBGCClient"
+          },
+          "RobloxBoardGameStarterGui": {
+            "$path": "src/StarterGui/default.project.json"
+          }
+        }
+      },
+
+      "StarterPlayer": {
+        "$className": "StarterPlayer",
+        "StarterPlayerScripts": {
+          "$className": "StarterPlayerScripts",
+          "$path": "src/StarterPlayerScripts/default.project.json"
+        }
+      },
+
+      "Workspace": {
+        "$properties": {
+          "FilteringEnabled": true
+        },
+        "Baseplate": {
+          "$className": "Part",
+          "$properties": {
+            "Anchored": true,
+            "Color": [
+              0.2,
+              0.3,
+              0.4
+            ],
+            "Locked": true,
+            "Position": [
+              0,
+              -10,
+              0
+            ],
+            "Size": [
+              512,
+              20,
+              512
+            ]
+          }
+        }
+      },
+      "Lighting": {
+        "$properties": {
+          "Ambient": [
+            0,
+            0,
+            0
+          ],
+          "Brightness": 2,
+          "GlobalShadows": true,
+          "Outlines": false,
+          "Technology": "Voxel"
+        }
+      },
+      "SoundService": {
+        "$properties": {
+          "RespectFilteringEnabled": true
+        }
+      }
+    }
+  }

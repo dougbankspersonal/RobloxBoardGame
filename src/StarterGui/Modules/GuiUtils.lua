@@ -115,7 +115,7 @@ end
 
 -- Standard notion of displaying a game image in text.
 -- Start with basic "item image", tweak the size, set the image.
-local configureGameImage = function(imageLabel: ImageLabel, gameDetails: GameDetails): ImageLabel
+local configureGameImage = function(imageLabel: ImageLabel, gameDetails: CommonTypes.GameDetails): ImageLabel
     assert(imageLabel, "Should have imageLabel")
     assert(gameDetails, "Should have gameDetails")
     imageLabel.Size = UDim2.fromOffset(GuiConstants.gameImageWidth, GuiConstants.gameImageHeight)
@@ -184,7 +184,7 @@ GuiUtils.addStandardMainFramePadding = function(frame: Frame): UIPadding
     return GuiUtils.addPadding(frame, {
         PaddingLeft = UDim.new(0, GuiConstants.mainFramePadding),
         PaddingRight = UDim.new(0, GuiConstants.mainFramePadding),
-        PaddingTop = UDim.new(0, GuiConstants.mainFramePadding),
+        PaddingTop = UDim.new(0, GuiConstants.mainFrameTopPadding),
         PaddingBottom = UDim.new(0, GuiConstants.mainFramePadding),
     })
 end
@@ -281,12 +281,12 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
     local row = Instance.new("Frame")
     row.Name = rowName
     row.Parent = parent
-    row.Size = UDim2.fromScale(1, 0)
+    row.Size = UDim2.fromScale(0, 0)
     row.Position = UDim2.fromScale(0, 0)
     row.BorderSizePixel = 0
 
     row.LayoutOrder = GuiUtils.getLayoutOrder(parent)
-    row.AutomaticSize = Enum.AutomaticSize.Y
+    row.AutomaticSize = Enum.AutomaticSize.XY
     row.BackgroundTransparency = 1.0
 
     local contentWidthOffset = 0
@@ -320,11 +320,11 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
     else
         rowContent = Instance.new("Frame")
     end
-    rowContent.Parent = row
-    rowContent.Size = UDim2.new(1, -contentWidthOffset, 0, 0)
-    rowContent.AutomaticSize = Enum.AutomaticSize.Y
-    rowContent.Position = UDim2.fromScale(0, 0)
     rowContent.Name = GuiConstants.rowContentName
+    rowContent.Parent = row
+    rowContent.Size = UDim2.new(0, 0, 0, 0)
+    rowContent.AutomaticSize = Enum.AutomaticSize.XY
+    rowContent.Position = UDim2.fromScale(0, 0)
     rowContent.LayoutOrder = 2
     rowContent.BackgroundTransparency = 1
     rowContent.BorderSizePixel = 0
@@ -336,7 +336,8 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
         local uiGridLayout = Instance.new("UIGridLayout")
         uiGridLayout.Parent = rowContent
         uiGridLayout.FillDirection = Enum.FillDirection.Horizontal
-        uiGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        uiGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+        uiGridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
         uiGridLayout.Name = GuiConstants.rowUIGridLayoutName
         uiGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
         if rowOptions.gridCellSize then
@@ -397,16 +398,16 @@ GuiUtils.addTextButton = function(parent: Instance, text: string, callback: () -
 
     -- Listen for enabled/disabled.
     button.Changed:Connect(function(propertyName)
-        print("Doug: Button changed 001")
+        Utils.debugPrint("Button", "Doug: Button changed 001")
         if propertyName == "Active" then
-            print("Doug: Button changed 002")
+            Utils.debugPrint("Button", "Doug: Button changed 002")
             if button.Active then
-                print("Doug: Button changed 004")
+                Utils.debugPrint("Button", "Doug: Button changed 004")
                 button.TextColor3 = GuiConstants.enabledButtonTextColor
                 button.AutoButtonColor = true
             else
                 button.TextColor3 = GuiConstants.disabledButtonTextColor
-                print("Doug: Button changed 003")
+                Utils.debugPrint("Button", "Doug: Button changed 003")
                 button.AutoButtonColor = false
             end
         end
@@ -614,7 +615,7 @@ end
 -- a child "itemType" string value and a child "itemId" number value.
 -- <type, id> should be globally unique.
 -- Name is just "WidgetContainer_<type>_<id>
-GuiUtils.constructWidgetContainerName = function(itemType: string, itemId: numbe): string
+GuiUtils.constructWidgetContainerName = function(itemType: string, itemId: number): string
     assert(itemType, "Should have a itemType")
     assert(itemId, "Should have a itemId")
     return "WidgetContainer_" .. itemType .. "_" .. tostring(itemId)
@@ -661,7 +662,7 @@ local function makeTweenKey(widgetContainer: Instance): string
     return "Tween_" .. itemType.Value .. "_" .. tostring(itemId.Value)
 end
 
-local collectWidgetContainers = function(parent: GuiObjet): {GuiObject}
+local collectWidgetContainers = function(parent: GuiObject): {GuiObject}
     assert(parent, "Should have a parent")
     local widgetContainers = {} :: {GuiObject}
     local allKids = parent:GetChildren()
@@ -844,9 +845,9 @@ GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, opt
     local userWidgetContainer = makeWidgetContainer(parent, "User", userId)
 
     if opt_onClick then
-        print("Doug: addUserWidgetContainer 001")
+        Utils.debugPrint("WidgetContainer", "Doug: addUserWidgetContainer 001")
         GuiUtils.addUserButton(userWidgetContainer, userId, function()
-            print("Doug: addUserWidgetContainer 002")
+            Utils.debugPrint("WidgetContainer", "Doug: addUserWidgetContainer 002")
             opt_onClick(userId)
         end)
 
@@ -933,11 +934,11 @@ GuiUtils.updateTextLabelWidgetContainer = function(widgetContainer: Frame, text:
 end
 
 GuiUtils.updateTextButtonEnabledInWidgetContainer = function(widgetContainer: Frame, enabled: boolean)
-    print("Doug: updateTextButtonEnabledInWidgetContainer ", enabled)
+    Utils.debugPrint("WidgetContainer", "Doug: updateTextButtonEnabledInWidgetContainer ", enabled)
     assert(widgetContainer, "Should have a widgetContainer")
     local textButton = widgetContainer:FindFirstChild(GuiConstants.textButtonName)
     assert(textButton, "Should have a textButton")
-    print("Doug: textButton.Active ", textButton.Active)
+    Utils.debugPrint("WidgetContainer", "Doug: textButton.Active ", textButton.Active)
     textButton.Active = enabled
 end
 

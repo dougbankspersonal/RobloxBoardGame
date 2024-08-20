@@ -29,7 +29,7 @@ GameUIs.setAllGameUIs = function(_gameUIsByGameId: CommonTypes.GameUIsByGameId):
     gameUIsByGameId = _gameUIsByGameId
 end
 
-GameUIs.getGameUI = function(gameId: CommonTypes.GameId): CommonTypes.GameUI?
+GameUIs.getGameUI = function(gameId: CommonTypes.GameId): CommonTypes.GameUIs?
   if gameUIsByGameId[gameId] then
     return gameUIsByGameId[gameId]
   else

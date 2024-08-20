@@ -93,15 +93,16 @@ end
 local onAddInviteClicked = function(currentTableDescription: CommonTypes.TableDescription)
     assert(currentTableDescription, "Should have a currentTableDescription")
     local inviteeIds = Cryo.Dictionary.keys(currentTableDescription.invitedUserIds)
-    FriendSelectionDialog.selectFriends("Select a friend",
-        "Select a friend to invite to the table.",
-        true,
-        inviteeIds,
-        function (userIds: {CommonTypes.UserId}?)
-            if userIds then
-                ClientEventManagement.invitePlayersToTable(currentTableDescription.tableId, userIds)
-            end
-        end)
+    local friendSelectionDialogConfig: FriendSelectionDialog.FriendSelectionDialogConfig = {
+        title = "Select friends",
+        description = "Select friends to invite to the table.",
+        isMultiSelect = true,
+        preselectedUserIds = inviteeIds,
+        callback = function(userIds: {CommonTypes.UserId})
+            ClientEventManagement.invitePlayersToTable(currentTableDescription.tableId, userIds)
+        end
+    }
+    FriendSelectionDialog.selectFriends(friendSelectionDialogConfig)
 end
 
 local addTableControls = function (frame: Frame, currentTableDescription: CommonTypes.TableDescription, isHost: boolean)
@@ -174,6 +175,7 @@ TableWaitingUI.build = function(currentTableDescription: CommonTypes.TableDescri
     GuiUtils.addStandardMainFramePadding(mainFrame)
     GuiUtils.addLayoutOrderGenerator(mainFrame)
     GuiUtils.addUIListLayout(mainFrame, {
+        VerticalAlignment = Enum.VerticalAlignment.Top,
         Padding = UDim.new(0, GuiConstants.paddingBetweenRows),
     })
 
@@ -257,7 +259,7 @@ local updateInvites = function(parentOfRow: Frame, isHost: boolean, currentTable
     assert(currentTableDescription, "Should have a currentTableDescription")
 
     -- Some functions used as args below.
-    local function canRemoveInvite(userId: CommonTypes.UserId): boolean
+    local function canRemoveInvite(_: CommonTypes.UserId): boolean
         if isHost then
             return true
         else
@@ -266,10 +268,10 @@ local updateInvites = function(parentOfRow: Frame, isHost: boolean, currentTable
     end
 
     local function removeInviteCallback(userId: CommonTypes.UserId)
-        print("Doug: removeInviteCallback 001 userId = ", userId)
+        Utils.debugPrint("RemoveInvite", "Doug: removeInviteCallback 001 userId = ", userId)
         DialogUtils.showConfirmationDialog("Remove Invitation?",
             "Please confirm you want to remove this player''s invitation to the table.", function()
-                print("Doug: removeInviteCallback 002 userId = ", userId)
+                Utils.debugPrint("RemoveInvite", "Doug: removeInviteCallback 002 userId = ", userId)
                 ClientEventManagement.removeInviteForTable(currentTableDescription.tableId, userId)
             end)
     end
@@ -285,7 +287,7 @@ end
 local updateTableControls = function(parentOfRow: Frame, currentTableDescription: CommonTypes.TableDescription, isHost: boolean)
     assert(parentOfRow, "Should have a mainFrame")
     assert(currentTableDescription, "Should have a currentTableDescription")
-    print("Doug: updateTableControls 001")
+    Utils.debugPrint("UpdateTable", "Doug: updateTableControls 001")
 
     -- Non-host controls never change.
     if not isHost then
@@ -302,7 +304,7 @@ local updateTableControls = function(parentOfRow: Frame, currentTableDescription
     assert(gameDetails.maxPlayers >= numMembers, "Somehow we have too many members")
 
     local startEnabled = numMembers >= gameDetails.minPlayers
-    print("Doug: updateTableControls startEnabled = ", startEnabled)
+    Utils.debugPrint("UpdateTable", "Doug: updateTableControls startEnabled = ", startEnabled)
 
     assert(startButtonWidgetContainerName, "Should have startButtonWidgetContainerName")
 

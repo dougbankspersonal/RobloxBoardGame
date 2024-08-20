@@ -153,9 +153,9 @@ ServerEventManagement.createClientToServerEvents = function()
 
     -- Event to remove an invite from a table.
     createGameTableRemoteEvent("RemoveInviteForTable", function(player, gameTable, userId)
-        print("Doug: RemoveInviteForTable 001")
+        Utils.debugPrint("RemoveInvite", "Doug: RemoveInviteForTable 001")
         if gameTable:removeInviteForTable(player.UserId, userId) then
-            print("Doug: RemoveInviteForTable 002")
+            Utils.debugPrint("RemoveInvite", "Doug: RemoveInviteForTable 002")
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end
     end)
@@ -190,7 +190,7 @@ ServerEventManagement.createClientToServerEvents = function()
 
     if RunService:IsStudio() then
         createGameTableRemoteEvent("AddMockMember", function(_, gameTable)
-            Utils.debugPrint("Doug; Adding mock member")
+            Utils.debugPrint("Mocks", "Doug: Adding mock member")
             if not gameTable.tableDescription.isPublic then
                 return
             end
@@ -201,15 +201,15 @@ ServerEventManagement.createClientToServerEvents = function()
         end)
 
         createGameTableRemoteEvent("AddMockInvite", function(player, gameTable)
-            Utils.debugPrint("Doug; Adding mock invite")
+            Utils.debugPrint("Mocks", "Doug; Adding mock invite")
             if gameTable.tableDescription.isPublic then
                 return
             end
             if not gameTable:inviteToTable(player.UserId, getNextMockUserId()) then
-                print("Doug: AddMockInvite: invite to table failed")
+                Utils.debugPrint("Mocks", "Doug: AddMockInvite: invite to table failed")
                 return
             end
-            print("Doug: AddMockInvite: broadcasting new table.")
+            Utils.debugPrint("Mocks", "Doug: AddMockInvite: broadcasting new table.")
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end)
 
@@ -229,7 +229,7 @@ ServerEventManagement.createClientToServerEvents = function()
 
         -- Destroy all Mock Tables.
         createRemoteEvent("TableEvents", "DestroyAllMockTables", function(player)
-            Utils.debugPrint("Doug; Destroying all Mock Tables")
+            Utils.debugPrint("Mocks", "Doug; Destroying all Mock Tables")
             local allTables = GameTable.getAllGameTables()
             for tableId, gameTable in allTables do
                 if gameTable.isMock then
@@ -241,7 +241,7 @@ ServerEventManagement.createClientToServerEvents = function()
 
         -- Make a mock table.
         createRemoteEvent("TableEvents", "MockTable", function(player, isPublic)
-            Utils.debugPrint("Doug; Mocking Table")
+            Utils.debugPrint("Mocks", "Doug; Mocking Table")
             -- Make a random table.
             -- Get a random game id.
             local gameDetailsByGameId = GameDetails.getAllGameDetails()
@@ -250,7 +250,7 @@ ServerEventManagement.createClientToServerEvents = function()
             local mockUserId = getNextMockUserId()
             local gameTable = GameTable.createNewTable(mockUserId, gameId, isPublic)
             if not gameTable then
-                Utils.debugPrint("Doug; Mocking Table: no table")
+                Utils.debugPrint("Mocks", "Doug; Mocking Table: no table")
                 return
             end
 
@@ -263,7 +263,7 @@ ServerEventManagement.createClientToServerEvents = function()
 
             local tableDescription = gameTable:getTableDescription()
 
-            Utils.debugPrint("Doug; Mocking Table: broadcasting TableCreated tableDescription = ", tableDescription)
+            Utils.debugPrint("Mocks", "Doug; Mocking Table: broadcasting TableCreated tableDescription = ", tableDescription)
 
             -- Broadcast the new table to all players
             sendToAllPlayers("TableCreated", tableDescription)

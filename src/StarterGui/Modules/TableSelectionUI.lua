@@ -23,7 +23,6 @@ local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescrip
 local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
 local TableConfigDialog = require(RobloxBoardGameStarterGui.Modules.TableConfigDialog)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
-local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
 
 local TableSelectionUI = {}
 
@@ -84,7 +83,7 @@ TableSelectionUI.build = function()
     GuiUtils.addLayoutOrderGenerator(mainFrame)
 
     GuiUtils.addUIListLayout(mainFrame, {
-        HorizontalAlignment = Enum.HorizontalAlignment.Left,
+        VerticalAlignment = Enum.VerticalAlignment.Top,
         Padding = UDim.new(0, GuiConstants.paddingBetweenRows),
     })
 

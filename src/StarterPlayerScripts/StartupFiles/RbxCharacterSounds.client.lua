@@ -5,4 +5,4 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
-Utils.debugPrint("Sound is disabled.")
+Utils.debugPrint("Sound", "Sound is disabled.")

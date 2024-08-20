@@ -200,40 +200,40 @@ end
 -- Return true iff successful.
 function GameTable:inviteToTable(userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId): boolean
     -- Must be the host.
-    print("Doug: GameTable:inviteToTable userId = ", userId)
-    print("Doug: GameTable:inviteToTable inviteeId = ", inviteeId)
-    print("Doug self.tableDescription.hostUserId = ", self.tableDescription.hostUserId)
+    Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable userId = ", userId)
+    Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable inviteeId = ", inviteeId)
+    Utils.debugPrint("InviteToTable", "Doug: self.tableDescription.hostUserId = ", self.tableDescription.hostUserId)
 
     if not self:isHost(userId) then
-        print("Doug: GameTable:inviteToTable 001")
+        Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable 001")
         return false
     end
 
     -- Can't invite self.
     if userId == inviteeId then
-        print("Doug: GameTable:inviteToTable 002")
+        Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable 002")
         return false
     end
 
     -- Game already started, no.
     if self.tableDescription.gameTableState ~= GameTableStates.WaitingForPlayers then
-        print("Doug: GameTable:inviteToTable 003")
+        Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable 003")
         return false
     end
 
     -- Already a member, no.
     if self:isMember(inviteeId) then
-        print("Doug: GameTable:inviteToTable 004")
+        Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable 004")
         return false
     end
 
     -- Already invited, no.
     if self:isInvitedToTable(inviteeId) then
-        print("Doug: GameTable:inviteToTable 005")
+        Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable 005")
         return false
     end
 
-    print("Doug: GameTable:inviteToTable 006")
+    Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable 006")
     self.tableDescription.invitedUserIds[inviteeId] = true
     return true
 end
@@ -264,21 +264,21 @@ function GameTable:removeGuestFromTable(userId: CommonTypes.UserId, guestId: Com
 end
 
 function GameTable:removeInviteForTable(userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId): boolean
-    print("Doug: GameTable:removeInviteForTable userId = ", userId)
+    Utils.debugPrint("RemoveInvite", "Doug: GameTable:removeInviteForTable userId = ", userId)
     -- Must be the host.
     if not self:isHost(userId) then
-        print("Doug: GameTable:removeInviteForTable 001")
+        Utils.debugPrint("RemoveInvite", "Doug: GameTable:removeInviteForTable 001")
         return false
     end
 
     -- Must be an invitee.
     if not self:isInvitedToTable(inviteeId) then
-        print("Doug: GameTable:removeInviteForTable 002")
+        Utils.debugPrint("RemoveInvite", "Doug: GameTable:removeInviteForTable 002")
         return false
     end
 
     self.tableDescription.invitedUserIds[inviteeId] = nil
-    print("Doug: GameTable:removeInviteForTable 003")
+    Utils.debugPrint("RemoveInvite", "Doug: GameTable:removeInviteForTable 003")
     return true
 end
 

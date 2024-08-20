@@ -16,6 +16,9 @@ GuiConstants.textButtonName = "TextButton"
 GuiConstants.textLabelName = "TextLabel"
 
 GuiConstants.dialogBackgroundName = "DialogBackground"
+GuiConstants.dialogContentFrameName = "DialogContentFrame"
+GuiConstants.dialogName = "Dialog"
+
 GuiConstants.nullWidgetName = "NullWidget"
 GuiConstants.deadMeatTweeningOutName = "DeadMeatTweeningOut"
 
@@ -34,6 +37,7 @@ GuiConstants.standardCornerSize = 10
 GuiConstants.rowLabelWidth = 200
 GuiConstants.standardPadding = 5
 GuiConstants.mainFramePadding = 20
+GuiConstants.mainFrameTopPadding = 80
 GuiConstants.paddingBetweenRows = 14
 
 GuiConstants.gameImageWidth = 60
@@ -58,7 +62,7 @@ GuiConstants.tableWidgetY = GuiConstants.gameImageHeight + GuiConstants.gameLabe
 GuiConstants.redXSize = 20
 GuiConstants.redXMargin = 5
 
-GuiConstants.dialogOuterPadding = 20
+GuiConstants.dialogToContentPadding = 20
 
 -- Z indices
 GuiConstants.mainFrameZIndex = 2

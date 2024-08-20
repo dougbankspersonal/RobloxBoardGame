@@ -62,7 +62,18 @@ local summonMocksDialog = function(): Frame?
                 ClientEventManagement.destroyAllMockTables(false)
             end
         } :: CommonTypes.DialogButtonConfig,
-    } :: {CommonTypes.DialogConfig}
+    } :: {CommonTypes.DialogButtonConfig}
+
+    -- Debug stuff.
+    for i = 1, 20 do
+        local config = {
+            text = "Mock plus " .. tostring(i),
+            callback = function()
+                print("Doug: Mock plus " .. tostring(i))
+            end
+        } :: CommonTypes.DialogButtonConfig
+        table.insert(dialogButtonConfigs, config)
+    end
 
     -- Mocks to add/remove invites and members while waiting.
     if currentTableDescription and currentUIMode == UIModes.TableWaitingForPlayers then
@@ -110,9 +121,9 @@ GuiMain.makeContaintingScrollingFrame = function()
     containingScrollingFrame.Parent = mainScreenGui
     containingScrollingFrame.Name = GuiConstants.containingScrollingFrameName
     containingScrollingFrame.BorderSizePixel= 0
-    containingScrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
     containingScrollingFrame.CanvasSize = UDim2.fromScale(1, 0)
     containingScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    containingScrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
     containingScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(0.5, 0.5, 0.5)
 
     return containingScrollingFrame
@@ -270,7 +281,7 @@ GuiMain.onTableDestroyed = function(tableId: CommonTypes.TableId)
 end
 
 GuiMain.onTableUpdated = function(tableDescription: CommonTypes.TableDescription)
-    print("Doug: onTableUpdated called on client, tableDescription = ", tableDescription)
+    Utils.debugPrint("TableUpdated", "Doug: onTableUpdated called on client, tableDescription = ", tableDescription)
     -- Sending table description from server to client messes with some types. Fix it.
     tableDescription = TableDescriptions.cleanUpTypes(tableDescription)
 

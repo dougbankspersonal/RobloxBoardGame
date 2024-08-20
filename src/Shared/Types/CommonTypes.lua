@@ -185,6 +185,13 @@ export type InstanceOptions = {
     [string]: any,
 }
 
+export type FriendFromFriendPages = {
+    DisplayName	: string,
+    Id: number,
+    IsOnline: boolean,
+    Username: string,
+}
+
 local CommonTypes = {
 }
 

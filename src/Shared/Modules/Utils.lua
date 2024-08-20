@@ -14,6 +14,18 @@ local Cryo = require(ReplicatedStorage.Cryo)
 
 local Utils = {}
 
+local debugPrintEnabledLabels = {
+    Button = false,
+    Dialogs = false,
+    Friends = true,
+    InviteToTable = false,
+    Mocks = false,
+    RemoveInvite = false,
+    Sound = false,
+    UpdateTable = false,
+    WidgetContainer = false,
+}
+
 -- String starts with given start.
 Utils.stringStartsWith = function(str: string, start: string): boolean
     return str:sub(1, #start) == start
@@ -46,9 +58,16 @@ Utils.tableSize = function(table: {[any]: any}): number
     return #keys
 end
 
-Utils.debugPrint = function(...)
+Utils.debugPrint = function(label, ...)
     if RunService:IsStudio() then
-        print(...)
+        -- should be a label I know.
+        local keys = Cryo.Dictionary.keys(debugPrintEnabledLabels)
+        local found = Cryo.List.find(keys, label) ~= nil
+        assert(found, "Unknown debugPrint label: " .. label)
+
+        if debugPrintEnabledLabels[label] then
+            print(...)
+        end
     end
 end
 

@@ -15,7 +15,6 @@ local RunService = game:GetService("RunService")
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
-local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 local Cryo = require(ReplicatedStorage.Cryo)
@@ -30,8 +29,6 @@ local UserGuiUtils = require(RobloxBoardGameStarterGui.Modules.UserGuiUtils)
 local FriendSelectionDialog = {}
 
 local selectedUserIds: {CommonTypes.UserId} = {}
-
-local friendPages
 
 export type FriendSelectionDialogConfig = {
     title: string,
@@ -61,11 +58,11 @@ updateSelectedFriendsRow = function(parent: Frame, opt_justBuilt: boolean?)
     UserGuiUtils.updateUserRow(parent, "Row_SelectedFriends", opt_justBuilt == true, selectedUserIds, canDeselectFriend, deselectFriendCallback, makeNullWidget, GuiUtils.removeNullWidget)
 end
 
-local function appendFriendsToGrid(rowContent, friends, config)
-    for _, friend in friends do
-        local userId = friend.Id
+local function appendFriendsToGrid(rowContent: Frame, friendsFromFriendPages: {CommonTypes.FriendFromFriendPages}, config: FriendSelectionDialogConfig)
+    for _, friendFromFriendPages in friendsFromFriendPages do
+        local userId = friendFromFriendPages.Id
 
-        GuiUtils.addUserButton(rowContent, userId, function()
+        local button = GuiUtils.addUserButton(rowContent, userId, function()
             if config.isMultiSelect then
                 -- Just some sanity checcks: if already selected this is a no op.
                 if Cryo.List.find(selectedUserIds, userId) then
@@ -77,12 +74,25 @@ local function appendFriendsToGrid(rowContent, friends, config)
                 config.callback({userId})
             end
         end)
+
+        if Cryo.List.find(selectedUserIds, userId) then
+            button.Active = false
+        end
     end
 end
 
-local function addNextPageOfFriendsAsNeeded(rowContent, friendPages, config)
+local function asyncFetchAllFriends(userId: number, callback: ({CommonTypes.FriendFromFriendPages}))
+    task.spawn(function()
+            local friendPages = Players:GetFriendsAsync(userId)
+        local finalFriendsFromFriendPages: {CommonTypes.FriendFromFriendPages} = {}
+        while friendPages.IsFinished == false do
+            local friendsFromFriendPagesHandful = friendPages:GetCurrentPage()
+            finalFriendsFromFriendPages = Cryo.List.join(finalFriendsFromFriendPages, friendsFromFriendPagesHandful)
+            friendPages:AdvanceToNextPageAsync()
+        end
+        callback(finalFriendsFromFriendPages)
+    end)
 end
-
 
 local function fillGridInRowContentWithFriends(rowContent: Frame, config: FriendSelectionDialogConfig)
     -- Grab handfuls. If we scroll down grab more handfuls.
@@ -92,13 +102,10 @@ local function fillGridInRowContentWithFriends(rowContent: Frame, config: Friend
         userId = 2231221
     end
 
-    friendPages = Players:GetFriendsAsync(userId)
-
-    local friends = friendPages:GetCurrentPage()
-
-    appendFriendsToGrid(rowContent, friends, config)
-
-    addNextPageOfFriendsAsNeeded(rowContent, friendPages, config)
+    -- Async so do in a task spawn.
+    asyncFetchAllFriends(userId, function(friendsFromFriendPages: {CommonTypes.FriendFromFriendPages})
+        appendFriendsToGrid(rowContent, friendsFromFriendPages, config)
+    end)
 end
 
 
@@ -109,11 +116,17 @@ local function _makeCustomDialogContent(parent:Frame, config: FriendSelectionDia
         updateSelectedFriendsRow(parent, true)
     end
 
+    -- FIXME(dbanks)
+    -- Add the filter widget.
+
+    -- Grid of friends.
     local rowContent = GuiUtils.addRowWithItemGridAndReturnRowContent(parent, "Row_AvailableFriends", GuiConstants.userWidgetWidth, GuiConstants.userWidgetY)
     fillGridInRowContentWithFriends(rowContent, config)
 end
 
 FriendSelectionDialog.selectFriends = function(config: FriendSelectionDialogConfig): Frame?
+    Utils.debugPrint("Friends", "Doug: config = ", config)
+
     assert(config, "config must be provided")
     assert(config.title, "config.title must be provided")
     assert(config.description, "config.description must be provided")
