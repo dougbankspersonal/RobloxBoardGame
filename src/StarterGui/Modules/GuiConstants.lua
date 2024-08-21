@@ -26,6 +26,7 @@ GuiConstants.persistentNameStart = "Persistent_"
 
 -- Font sizes
 GuiConstants.textLabelFontSize = 14
+GuiConstants.largeTextLabelFontSize = 18
 GuiConstants.dialogTitleFontSize = 24
 GuiConstants.gameTextLabelFontSize = 8
 GuiConstants.userTextLabelFontSize = 8
@@ -62,7 +63,11 @@ GuiConstants.tableWidgetY = GuiConstants.gameImageHeight + GuiConstants.gameLabe
 GuiConstants.redXSize = 20
 GuiConstants.redXMargin = 5
 
+GuiConstants.screenToDialogPadding = 50
 GuiConstants.dialogToContentPadding = 20
+
+GuiConstants.defaultUIListLayoutPadding = 5
+GuiConstants.dialogButtonsUIListLayoutPadding = 15
 
 -- Z indices
 GuiConstants.mainFrameZIndex = 2

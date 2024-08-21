@@ -34,7 +34,7 @@ UserGuiUtils.updateUserRow = function(parentOfRow: Frame, rowName: string, justB
     local makeUserWidgetContainer = function(frame: Frame, userId: CommonTypes.UserId): Frame
         local userWidgetContainer
         -- For host, if user is not himself, this widget is a button that lets you kick person out of table.
-        if isButton() then
+        if isButton(userId) then
             userWidgetContainer = GuiUtils.addUserWidgetContainer(frame, userId, buttonCallback)
         else
             userWidgetContainer = GuiUtils.addUserWidgetContainer(frame, userId)

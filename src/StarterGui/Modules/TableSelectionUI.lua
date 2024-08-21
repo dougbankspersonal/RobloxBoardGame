@@ -88,7 +88,7 @@ TableSelectionUI.build = function()
     })
 
     -- Row to add a new table.
-    local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_CreateTable", nil, {
+    local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_CreateTable", {
         horizontalAlignment = Enum.HorizontalAlignment.Center,
     })
     GuiUtils.addTextButtonWidgetContainer(rowContent, "Host a new Table", function()

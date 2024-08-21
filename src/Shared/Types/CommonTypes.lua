@@ -175,6 +175,7 @@ export type TweensToKill = {
 
 export type RowOptions = {
     isScrolling: boolean?,
+    scrollingDirection: Enum.ScrollingDirection?,
     useGridLayout: boolean?,
     labelText: string?,
     gridCellSize: UDim2?,

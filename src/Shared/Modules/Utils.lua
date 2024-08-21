@@ -17,12 +17,14 @@ local Utils = {}
 local debugPrintEnabledLabels = {
     Button = false,
     Dialogs = false,
-    Friends = true,
+    Friends = false,
+    GameMetadata = true,
     InviteToTable = false,
     Mocks = false,
     RemoveInvite = false,
+    Scrolling = false,
     Sound = false,
-    UpdateTable = false,
+    TableUpdated = false,
     WidgetContainer = false,
 }
 

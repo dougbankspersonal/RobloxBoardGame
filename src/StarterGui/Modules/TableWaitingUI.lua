@@ -45,32 +45,34 @@ TableWaitingUI.justBuilt = false
 -- Config options will change so that gets filled in in update, but we can create space for it now.
 local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameDetails, currentTableDescription: CommonTypes.TableDescription)
     -- Game info and host info will not change, might as well fill them in now.
-    local rowContent = GuiUtils.addRowOfUniformItems(frame, "Row_Game", "Game: ", GuiConstants.gameWidgetHeight)
-    rowContent.BackgroundTransparency = 1
-    GuiUtils.addGameWidget(rowContent, gameDetails, true)
+    local rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Metadata1")
+    local gameNameString = gameDetails.name
+    local gameHostString = Players:GetNameFromUserIdAsync(Utils.debugMapUserId(currentTableDescription.hostUserId))
+    local metadataString1 = string.format("<b>%s</b>, hosted by <b>%s</b>", gameNameString, gameHostString)
 
-    -- Num players row.
-    local rowOptions = {
-        horizontalAlignment = Enum.HorizontalAlignment.Left,
-    }
-    rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_NumPlayers", "Players:", rowOptions)
-    GuiUtils.addTextLabelWidgetContainer(rowContent, GuiUtils.italicize(GuiUtils.getTableSizeString(gameDetails)), {
+    GuiUtils.addTextLabelWidgetContainer(rowContent, metadataString1, {
+        RichText = true,
+        TextSize = GuiConstants.largeTextLabelFontSize,
+    })
+
+    rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Metadata1")
+    local tableSizeString = GuiUtils.getTableSizeString(gameDetails)
+    local publicOrPrivateString = currentTableDescription.isPublic and "Public" or "Private"
+    local metadataString2 = string.format("<i>%s, %s</i>", tableSizeString, publicOrPrivateString)
+    GuiUtils.addTextLabelWidgetContainer(rowContent, metadataString2, {
         RichText = true,
     })
 
-    -- Visiblility row.
-    rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Visibility", "Visibility:", rowOptions)
-
-    local value = currentTableDescription.isPublic and "Public" or "Private"
-    value = GuiUtils.italicize(value)
-    GuiUtils.addTextLabelWidgetContainer(rowContent, value, {
-        RichText = true,
-    })
-
+    local rowOptions
     -- If there are gameOptions, add a widget to contain that info.
     -- It will be filled in later.
     if gameDetails.gameOptions and #gameDetails.gameOptions > 0 then
-        rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_GameOptions", "Game Options:", rowOptions)
+        rowOptions = {
+            horizontalAlignment = Enum.HorizontalAlignment.Left,
+            labelText = "Game Options:",
+        }
+
+        rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_GameOptions", rowOptions)
 
         local selectedOptionsString = GuiUtils.getSelectedGameOptionsString(currentTableDescription)
         assert(selectedOptionsString, "selectedOptionsString should exist")
@@ -84,10 +86,6 @@ local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameD
         assert(gameOptionsLabelWidgetContainer, "Should have gameOptionsLabelWidgetContainer")
         gameOptionsWidgetContainerName = gameOptionsLabelWidgetContainer.Name
     end
-
-    rowContent = GuiUtils.addRowOfUniformItems(frame, "Row_Host", "Host: ", GuiConstants.userWidgetY)
-    rowContent.BackgroundTransparency = 1
-    GuiUtils.addUserWidget(rowContent, currentTableDescription.hostUserId)
 end
 
 local onAddInviteClicked = function(currentTableDescription: CommonTypes.TableDescription)
@@ -107,7 +105,7 @@ end
 
 local addTableControls = function (frame: Frame, currentTableDescription: CommonTypes.TableDescription, isHost: boolean)
     -- Make a row for controls.
-    local rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Controls", nil, {
+    local rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Controls", {
         horizontalAlignment = Enum.HorizontalAlignment.Center,
     })
 
@@ -218,13 +216,14 @@ local updateGameOptions = function(parentOfRow: Frame, currentTableDescription: 
     GuiUtils.updateTextLabelWidgetContainer(gameOptionsContainerWidget, selectedOptionsString)
 end
 
-local updateGuests = function(parentOfRow: Frame, isHost: boolean, localUserId: CommonTypes.UserId, currentTableDescription: CommonTypes.TableDescription)
+local updateMembers = function(parentOfRow: Frame, isHost: boolean, localUserId: CommonTypes.UserId, currentTableDescription: CommonTypes.TableDescription)
     assert(parentOfRow, "Should have a parentOfRow")
     assert(localUserId, "Should have a localUserId")
     assert(currentTableDescription, "Should have a currentTableDescription")
 
     -- Some functions used as args below.
     local function canRemoveGuest(userId: CommonTypes.UserId): boolean
+        assert(userId, "Should have a userId")
         if isHost and userId ~= localUserId then
             return true
         else
@@ -233,6 +232,7 @@ local updateGuests = function(parentOfRow: Frame, isHost: boolean, localUserId: 
     end
 
     local function removeGuestCallback(userId: CommonTypes.UserId)
+        assert(userId, "Should have a userId")
         local mappedId = Utils.debugMapUserId(userId)
         local playerName = Players: GetNameFromUserIdAsync(mappedId)
 
@@ -244,9 +244,19 @@ local updateGuests = function(parentOfRow: Frame, isHost: boolean, localUserId: 
     end
 
     -- We don't want to display the host as a member, remove him.
-    local memberUserIdsWithoutHost = TableDescriptions.getMembersWithoutHost(currentTableDescription)
+    Utils.debugPrint("GameMetadata", "Doug: currentTableDescription.memberUserIds = ", currentTableDescription.memberUserIds)
+    local memberUserIds = Cryo.Dictionary.keys(currentTableDescription.memberUserIds)
+    Utils.debugPrint("GameMetadata", "Doug: pristine memberUserIds = ", memberUserIds)
+    Utils.debugPrint("GameMetadata", "Doug: currentTableDescription.hostUserId = ", currentTableDescription.hostUserId)
+    Utils.debugPrint("GameMetadata", "Doug: typeof(currentTableDescription.hostUserId) = ", typeof(currentTableDescription.hostUserId))
+    Utils.debugPrint("GameMetadata", "Doug: typeof(memberUserIds[1]) = ", typeof(memberUserIds[1]))
+    -- Host should always be first.
+    memberUserIds = Cryo.List.removeValue(memberUserIds, currentTableDescription.hostUserId)
+    Utils.debugPrint("GameMetadata", "Doug: removed host memberUserIds = ", memberUserIds)
+    table.insert(memberUserIds, 1, currentTableDescription.hostUserId)
+    Utils.debugPrint("GameMetadata", "Doug: restored host memberUserIds = ", memberUserIds)
 
-    UserGuiUtils.updateUserRow(parentOfRow, "Row_Members", TableWaitingUI.justBuilt, Cryo.Dictionary.keys(memberUserIdsWithoutHost), canRemoveGuest,
+    UserGuiUtils.updateUserRow(parentOfRow, "Row_Members", TableWaitingUI.justBuilt, memberUserIds, canRemoveGuest,
         removeGuestCallback, function(parent)
             GuiUtils.addNullWidget(parent, "<i>No players have joined yet.</i>", {
                 Size = UDim2.fromOffset(GuiConstants.userWidgetX, GuiConstants.userWidgetY)
@@ -287,7 +297,7 @@ end
 local updateTableControls = function(parentOfRow: Frame, currentTableDescription: CommonTypes.TableDescription, isHost: boolean)
     assert(parentOfRow, "Should have a mainFrame")
     assert(currentTableDescription, "Should have a currentTableDescription")
-    Utils.debugPrint("UpdateTable", "Doug: updateTableControls 001")
+    Utils.debugPrint("TableUpdated", "Doug: updateTableControls 001")
 
     -- Non-host controls never change.
     if not isHost then
@@ -304,7 +314,7 @@ local updateTableControls = function(parentOfRow: Frame, currentTableDescription
     assert(gameDetails.maxPlayers >= numMembers, "Somehow we have too many members")
 
     local startEnabled = numMembers >= gameDetails.minPlayers
-    Utils.debugPrint("UpdateTable", "Doug: updateTableControls startEnabled = ", startEnabled)
+    Utils.debugPrint("TableUpdated", "Doug: updateTableControls startEnabled = ", startEnabled)
 
     assert(startButtonWidgetContainerName, "Should have startButtonWidgetContainerName")
 
@@ -331,8 +341,8 @@ TableWaitingUI.update = function()
     -- Keep game options up to date.
     updateGameOptions(mainFrame, currentTableDescription)
 
-    -- Keep guests up to date.
-    updateGuests(mainFrame, isHost, localUserId, currentTableDescription)
+    -- Keep members up to date.
+    updateMembers(mainFrame, isHost, localUserId, currentTableDescription)
 
     -- Keep invites up to date.
     if not currentTableDescription.isPublic then

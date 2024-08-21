@@ -28,20 +28,10 @@ DialogUtils.cleanupDialog = function()
     dialogBackground:Destroy()
 end
 
-DialogUtils.addPaddingForRowContent = function(rowContent:Frame)
-    GuiUtils.addPadding(rowContent, {
-        PaddingLeft = UDim.new(0, GuiConstants.dialogToContentPadding),
-        PaddingRight = UDim.new(0, GuiConstants.dialogToContentPadding),
-        PaddingTop = UDim.new(0, 0),
-        PaddingBottom = UDim.new(0, 0),
-    })
-end
-
 -- Throw up a dialog using the given config.
 -- Clicking any button in the config will kill the dialog and hit the associated callback.
 DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame?
     local mainScreenGui = GuiUtils.getMainScreenGui()
-    local mainSize = mainScreenGui.AbsoluteSize
 
     -- Can't have two dialogs up at once.
     local existingDialogBackground = DialogUtils.getDialogBackground()
@@ -62,13 +52,18 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     dialogBackground.Text = ""
     dialogBackground.AutoButtonColor = false
 
-    -- One way to make this nicer, add some kinda cool tweening effect for dialog
-    -- going up/down.
+    -- One way to make this nicer, a
+    -- FIXME(dbanks)
+    -- 1. Add some kinda cool tweening effect for dialog going up/down.
+    -- 2. I want the dialog to scale to content, but if it's too big, stop at certain
+    --    max and add scroll.  Docs suggest using UISizeConstraint but experience
+    --    shows this does not work:
+    --    https://devforum.roblox.com/t/automaticsize-doesnt-respect-uisizeconstraint-constraints/1391918/10
+    --    So we are going with a fixed size, which will look bad with small content and large screen.
     local dialog = Instance.new("Frame")
-    dialog.Size = UDim2.new(0.66, 0, 0, 100)
+    dialog.Size = UDim2.new(1, -GuiConstants.screenToDialogPadding, 1, -GuiConstants.screenToDialogPadding)
     dialog.Position = UDim2.fromScale(0.5, 0.5)
     dialog.AnchorPoint = Vector2.new(0.5, 0.5)
-    dialog.AutomaticSize = Enum.AutomaticSize.XY
     dialog.BackgroundColor3 = Color3.new(1, 1, 1)
     dialog.Parent = dialogBackground
     dialog.Name = GuiConstants.dialogName
@@ -81,21 +76,21 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     local dialogContentFrame = Instance.new("ScrollingFrame")
     dialogContentFrame.Name = GuiConstants.dialogContentFrameName
     dialogContentFrame.Parent = dialog
-    dialogContentFrame.Size = UDim2.fromScale(1, 0)
-    dialogContentFrame.AutomaticSize = Enum.AutomaticSize.Y
+    dialogContentFrame.Size = UDim2.fromScale(1, 1)
     dialogContentFrame.Position = UDim2.fromScale(0, 0)
     dialogContentFrame.BackgroundTransparency = 1
     dialogContentFrame.BorderSizePixel = 0
-    dialogContentFrame.ScrollingDirection = Enum.ScrollingDirection.XY
-    dialogContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.XY
+    dialogContentFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+    dialogContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     dialogContentFrame.CanvasSize = UDim2.fromScale(0, 0)
 
     GuiUtils.addPadding(dialogContentFrame, {
-        PaddingLeft = UDim.new(0, 0),
-        PaddingRight = UDim.new(0, 0),
+        PaddingLeft = UDim.new(0, GuiConstants.dialogToContentPadding),
+        PaddingRight = UDim.new(0, GuiConstants.dialogToContentPadding),
         PaddingTop = UDim.new(0, GuiConstants.dialogToContentPadding),
         PaddingBottom = UDim.new(0, GuiConstants.dialogToContentPadding),
     })
+
     GuiUtils.addUIListLayout(dialogContentFrame, {
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
         VerticalAlignment = Enum.VerticalAlignment.Top,
@@ -103,13 +98,11 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     })
 
     local titleContent = GuiUtils.addRowAndReturnRowContent(dialogContentFrame, "Row_Title")
-    DialogUtils.addPaddingForRowContent(titleContent)
 
     local title = GuiUtils.addTextLabel(titleContent, "<b>" .. dialogConfig.title .. "</b>", {RichText = true})
     title.TextSize = GuiConstants.dialogTitleFontSize
 
     local descriptionContent = GuiUtils.addRowAndReturnRowContent(dialogContentFrame, "Row_Description")
-    DialogUtils.addPaddingForRowContent(descriptionContent)
     GuiUtils.addTextLabel(descriptionContent, GuiUtils.italicize(dialogConfig.description), {
         RichText = true,
         TextWrapped = true,
@@ -125,11 +118,15 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     end
 
     if hasDialogButtonConfigs then
-        local controlsContent = GuiUtils.addRowAndReturnRowContent(dialogContentFrame, "Row_Controls", nil, {
+        local controlsContent = GuiUtils.addRowAndReturnRowContent(dialogContentFrame, "Row_Controls", {
             horizontalAlignment = Enum.HorizontalAlignment.Center,
             wraps = true,
         })
-        DialogUtils.addPaddingForRowContent(controlsContent)
+
+        -- Adjust usual spacing for buttons.
+        local uiListLayout = controlsContent:FindFirstChildOfClass("UIListLayout")
+        assert(uiListLayout, "Should have a UIListLayout")
+        uiListLayout.Padding = UDim.new(0, GuiConstants.dialogButtonsUIListLayoutPadding)
 
         Utils.debugPrint("Dialogs", "Doug: dialogConfig.dialogButtonConfigs = ", dialogConfig.dialogButtonConfigs)
         for _, dialogButtonConfig in ipairs(dialogConfig.dialogButtonConfigs) do
