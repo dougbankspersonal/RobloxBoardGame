@@ -28,12 +28,16 @@ local UserGuiUtils = require(RobloxBoardGameStarterGui.Modules.UserGuiUtils)
 
 local FriendSelectionDialog = {}
 
-local mockUserId = 5845980262 -- 2231221
+-- SnackFort: few friends.
+-- local mockUserId = 5845980262
+-- TheGamer101: many friends.
+local mockUserId = 2231221
 
 local selectedUserIds: {CommonTypes.UserId} = {}
 
 local selectedFriendsRowContent
 local gridRowContent
+local filterWidgetContent
 
 export type FriendSelectionDialogConfig = {
     title: string,
@@ -161,6 +165,39 @@ local function fillGridInRowContentWithFriends(config: FriendSelectionDialogConf
     end)
 end
 
+local filterMatchesUserName = function(filterText: string?, userName: string): boolean
+    if not filterText or filterText == "" then
+        return true
+    end
+
+    return string.find(string.lower(userName), string.lower(filterText), 1, true) ~= nil
+end
+
+local addFilterTextBox = function(rowContent:Frame): Frame
+    local textBox = GuiUtils.addTextBox(rowContent, {
+        PlaceholderText = "Filter friends by name...",
+        Size = UDim2.fromScale(0.75, 0),
+        Text = "",
+    })
+
+    -- When the text box changes we are going to filter the grid.
+    textBox:GetPropertyChangedSignal("Text"):Connect(function()
+        local filterText = textBox.Text
+        local childWidgetContainers = gridRowContent:GetChildren()
+        for _, childWidgetContainer in childWidgetContainers do
+            if GuiUtils.isAWidgetContainer(childWidgetContainer) then
+                local userName = GuiUtils.getNameFromUserWidgetContainer(childWidgetContainer)
+
+                if filterMatchesUserName(filterText, userName) then
+                    childWidgetContainer.Visible = true
+                else
+                    childWidgetContainer.Visible = false
+                end
+            end
+        end
+    end)
+end
+
 
 local function _makeCustomDialogContent(parent:Frame, config: FriendSelectionDialogConfig): GuiObject
     -- If this is multi-select, we want a row to show all currently selected friends.
@@ -168,8 +205,9 @@ local function _makeCustomDialogContent(parent:Frame, config: FriendSelectionDia
         selectedFriendsRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(parent, "Row_SelectedFriends", "Selected Friends: ", GuiConstants.userWidgetHeight)
     end
 
-    -- FIXME(dbanks)
     -- Add the filter widget.
+    filterWidgetContent = GuiUtils.addRowAndReturnRowContent(parent, "Row_Filter")
+    addFilterTextBox(filterWidgetContent)
 
     -- Grid of friends.
     gridRowContent = GuiUtils.addRowWithItemGridAndReturnRowContent(parent, "Row_AvailableFriends", GuiConstants.userWidgetWidth, GuiConstants.userWidgetHeight)

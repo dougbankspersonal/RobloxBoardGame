@@ -271,17 +271,10 @@ local updateMembers = function(isHost: boolean, localUserId: CommonTypes.UserId,
     end
 
     -- We don't want to display the host as a member, remove him.
-    Utils.debugPrint("GameMetadata", "Doug: tableDescription.memberUserIds = ", tableDescription.memberUserIds)
     local memberUserIds = Cryo.Dictionary.keys(tableDescription.memberUserIds)
-    Utils.debugPrint("GameMetadata", "Doug: pristine memberUserIds = ", memberUserIds)
-    Utils.debugPrint("GameMetadata", "Doug: tableDescription.hostUserId = ", tableDescription.hostUserId)
-    Utils.debugPrint("GameMetadata", "Doug: typeof(tableDescription.hostUserId) = ", typeof(tableDescription.hostUserId))
-    Utils.debugPrint("GameMetadata", "Doug: typeof(memberUserIds[1]) = ", typeof(memberUserIds[1]))
     -- Host should always be first.
     memberUserIds = Cryo.List.removeValue(memberUserIds, tableDescription.hostUserId)
-    Utils.debugPrint("GameMetadata", "Doug: removed host memberUserIds = ", memberUserIds)
     table.insert(memberUserIds, 1, tableDescription.hostUserId)
-    Utils.debugPrint("GameMetadata", "Doug: restored host memberUserIds = ", memberUserIds)
 
     UserGuiUtils.updateUserRowContent(membersRowContent, TableWaitingUI.justBuilt, memberUserIds, canRemoveGuest,
         removeGuestCallback, function(parent)
@@ -309,13 +302,11 @@ local updateInvites = function(isHost: boolean, tableDescription: CommonTypes.Ta
     end
 
     local function removeInviteCallback(userId: CommonTypes.UserId)
-        Utils.debugPrint("RemoveInvite", "Doug: removeInviteCallback 001 userId = ", userId)
         local playerName = PlayerUtils.getNameAsync(userId)
         local title = string.format("Disinvite %s?", playerName)
         local desc = string.format("Please confirm you want to remove %s's invitation to the table.", playerName)
 
         DialogUtils.showConfirmationDialog(title, desc, function()
-                Utils.debugPrint("RemoveInvite", "Doug: removeInviteCallback 002 userId = ", userId)
                 ClientEventManagement.removeInviteForTable(tableId, userId)
             end)
     end
@@ -331,7 +322,6 @@ end
 local updateTableControls = function(tableDescription: CommonTypes.TableDescription, isHost: boolean)
     assert(controlsRowContent, "Should have a controlsRowContent")
     assert(tableDescription, "Should have a tableDescription")
-    Utils.debugPrint("TableUpdated", "Doug: updateTableControls 001")
 
     -- Non-host controls never change.
     if not isHost then
@@ -348,7 +338,6 @@ local updateTableControls = function(tableDescription: CommonTypes.TableDescript
     assert(gameDetails.maxPlayers >= numMembers, "Somehow we have too many members")
 
     local startEnabled = numMembers >= gameDetails.minPlayers
-    Utils.debugPrint("TableUpdated", "Doug: updateTableControls startEnabled = ", startEnabled)
 
     assert(startButtonWidgetContainerName, "Should have startButtonWidgetContainerName")
 

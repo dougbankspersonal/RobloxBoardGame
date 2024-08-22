@@ -284,7 +284,6 @@ GuiMain.onTableDestroyed = function(tableId: CommonTypes.TableId)
 end
 
 GuiMain.onTableUpdated = function(tableDescription: CommonTypes.TableDescription)
-    Utils.debugPrint("TableUpdated", "Doug: onTableUpdated called on client, tableDescription = ", tableDescription)
     -- Sending table description from server to client messes with some types. Fix it.
     tableDescription = TableDescriptions.cleanUpTypes(tableDescription)
 

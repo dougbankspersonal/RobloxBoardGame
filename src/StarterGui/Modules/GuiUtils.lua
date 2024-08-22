@@ -11,6 +11,7 @@
 local GuiUtils = {}
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextService = game:GetService("TextService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 
@@ -238,7 +239,7 @@ GuiUtils.addTextLabel = function(parent: Instance, text: string, opt_instanceOpt
     textLabel.Name = GuiConstants.textLabelName
 
     textLabel.Parent = parent
-    textLabel.Size = UDim2.fromOffset(0, GuiUtils.GuiConstants)
+    textLabel.Size = UDim2.fromOffset(0, 0)
     textLabel.Position = UDim2.fromScale(0, 0)
     textLabel.AutomaticSize = Enum.AutomaticSize.XY
     textLabel.Text = text
@@ -251,6 +252,30 @@ GuiUtils.addTextLabel = function(parent: Instance, text: string, opt_instanceOpt
     applyInstanceOptions(textLabel, opt_instanceOptions)
 
     return textLabel
+end
+
+-- Make a text box, standardized look & feel.
+GuiUtils.addTextBox = function(parent: Instance, opt_instanceOptions: InstanceOptions): TextBox
+    local textBox = Instance.new("TextBox")
+    textBox.Name = GuiConstants.textBoxName
+
+    textBox.Parent = parent
+    textBox.Size = UDim2.fromOffset(0, 0)
+    textBox.Position = UDim2.fromScale(0, 0)
+    textBox.AutomaticSize = Enum.AutomaticSize.XY
+    textBox.TextSize = GuiConstants.textBoxFontSize
+    textBox.BorderSizePixel = 0
+    textBox.BackgroundTransparency = 0
+    textBox.BackgroundColor3 = Color3.new(0.8, 0.8, 1)
+    textBox.TextXAlignment = Enum.TextXAlignment.Left
+    textBox.TextYAlignment = Enum.TextYAlignment.Center
+
+    GuiUtils.addPadding(textBox)
+    GuiUtils.addCorner(textBox)
+
+    applyInstanceOptions(textBox, opt_instanceOptions)
+
+    return textBox
 end
 
 -- Conveniencce for adding ui list layout.
@@ -322,27 +347,21 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
     end
 
     local rowContent
-    Utils.debugPrint("Layout", "Doug: scrolling 001 rowName = ", rowName)
     if rowOptions.isScrolling then
-        Utils.debugPrint("Layout", "Doug: scrolling 002")
         rowContent = Instance.new("ScrollingFrame")
         if rowOptions.scrollingDirection == Enum.ScrollingDirection.X then
-            Utils.debugPrint("Layout", "Doug: scrolling 003")
             rowContent.AutomaticCanvasSize = Enum.AutomaticSize.XY
             rowContent.CanvasSize = UDim2.fromScale(0, 0)
             rowContent.ScrollingDirection = Enum.ScrollingDirection.X
         else
-            Utils.debugPrint("Layout", "Doug: scrolling 004")
             assert(rowOptions.scrollingDirection == Enum.ScrollingDirection.Y or rowOptions.scrollingDirection == nil, "Unexpected Scrolling Direction")
             rowContent.AutomaticCanvasSize = Enum.AutomaticSize.Y
             rowContent.CanvasSize = UDim2.fromScale(1, 0)
             rowContent.ScrollingDirection = Enum.ScrollingDirection.Y
         end
-        Utils.debugPrint("Layout", "Doug: scrolling 005")
         rowContent.ScrollingDirection = Enum.ScrollingDirection.Y
         rowContent.ScrollBarImageColor3 = Color3.new(0.5, 0.5, 0.5)
     else
-        Utils.debugPrint("Layout", "Doug: scrolling 006")
         rowContent = Instance.new("Frame")
     end
 
@@ -906,6 +925,17 @@ local makeWidgetContainer = function(parent:GuiObject, widgetType: string, opt_i
     return widgetContainer
 end
 
+GuiUtils.getNameFromUserWidgetContainer = function(widgetContainer: Instance): string?
+    assert(widgetContainer, "Should have a widgetContainer")
+    assert(GuiUtils.isAWidgetContainer(widgetContainer), "Should be a widgetContainer")
+
+    local textLabel = widgetContainer:FindFirstChildWhichIsA("TextLabel", true)
+    if not textLabel then
+        return nil
+    end
+    return textLabel.Text
+end
+
 -- Make a widgetContainer containing a user (name, thumbnail, etc).
 -- If a callback is given, make it a button, else it's just a static frame.
 GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, opt_config: any): Frame
@@ -1117,7 +1147,7 @@ GuiUtils.addRowWithItemGridAndReturnRowContent = function(parent:GuiObject, rowN
         gridCellSize = UDim2.fromOffset(itemWidth, itemHeight),
     }
 
-    local rowContent = GuiUtils.addRowAndReturnRowContent(parent,rowName, rowOptions, {
+    local rowContent = GuiUtils.addRowAndReturnRowContent(parent, rowName, rowOptions, {
         AutomaticSize = Enum.AutomaticSize.None,
         ClipsDescendants = true,
         BorderSizePixel = 0,

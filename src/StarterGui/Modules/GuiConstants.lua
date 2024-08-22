@@ -14,6 +14,7 @@ GuiConstants.mainFrameName = "MainFrame"
 GuiConstants.containingScrollingFrameName = "ContainingScrollingFrame"
 GuiConstants.textButtonName = "TextButton"
 GuiConstants.textLabelName = "TextLabel"
+GuiConstants.textBoxName = "TextBox"
 
 GuiConstants.dialogBackgroundName = "DialogBackground"
 GuiConstants.dialogContentFrameName = "DialogContentFrame"
@@ -31,6 +32,7 @@ GuiConstants.gameButtonName = "GameButton"
 GuiConstants.tableButtonName = "TableButton"
 
 -- Font sizes
+GuiConstants.textBoxFontSize = 14
 GuiConstants.textLabelFontSize = 14
 GuiConstants.largeTextLabelFontSize = 18
 GuiConstants.dialogTitleFontSize = 24

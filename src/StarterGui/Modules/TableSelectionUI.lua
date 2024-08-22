@@ -41,7 +41,7 @@ local function updateInvitedTables(mainFrame: GuiObject)
     local tableIdsForInvitedWaitingTables = TableDescriptions.getTableIdsForInvitedWaitingTables(localUserId)
 
     GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, makeWidgetContainerForTable, function(parent)
-        GuiUtils.addNullWidget(parent, "<i>There are no table invites.</i>", {
+        GuiUtils.addNullWidget(parent, "<i>No table invites</i>", {
             Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableWidgetHeight)
         })
     end, GuiUtils.removeNullWidget)
@@ -56,7 +56,7 @@ local function updatePublicTables(mainFrame: GuiObject)
     local tableIdsForPublicWaitingTables = TableDescriptions.getTableIdsForPublicWaitingTables(localUserId)
 
     GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, makeWidgetContainerForTable, function(parent)
-        GuiUtils.addNullWidget(parent, "<i>There are no public tables to join.</i>", {
+        GuiUtils.addNullWidget(parent, "<i>No public tables</i>", {
             Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableWidgetHeight)
         })
     end, GuiUtils.removeNullWidget)

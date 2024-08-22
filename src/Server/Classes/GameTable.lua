@@ -294,21 +294,17 @@ function GameTable:removeGuestFromTable(userId: CommonTypes.UserId, guestId: Com
 end
 
 function GameTable:removeInviteForTable(userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId): boolean
-    Utils.debugPrint("RemoveInvite", "Doug: GameTable:removeInviteForTable userId = ", userId)
     -- Must be the host.
     if not self:isHost(userId) then
-        Utils.debugPrint("RemoveInvite", "Doug: GameTable:removeInviteForTable 001")
         return false
     end
 
     -- Must be an invitee.
     if not self:isInvitedToTable(inviteeId) then
-        Utils.debugPrint("RemoveInvite", "Doug: GameTable:removeInviteForTable 002")
         return false
     end
 
     self.tableDescription.invitedUserIds[inviteeId] = nil
-    Utils.debugPrint("RemoveInvite", "Doug: GameTable:removeInviteForTable 003")
     return true
 end
 

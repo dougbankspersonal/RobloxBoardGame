@@ -162,9 +162,7 @@ ServerEventManagement.createClientToServerEvents = function()
 
     -- Event to remove an invite from a table.
     createGameTableRemoteEvent("RemoveInviteForTable", function(player, gameTable, userId)
-        Utils.debugPrint("RemoveInvite", "Doug: RemoveInviteForTable 001")
         if gameTable:removeInviteForTable(player.UserId, userId) then
-            Utils.debugPrint("RemoveInvite", "Doug: RemoveInviteForTable 002")
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end
     end)
@@ -199,7 +197,6 @@ ServerEventManagement.createClientToServerEvents = function()
 
     if RunService:IsStudio() then
         createGameTableRemoteEvent("AddMockMember", function(_, gameTable)
-            Utils.debugPrint("Mocks", "Doug: Adding mock member")
             if not gameTable.tableDescription.isPublic then
                 return
             end
@@ -210,15 +207,12 @@ ServerEventManagement.createClientToServerEvents = function()
         end)
 
         createGameTableRemoteEvent("AddMockInvite", function(player, gameTable)
-            Utils.debugPrint("Mocks", "Doug; Adding mock invite")
             if gameTable.tableDescription.isPublic then
                 return
             end
             if not gameTable:inviteToTable(player.UserId, getNextMockUserId()) then
-                Utils.debugPrint("Mocks", "Doug: AddMockInvite: invite to table failed")
                 return
             end
-            Utils.debugPrint("Mocks", "Doug: AddMockInvite: broadcasting new table.")
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end)
 

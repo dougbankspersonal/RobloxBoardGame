@@ -106,7 +106,6 @@ ClientEventManagement.removeGuestFromTable = function(tableId: CommonTypes.Table
 end
 
 ClientEventManagement.removeInviteForTable = function(tableId: CommonTypes.TableId, userId: CommonTypes.UserId)
-    Utils.debugPrint("RemoveInvite", "Doug: ClientEventManagement.removeInviteForTable 001 userId = ", userId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("RemoveInviteForTable")
     assert(event, "RemoveInviteForTable event missing")
     event:FireServer(tableId, userId)
