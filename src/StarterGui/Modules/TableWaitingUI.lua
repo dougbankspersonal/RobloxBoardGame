@@ -14,7 +14,6 @@ UI Shows:
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
 
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
@@ -22,6 +21,7 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local Cryo = require(ReplicatedStorage.Cryo)
+local PlayerUtils = require(RobloxBoardGameShared.Modules.PlayerUtils)
 
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
@@ -36,30 +36,41 @@ local UserGuiUtils = require(RobloxBoardGameStarterGui.Modules.UserGuiUtils)
 local TableWaitingUI = {}
 
 local startButtonWidgetContainerName: string
-local gameOptionsWidgetContainerName: string
+local gameOptionsTextLabel: string
+
+local membersRowContent: Frame?
+local invitesRowContent: Frame?
+local controlsRowContent: Frame?
 
 TableWaitingUI.justBuilt = false
+
+local startButton
 
 -- Called when first building the UI.
 -- Game and host info don't change so we can fill that in.
 -- Config options will change so that gets filled in in update, but we can create space for it now.
-local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameDetails, currentTableDescription: CommonTypes.TableDescription)
+local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameDetails, tableDescription: CommonTypes.TableDescription)
     -- Game info and host info will not change, might as well fill them in now.
     local rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Metadata1")
-    local gameNameString = gameDetails.name
-    local gameHostString = Players:GetNameFromUserIdAsync(Utils.debugMapUserId(currentTableDescription.hostUserId))
-    local metadataString1 = string.format("<b>%s</b>, hosted by <b>%s</b>", gameNameString, gameHostString)
 
-    GuiUtils.addTextLabelWidgetContainer(rowContent, metadataString1, {
+    local topTextLabel = GuiUtils.addTextLabel(rowContent, "", {
         RichText = true,
         TextSize = GuiConstants.largeTextLabelFontSize,
     })
 
+    task.spawn(function()
+        local gameNameString = gameDetails.name
+        local gameHostString = PlayerUtils.getNameAsync(tableDescription.hostUserId)
+        local metadataString1 = string.format("<b>%s</b>, hosted by <b>%s</b>", gameNameString, gameHostString)
+        assert(topTextLabel, "Should have topTextLabel")
+        topTextLabel.Text = metadataString1
+    end)
+
     rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Metadata1")
     local tableSizeString = GuiUtils.getTableSizeString(gameDetails)
-    local publicOrPrivateString = currentTableDescription.isPublic and "Public" or "Private"
+    local publicOrPrivateString = tableDescription.isPublic and "Public" or "Private"
     local metadataString2 = string.format("<i>%s, %s</i>", tableSizeString, publicOrPrivateString)
-    GuiUtils.addTextLabelWidgetContainer(rowContent, metadataString2, {
+    GuiUtils.addTextLabel(rowContent, metadataString2, {
         RichText = true,
     })
 
@@ -74,40 +85,52 @@ local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameD
 
         rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_GameOptions", rowOptions)
 
-        local selectedOptionsString = GuiUtils.getSelectedGameOptionsString(currentTableDescription)
+        local selectedOptionsString = GuiUtils.getSelectedGameOptionsString(tableDescription)
         assert(selectedOptionsString, "selectedOptionsString should exist")
         selectedOptionsString = GuiUtils.italicize(selectedOptionsString)
 
-        local gameOptionsLabelWidgetContainer = GuiUtils.addTextLabelWidgetContainer(rowContent, selectedOptionsString,
+        gameOptionsTextLabel = GuiUtils.addTextLabel(rowContent, selectedOptionsString,
             {
                 TextWrapped = true,
                 RichText = true,
             })
-        assert(gameOptionsLabelWidgetContainer, "Should have gameOptionsLabelWidgetContainer")
-        gameOptionsWidgetContainerName = gameOptionsLabelWidgetContainer.Name
+        assert(gameOptionsTextLabel, "Should have gameOptionsTextLabel")
     end
 end
 
-local onAddInviteClicked = function(currentTableDescription: CommonTypes.TableDescription)
-    assert(currentTableDescription, "Should have a currentTableDescription")
-    local inviteeIds = Cryo.Dictionary.keys(currentTableDescription.invitedUserIds)
+local onManageInvitesClicked = function(tableId: CommonTypes.TableId)
+    assert(tableId, "Should have a tableId")
+    Utils.debugPrint("Friends", "Doug: tableId = ", tableId)
+
+    local tableDescription = TableDescriptions.getTableDescription(tableId)
+    local inviteeIds = Cryo.Dictionary.keys(tableDescription.invitedUserIds)
+
+    Utils.debugPrint("Friends", "Doug: inviteeIds = ", inviteeIds)
+
     local friendSelectionDialogConfig: FriendSelectionDialog.FriendSelectionDialogConfig = {
-        title = "Select friends",
+        title = "Select Friends",
         description = "Select friends to invite to the table.",
         isMultiSelect = true,
         preselectedUserIds = inviteeIds,
         callback = function(userIds: {CommonTypes.UserId})
-            ClientEventManagement.invitePlayersToTable(currentTableDescription.tableId, userIds)
+            ClientEventManagement.setTableInvites(tableId, userIds)
         end
     }
+
+    Utils.debugPrint("Friends", "Doug: friendSelectionDialogConfig = ", friendSelectionDialogConfig)
+
     FriendSelectionDialog.selectFriends(friendSelectionDialogConfig)
 end
 
-local addTableControls = function (frame: Frame, currentTableDescription: CommonTypes.TableDescription, isHost: boolean)
+local addTableControls = function (frame: Frame, tableDescription: CommonTypes.TableDescription, isHost: boolean)
     -- Make a row for controls.
-    local rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Controls", {
+    local rowOptions : GuiUtils.RowOptions = {
         horizontalAlignment = Enum.HorizontalAlignment.Center,
-    })
+        uiListLayoutPadding = UDim.new(0, GuiConstants.buttonsUIListLayoutPadding),
+    }
+    controlsRowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Controls",rowOptions)
+
+    local tableId = tableDescription.tableId
 
     -- If we are the host, we can start the game.
     if isHost then
@@ -118,52 +141,55 @@ local addTableControls = function (frame: Frame, currentTableDescription: Common
         -- * configure game (for game with gameOptions).
         --
         -- Keep track of the id for the start game button: we need to update it later.
-        local startButtonWidgetContainer = GuiUtils.addTextButtonWidgetContainer(rowContent, "Start Game", function()
-            ClientEventManagement.startGame(currentTableDescription.tableId)
+        startButton = GuiUtils.addTextButton(controlsRowContent, "Start Game", function()
+            ClientEventManagement.startGame(tableId)
         end)
-        assert(startButtonWidgetContainer, "Should have startButtonWidgetContainer")
-        startButtonWidgetContainerName = startButtonWidgetContainer.Name
+        assert(startButton, "Should have startButton")
+        startButtonWidgetContainerName = startButton.Name
 
-        GuiUtils.addTextButtonWidgetContainer(rowContent, "Destroy Table", function()
+        GuiUtils.addTextButton(controlsRowContent, "Destroy Table", function()
             DialogUtils.showConfirmationDialog("Destroy Table?", "Please confirm you want to destroy this table.", function()
-                ClientEventManagement.destroyTable(currentTableDescription.tableId)
+                ClientEventManagement.destroyTable(tableId)
             end)
         end)
 
-        if not currentTableDescription.isPublic then
-            GuiUtils.addTextButtonWidgetContainer(rowContent, "Add Invites", function()
-                onAddInviteClicked(currentTableDescription)
+        if not tableDescription.isPublic then
+            GuiUtils.addTextButton(controlsRowContent, "Manage Invites", function()
+                Utils.debugPrint("Friends", "Doug: Manage Invites clicked")
+                onManageInvitesClicked(tableId)
             end)
         end
 
-        local gameDetails = GameDetails.getGameDetails(currentTableDescription.gameId)
+        local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
         assert(gameDetails, "Should have gameDetails")
         if gameDetails.gameOptions and #gameDetails.gameOptions > 0 then
-            GuiUtils.addTextButtonWidgetContainer(rowContent, "Configure Game", function()
+            GuiUtils.addTextButton(controlsRowContent, "Configure Game", function()
                 -- FIXME(dbanks)
                 -- Put up a dialog to configure game.
             end)
         end
     else
         -- Guests can leave table.
-        GuiUtils.addTextButtonWidgetContainer(rowContent, "Leave Table", function()
-            ClientEventManagement.leaveTable(currentTableDescription.tableId)
+        GuiUtils.addTextButton(controlsRowContent, "Leave Table", function()
+            ClientEventManagement.leaveTable(tableId)
         end)
     end
 end
 
 -- Create barebones structure for this UI,
 -- Do not bother filling in anything that might change over time: this comes with update.
-TableWaitingUI.build = function(currentTableDescription: CommonTypes.TableDescription)
+TableWaitingUI.build = function(tableId: CommonTypes.TableId)
     -- Sanity check arguments, get all the other stuff we need.
-    assert(currentTableDescription, "Should have a currentTableDescription")
+    assert(tableId, "Should have a tableId")
 
     local localUserId = game.Players.LocalPlayer.UserId
     assert(localUserId, "Should have a localUserId")
 
-    local isHost = localUserId == currentTableDescription.hostUserId
+    local tableDescription = TableDescriptions.getTableDescription(tableId)
+    assert(tableDescription, "Should have a tableDescription")
+    local isHost = localUserId == tableDescription.hostUserId
 
-    local gameDetails = GameDetails.getGameDetails(currentTableDescription.gameId)
+    local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
     assert(gameDetails, "Should have a gameDetails")
 
     local mainFrame = GuiUtils.getMainFrame()
@@ -177,49 +203,50 @@ TableWaitingUI.build = function(currentTableDescription: CommonTypes.TableDescri
         Padding = UDim.new(0, GuiConstants.paddingBetweenRows),
     })
 
-    addGameAndHostInfo(mainFrame, gameDetails, currentTableDescription)
+    addGameAndHostInfo(mainFrame, gameDetails, tableDescription)
 
     -- Make a row for members (players who have joined), invites (players invited who have not yet joined)
     -- but do not fill in as this info will change: we set this in update function.
-    GuiUtils.addRowOfUniformItems(mainFrame, "Row_Members", "Members: ", GuiConstants.userWidgetY)
+    membersRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_Members", "Members: ", GuiConstants.userWidgetHeight)
 
-    if not currentTableDescription.isPublic then
-        GuiUtils.addRowOfUniformItems(mainFrame, "Row_Invites", "Invites: ", GuiConstants.userWidgetY)
+    if not tableDescription.isPublic then
+        invitesRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_Invites", "Invites: ", GuiConstants.userWidgetHeight)
     end
 
-    addTableControls(mainFrame, currentTableDescription, isHost)
+    addTableControls(mainFrame, tableDescription, isHost)
     TableWaitingUI.justBuilt = true
 end
 
 -- Parent frame of whole UI and table we're seated at.
 -- Update the UI to show the current game configs.
 -- May not need updating.
-local updateGameOptions = function(parentOfRow: Frame, currentTableDescription: CommonTypes.TableDescription)
+local updateGameOptions = function(parentOfRow: Frame, tableDescription: CommonTypes.TableDescription)
     assert(parentOfRow, "Should have a frame")
-    assert(currentTableDescription, "Should have a currentTableDescription")
+    assert(tableDescription, "Should have a tableDescription")
 
-    local gameDetails = GameDetails.getGameDetails(currentTableDescription.gameId)
+    local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
     if not gameDetails.gameOptions or #gameDetails.gameOptions == 0 then
         return
     end
 
     local configsRowContent = GuiUtils.getRowContent(parentOfRow, "Row_GameOptions")
     assert(configsRowContent, "Should have a configsRowContent")
-    assert(gameOptionsWidgetContainerName, "Should have getOptionsLabelWidgetContainerName")
+    assert(gameOptionsTextLabel, "Should have gameOptionsTextLabel")
 
-    local gameOptionsContainerWidget = configsRowContent:FindFirstChild(gameOptionsWidgetContainerName)
-    assert(gameOptionsContainerWidget, "Should have gameConfigLabelWidgetContainerName")
+    assert(gameOptionsTextLabel, "Should have gameOptionsTextLabel")
 
-    local selectedOptionsString = GuiUtils.getSelectedGameOptionsString(currentTableDescription)
+    local selectedOptionsString = GuiUtils.getSelectedGameOptionsString(tableDescription)
     assert(selectedOptionsString, "selectedOptionsString should exist")
     selectedOptionsString = GuiUtils.italicize(selectedOptionsString)
-    GuiUtils.updateTextLabelWidgetContainer(gameOptionsContainerWidget, selectedOptionsString)
+    GuiUtils.updateTextLabel(gameOptionsTextLabel, selectedOptionsString)
 end
 
-local updateMembers = function(parentOfRow: Frame, isHost: boolean, localUserId: CommonTypes.UserId, currentTableDescription: CommonTypes.TableDescription)
-    assert(parentOfRow, "Should have a parentOfRow")
+local updateMembers = function(isHost: boolean, localUserId: CommonTypes.UserId, tableDescription: CommonTypes.TableDescription)
+    assert(membersRowContent, "Should have a rowContent")
     assert(localUserId, "Should have a localUserId")
-    assert(currentTableDescription, "Should have a currentTableDescription")
+    assert(tableDescription, "Should have a tableDescription")
+
+    local tableId = tableDescription.tableId
 
     -- Some functions used as args below.
     local function canRemoveGuest(userId: CommonTypes.UserId): boolean
@@ -233,40 +260,44 @@ local updateMembers = function(parentOfRow: Frame, isHost: boolean, localUserId:
 
     local function removeGuestCallback(userId: CommonTypes.UserId)
         assert(userId, "Should have a userId")
-        local mappedId = Utils.debugMapUserId(userId)
-        local playerName = Players: GetNameFromUserIdAsync(mappedId)
-
-        local title = string.format("Remove %s?", playerName)
-        local desc = string.format("Please confirm you want to remove %s from the table.", playerName)
-        DialogUtils.showConfirmationDialog(title, desc, function()
-                ClientEventManagement.removeGuestFromTable(currentTableDescription.tableId, userId)
-            end)
+        task.spawn(function()
+            local playerName = PlayerUtils.getNameAsync(userId)
+            local title = string.format("Remove %s?", playerName)
+            local desc = string.format("Please confirm you want to remove %s from the table.", playerName)
+            DialogUtils.showConfirmationDialog(title, desc, function()
+                    ClientEventManagement.removeGuestFromTable(tableId, userId)
+                end)
+        end)
     end
 
     -- We don't want to display the host as a member, remove him.
-    Utils.debugPrint("GameMetadata", "Doug: currentTableDescription.memberUserIds = ", currentTableDescription.memberUserIds)
-    local memberUserIds = Cryo.Dictionary.keys(currentTableDescription.memberUserIds)
+    Utils.debugPrint("GameMetadata", "Doug: tableDescription.memberUserIds = ", tableDescription.memberUserIds)
+    local memberUserIds = Cryo.Dictionary.keys(tableDescription.memberUserIds)
     Utils.debugPrint("GameMetadata", "Doug: pristine memberUserIds = ", memberUserIds)
-    Utils.debugPrint("GameMetadata", "Doug: currentTableDescription.hostUserId = ", currentTableDescription.hostUserId)
-    Utils.debugPrint("GameMetadata", "Doug: typeof(currentTableDescription.hostUserId) = ", typeof(currentTableDescription.hostUserId))
+    Utils.debugPrint("GameMetadata", "Doug: tableDescription.hostUserId = ", tableDescription.hostUserId)
+    Utils.debugPrint("GameMetadata", "Doug: typeof(tableDescription.hostUserId) = ", typeof(tableDescription.hostUserId))
     Utils.debugPrint("GameMetadata", "Doug: typeof(memberUserIds[1]) = ", typeof(memberUserIds[1]))
     -- Host should always be first.
-    memberUserIds = Cryo.List.removeValue(memberUserIds, currentTableDescription.hostUserId)
+    memberUserIds = Cryo.List.removeValue(memberUserIds, tableDescription.hostUserId)
     Utils.debugPrint("GameMetadata", "Doug: removed host memberUserIds = ", memberUserIds)
-    table.insert(memberUserIds, 1, currentTableDescription.hostUserId)
+    table.insert(memberUserIds, 1, tableDescription.hostUserId)
     Utils.debugPrint("GameMetadata", "Doug: restored host memberUserIds = ", memberUserIds)
 
-    UserGuiUtils.updateUserRow(parentOfRow, "Row_Members", TableWaitingUI.justBuilt, memberUserIds, canRemoveGuest,
+    UserGuiUtils.updateUserRowContent(membersRowContent, TableWaitingUI.justBuilt, memberUserIds, canRemoveGuest,
         removeGuestCallback, function(parent)
             GuiUtils.addNullWidget(parent, "<i>No players have joined yet.</i>", {
-                Size = UDim2.fromOffset(GuiConstants.userWidgetX, GuiConstants.userWidgetY)
+                Size = UDim2.fromOffset(GuiConstants.userWidgetWidth, GuiConstants.userWidgetHeight)
             })
         end, GuiUtils.removeNullWidget)
 end
 
-local updateInvites = function(parentOfRow: Frame, isHost: boolean, currentTableDescription: CommonTypes.TableDescription)
-    assert(parentOfRow, "Should have a mainFrame")
-    assert(currentTableDescription, "Should have a currentTableDescription")
+local updateInvites = function(isHost: boolean, tableDescription: CommonTypes.TableDescription)
+    assert(invitesRowContent, "Should have a rowContent")
+    assert(tableDescription, "Should have a tableDescription")
+
+    local tableId = tableDescription.tableId
+
+    Utils.debugPrint("Friends", "Doug: updateInvites tableDescription = ", tableDescription)
 
     -- Some functions used as args below.
     local function canRemoveInvite(_: CommonTypes.UserId): boolean
@@ -279,24 +310,27 @@ local updateInvites = function(parentOfRow: Frame, isHost: boolean, currentTable
 
     local function removeInviteCallback(userId: CommonTypes.UserId)
         Utils.debugPrint("RemoveInvite", "Doug: removeInviteCallback 001 userId = ", userId)
-        DialogUtils.showConfirmationDialog("Remove Invitation?",
-            "Please confirm you want to remove this player''s invitation to the table.", function()
+        local playerName = PlayerUtils.getNameAsync(userId)
+        local title = string.format("Disinvite %s?", playerName)
+        local desc = string.format("Please confirm you want to remove %s's invitation to the table.", playerName)
+
+        DialogUtils.showConfirmationDialog(title, desc, function()
                 Utils.debugPrint("RemoveInvite", "Doug: removeInviteCallback 002 userId = ", userId)
-                ClientEventManagement.removeInviteForTable(currentTableDescription.tableId, userId)
+                ClientEventManagement.removeInviteForTable(tableId, userId)
             end)
     end
 
-    UserGuiUtils.updateUserRow(parentOfRow, "Row_Invites", TableWaitingUI.justBuilt, Cryo.Dictionary.keys(currentTableDescription.invitedUserIds),
+    UserGuiUtils.updateUserRowContent(invitesRowContent, TableWaitingUI.justBuilt, Cryo.Dictionary.keys(tableDescription.invitedUserIds),
         canRemoveInvite, removeInviteCallback, function(parent)
             GuiUtils.addNullWidget(parent, "<i>No outstanding invitations.</i>", {
-                Size = UDim2.fromOffset(GuiConstants.userWidgetX, GuiConstants.userWidgetY)
+                Size = UDim2.fromOffset(GuiConstants.userWidgetWidth, GuiConstants.userWidgetHeight)
             })
         end, GuiUtils.removeNullWidget)
 end
 
-local updateTableControls = function(parentOfRow: Frame, currentTableDescription: CommonTypes.TableDescription, isHost: boolean)
-    assert(parentOfRow, "Should have a mainFrame")
-    assert(currentTableDescription, "Should have a currentTableDescription")
+local updateTableControls = function(tableDescription: CommonTypes.TableDescription, isHost: boolean)
+    assert(controlsRowContent, "Should have a controlsRowContent")
+    assert(tableDescription, "Should have a tableDescription")
     Utils.debugPrint("TableUpdated", "Doug: updateTableControls 001")
 
     -- Non-host controls never change.
@@ -305,8 +339,8 @@ local updateTableControls = function(parentOfRow: Frame, currentTableDescription
     end
 
     -- The only control that changes is start game: we can't start if we don't have enough players.
-    local gameDetails = GameDetails.getGameDetails(currentTableDescription.gameId)
-    local numMembers = Utils.tableSize(currentTableDescription.memberUserIds)
+    local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
+    local numMembers = Utils.tableSize(tableDescription.memberUserIds)
 
     -- Sanity: we should never have too many.
     assert(gameDetails.minPlayers, "Should have minPlayers")
@@ -318,39 +352,34 @@ local updateTableControls = function(parentOfRow: Frame, currentTableDescription
 
     assert(startButtonWidgetContainerName, "Should have startButtonWidgetContainerName")
 
-    local controlsRowContent = GuiUtils.getRowContent(parentOfRow, "Row_Controls")
-
-    local startButtonWidgetContainer = controlsRowContent:FindFirstChild(startButtonWidgetContainerName)
-    assert(startButtonWidgetContainer, "Should have startButtonWidgetContainer")
-
-    GuiUtils.updateTextButtonEnabledInWidgetContainer(startButtonWidgetContainer, startEnabled)
-
+    assert(startButton, "Should have startButton")
+    startButton.Active = startEnabled
 end
 
 TableWaitingUI.update = function()
-    local currentTableDescription = TableDescriptions.getTableWithUserId(game.Players.LocalPlayer.UserId)
+    local tableDescription = TableDescriptions.getTableWithUserId(game.Players.LocalPlayer.UserId)
     -- Make sure we have all the stuff we need.
-    assert(currentTableDescription, "Should have a currentTableDescription")
+    assert(tableDescription, "Should have a tableDescription")
     local mainFrame = GuiUtils.getMainFrame()
     assert(mainFrame, "Should have a mainFrame")
 
     local localUserId = game.Players.LocalPlayer.UserId
     assert(localUserId, "Should have a localUserId")
-    local isHost = localUserId == currentTableDescription.hostUserId
+    local isHost = localUserId == tableDescription.hostUserId
 
     -- Keep game options up to date.
-    updateGameOptions(mainFrame, currentTableDescription)
+    updateGameOptions(mainFrame, tableDescription)
 
     -- Keep members up to date.
-    updateMembers(mainFrame, isHost, localUserId, currentTableDescription)
+    updateMembers(isHost, localUserId, tableDescription)
 
     -- Keep invites up to date.
-    if not currentTableDescription.isPublic then
-        updateInvites(mainFrame, isHost, currentTableDescription)
+    if not tableDescription.isPublic then
+        updateInvites(isHost, tableDescription)
     end
 
     -- Keep controls up to date.
-    updateTableControls(mainFrame, currentTableDescription, isHost)
+    updateTableControls(tableDescription, isHost)
     -- This is not longer "just built".
     TableWaitingUI.justBuilt = false
 end

@@ -8,6 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
+local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 
 local Cryo = require(ReplicatedStorage.Cryo)
 
@@ -58,11 +60,13 @@ TableDescriptions.getNumberOfPlayersAtTable = function(tableDescription: CommonT
     assert(tableDescription.memberUserIds, "tableDescription.memberUserIds must be provided")
     assert(tableDescription.hostUserId, "tableDescription.hostUserId must be provided")
     assert(tableDescription.memberUserIds[tableDescription.hostUserId], "hostUserId must be in memberUserIds")
-    return Cryo.Dictionary.size(tableDescription.memberUserIds)
+    return #(Cryo.Dictionary.keys(tableDescription.memberUserIds))
 end
 
 TableDescriptions.tableHasRoom = function(tableDescription: CommonTypes.TableDescription): boolean
-    return tableDescription.maxPlayers > TableDescriptions.getNumberOfPlayersAtTable(tableDescription)
+    Utils.debugPrint("TableDescriptions", "Doug: tableHasRoom tableDescription = ", tableDescription)
+    local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
+    return gameDetails.maxPlayers > TableDescriptions.getNumberOfPlayersAtTable(tableDescription)
 end
 
 TableDescriptions.playerCanJoinInvitedTable = function(userId: CommonTypes.UserId, tableDescription: CommonTypes.TableDescription): boolean

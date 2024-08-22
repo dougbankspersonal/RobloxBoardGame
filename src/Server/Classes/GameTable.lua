@@ -47,9 +47,10 @@ export type GameTable = {
     getGameId: (self: GameTable) -> CommonTypes.GameId,
 
     -- non-const functions.  Each returns true iff something changed.
-    destroyTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
+    destroyTable: (self: GameTable, userIds: {CommonTypes.UserId}) -> boolean,
     joinTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
     inviteToTable: (self: GameTable, userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId) -> boolean,
+    setInvites: (self: GameTable, userId: CommonTypes.UserId, inviteeIds: {CommonTypes.UserId}) -> boolean,
     removeGuestFromTable: (self: GameTable, userId: CommonTypes.UserId, guestId: CommonTypes.UserId) -> boolean,
     removeInviteForTable: (self: GameTable, userId: CommonTypes.UserId, inviteId: CommonTypes.UserId) -> boolean,
     leaveTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
@@ -197,45 +198,74 @@ function GameTable:joinTable(userId: CommonTypes.UserId): boolean
 end
 
 -- Try to add user as invitee of table.
--- Return true iff successful.
+-- Return true iff anything changes.
 function GameTable:inviteToTable(userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId): boolean
     -- Must be the host.
-    Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable userId = ", userId)
-    Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable inviteeId = ", inviteeId)
-    Utils.debugPrint("InviteToTable", "Doug: self.tableDescription.hostUserId = ", self.tableDescription.hostUserId)
-
     if not self:isHost(userId) then
-        Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable 001")
-        return false
-    end
-
-    -- Can't invite self.
-    if userId == inviteeId then
-        Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable 002")
         return false
     end
 
     -- Game already started, no.
     if self.tableDescription.gameTableState ~= GameTableStates.WaitingForPlayers then
-        Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable 003")
+        return false
+    end
+
+    -- Can't invite self.
+    if userId == inviteeId then
         return false
     end
 
     -- Already a member, no.
     if self:isMember(inviteeId) then
-        Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable 004")
         return false
     end
 
     -- Already invited, no.
     if self:isInvitedToTable(inviteeId) then
-        Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable 005")
         return false
     end
 
-    Utils.debugPrint("InviteToTable", "Doug: GameTable:inviteToTable 006")
     self.tableDescription.invitedUserIds[inviteeId] = true
     return true
+end
+
+-- Set invites to exactly this list.
+-- Return true iff anything changes.
+function GameTable:setInvites(userId: CommonTypes.UserId, inviteeIds: {CommonTypes.UserId}): boolean
+    -- Must be the host.
+    if not self:isHost(userId) then
+        return false
+    end
+
+    -- Game already started, no.
+    if self.tableDescription.gameTableState ~= GameTableStates.WaitingForPlayers then
+        return false
+    end
+
+    local newInvitedUserIds = {}
+
+    for _, inviteeId in inviteeIds do
+        -- Can't invite self.
+        if userId == inviteeId then
+            continue
+        end
+
+        -- Already a member, no.
+        if self:isMember(inviteeId) then
+            continue
+        end
+
+        newInvitedUserIds[inviteeId] = true
+    end
+
+    -- Did something change?
+    local somethingChanged = false
+    if not Utils.tablesHaveSameKeys(self.tableDescription.invitedUserIds, newInvitedUserIds) then
+        somethingChanged = true
+        self.tableDescription.invitedUserIds = newInvitedUserIds
+    end
+
+    return somethingChanged
 end
 
 function GameTable:removeGuestFromTable(userId: CommonTypes.UserId, guestId: CommonTypes.UserId): boolean

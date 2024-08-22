@@ -93,6 +93,12 @@ ClientEventManagement.invitePlayerToTable = function(tableId: CommonTypes.TableI
     event:FireServer(tableId, userId)
 end
 
+ClientEventManagement.setTableInvites = function(tableId: CommonTypes.TableId, userIds: {CommonTypes.UserId})
+    local event = ReplicatedStorage.TableEvents:WaitForChild("SetTableInvites")
+    assert(event, "SetTableInvites event missing")
+    event:FireServer(tableId, userIds)
+end
+
 ClientEventManagement.removeGuestFromTable = function(tableId: CommonTypes.TableId, userId: CommonTypes.UserId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("RemoveGuestFromTable")
     assert(event, "RemoveGuestFromTable event missing")

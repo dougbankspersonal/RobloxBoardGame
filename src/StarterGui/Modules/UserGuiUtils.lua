@@ -26,16 +26,19 @@ local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
 -- If it's a button:
 --   * Make the widget a button.
 --   * Hit the callback when button is clicked
-UserGuiUtils.updateUserRow = function(parentOfRow: Frame, rowName: string, justBuilt: boolean, userIds: {CommonTypes.UserId}, isButton: (userId: CommonTypes.UserId) -> boolean,
+UserGuiUtils.updateUserRowContent = function(rowContent: Frame, justBuilt: boolean, userIds: {CommonTypes.UserId}, isButton: (userId: CommonTypes.UserId) -> boolean,
     buttonCallback: (CommonTypes.UserId) -> nil, renderEmptyList: (Frame) -> nil, cleanupEmptyList: (Frame) -> nil)
-    local rowContent = GuiUtils.getRowContent(parentOfRow, rowName)
-    assert(rowContent, "Should have a rowContent")
+    assert(rowContent,  "Should have a rowContent")
 
     local makeUserWidgetContainer = function(frame: Frame, userId: CommonTypes.UserId): Frame
         local userWidgetContainer
         -- For host, if user is not himself, this widget is a button that lets you kick person out of table.
         if isButton(userId) then
-            userWidgetContainer = GuiUtils.addUserWidgetContainer(frame, userId, buttonCallback)
+            local config = {
+                onClick = buttonCallback,
+                useRedX = true,
+            }
+            userWidgetContainer = GuiUtils.addUserWidgetContainer(frame, userId, config)
         else
             userWidgetContainer = GuiUtils.addUserWidgetContainer(frame, userId)
         end

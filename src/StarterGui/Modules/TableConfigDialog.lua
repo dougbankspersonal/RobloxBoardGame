@@ -27,7 +27,7 @@ local makePublicOrPrivateDialog = function(gameId: CommonTypes.GameId, onTableCo
     -- Put up a UI to get public or private.
     -- FIXME(dbanks): this is horrible temp hack using an array of buttons to pick from a set of two options.
     -- Implement a proper toggle switch (or radio buttons or whatever)
-    local dialogConfig: CommonTypes.DialogConfig = {
+    local dialogConfig: DialogUtils.DialogConfig = {
         title = "Public or Private?",
         description = "Anyone in experience can join a public game.  Only invited players can join a private game.",
         dialogButtonConfigs = {
@@ -35,15 +35,15 @@ local makePublicOrPrivateDialog = function(gameId: CommonTypes.GameId, onTableCo
                 text = "Public",
                 callback = function()
                     onTableConfigSelected(gameId, true)
-                end
-            } :: CommonTypes.DialogButtonConfig,
+                end,
+            } :: DialogUtils.DialogButtonConfig,
             {
                 text = "Private",
                 callback = function()
                     onTableConfigSelected(gameId, false)
-                end
-            } :: CommonTypes.DialogButtonConfig,
-        } :: {CommonTypes.DialogConfig},
+                end,
+            } :: DialogUtils.DialogButtonConfig,
+        } :: {DialogUtils.DialogConfig},
     }
 
     DialogUtils.makeDialog(dialogConfig)
@@ -83,7 +83,7 @@ TableConfigDialog.makeGameSelectionDialog = function(onTableConfigSelected: (gam
         assert(type(gameId) == "number", "gameId should be a number")
         makePublicOrPrivateDialog(gameId, onTableConfigSelected)
     else
-        local dialogConfig: CommonTypes.DialogConfig = {
+        local dialogConfig: DialogUtils.DialogConfig = {
             title = "Select a game",
             description = "Click the game you want to play",
             makeCustomDialogContent = function(parent: Frame)

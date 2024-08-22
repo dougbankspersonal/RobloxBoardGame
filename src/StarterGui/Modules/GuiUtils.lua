@@ -19,6 +19,7 @@ local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
+local PlayerUtils = require(RobloxBoardGameShared.Modules.PlayerUtils)
 
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
@@ -31,6 +32,20 @@ local Cryo = require(ReplicatedStorage.Cryo)
 local mainScreenGui: ScreenGui = nil
 
 local globalLayoutOrder = 0
+
+export type RowOptions = {
+    isScrolling: boolean?,
+    scrollingDirection: Enum.ScrollingDirection?,
+    useGridLayout: boolean?,
+    labelText: string?,
+    gridCellSize: UDim2?,
+    horizontalAlignment: Enum.HorizontalAlignment?,
+    uiListLayoutPadding: UDim?,
+}
+
+export type InstanceOptions = {
+    [string]: any,
+}
 
 -- An "item" is a user or a game.
 -- We have a standard notion of size/style for an image for an item.
@@ -73,8 +88,7 @@ local configureUserTextLabel = function(textLabel:TextLabel, userId: CommonTypes
 
     -- Async get and set the contents of name
     task.spawn(function()
-        local mappedId = Utils.debugMapUserId(userId)
-        local playerName = Players: GetNameFromUserIdAsync(mappedId)
+        local playerName = PlayerUtils.getNameAsync(userId)
         assert(playerName, "playerName should exist")
 
         local formatString = if opt_formatString then opt_formatString else "%s"
@@ -152,7 +166,7 @@ GuiUtils.setMainScreenGui = function(msg: ScreenGui)
     mainScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 end
 
-GuiUtils.applyInstanceOptions = function(instance: Instance, opt_instanceOptions: CommonTypes.InstanceOptions?)
+local function applyInstanceOptions(instance: Instance, opt_instanceOptions: InstanceOptions?)
     if not opt_instanceOptions then
         return
     end
@@ -164,7 +178,7 @@ GuiUtils.applyInstanceOptions = function(instance: Instance, opt_instanceOptions
 end
 
 
-GuiUtils.addPadding = function(guiObject: GuiObject, opt_instanceOptions: CommonTypes.InstanceOptions?): UIPadding
+GuiUtils.addPadding = function(guiObject: GuiObject, opt_instanceOptions: InstanceOptions?): UIPadding
     local uiPadding = Instance.new("UIPadding")
     uiPadding.Parent = guiObject
     uiPadding.Name = "UniformPadding"
@@ -175,7 +189,7 @@ GuiUtils.addPadding = function(guiObject: GuiObject, opt_instanceOptions: Common
     uiPadding.PaddingTop = defaultPadding
     uiPadding.PaddingBottom = defaultPadding
 
-    GuiUtils.applyInstanceOptions(uiPadding, opt_instanceOptions)
+    applyInstanceOptions(uiPadding, opt_instanceOptions)
 
     return uiPadding
 end
@@ -189,13 +203,13 @@ GuiUtils.addStandardMainFramePadding = function(frame: Frame): UIPadding
     })
 end
 
-GuiUtils.addUIGradient = function(frame:Frame, colorSequence: ColorSequence, opt_instanceOptions: CommonTypes.InstanceOptions): UIGradient
+GuiUtils.addUIGradient = function(frame:Frame, colorSequence: ColorSequence, opt_instanceOptions: InstanceOptions): UIGradient
     local uiGradient = Instance.new("UIGradient")
     uiGradient.Parent = frame
     uiGradient.Color = colorSequence
     uiGradient.Rotation = 90
 
-    GuiUtils.applyInstanceOptions(uiGradient, opt_instanceOptions)
+    applyInstanceOptions(uiGradient, opt_instanceOptions)
 end
 
 GuiUtils.getLayoutOrder = function(parent:Instance): number
@@ -219,7 +233,7 @@ GuiUtils.addLayoutOrderGenerator = function(parent:Instance)
 end
 
 -- Make a text label, standardized look & feel.
-GuiUtils.addTextLabel = function(parent: Instance, text: string, opt_instanceOptions: CommonTypes.InstanceOptions): TextLabel
+GuiUtils.addTextLabel = function(parent: Instance, text: string, opt_instanceOptions: InstanceOptions): TextLabel
     local textLabel = Instance.new("TextLabel")
     textLabel.Name = GuiConstants.textLabelName
 
@@ -234,7 +248,7 @@ GuiUtils.addTextLabel = function(parent: Instance, text: string, opt_instanceOpt
     textLabel.TextXAlignment = Enum.TextXAlignment.Left
     textLabel.TextYAlignment = Enum.TextYAlignment.Center
 
-    GuiUtils.applyInstanceOptions(textLabel, opt_instanceOptions)
+    applyInstanceOptions(textLabel, opt_instanceOptions)
 
     return textLabel
 end
@@ -243,7 +257,7 @@ end
 -- Defaults to vertical fill direction, vertical align center, horizontal align left.
 -- This can be overridden with options.
 -- Defaults to center/center.
-GuiUtils.addUIListLayout = function(frame: Frame, opt_instanceOptions: CommonTypes.InstanceOptions) : UIListLayout
+GuiUtils.addUIListLayout = function(frame: Frame, opt_instanceOptions: InstanceOptions) : UIListLayout
     local uiListLayout = Instance.new("UIListLayout")
     uiListLayout.Name = "UIListLayout"
     uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -254,7 +268,7 @@ GuiUtils.addUIListLayout = function(frame: Frame, opt_instanceOptions: CommonTyp
     uiListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
     uiListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-    GuiUtils.applyInstanceOptions(uiListLayout, opt_instanceOptions)
+    applyInstanceOptions(uiListLayout, opt_instanceOptions)
 
     return uiListLayout
 end
@@ -272,7 +286,7 @@ end
 --  |   of row      |  | widget | widget
 --  |               |  +--------+--------
 --  +--------------------------------------------
-GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, opt_rowOptions: CommonTypes.RowOptions?, opt_instanceOptions: CommonTypes.InstanceOptions?): GuiObject
+GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, opt_rowOptions: RowOptions?, opt_instanceOptions: InstanceOptions?): GuiObject
     assert(parent, "Should have a parent")
     assert(rowName, "Should have a rowName")
 
@@ -308,27 +322,27 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
     end
 
     local rowContent
-    Utils.debugPrint("Scrolling", "Doug: scrolling 001 rowName = ", rowName)
+    Utils.debugPrint("Layout", "Doug: scrolling 001 rowName = ", rowName)
     if rowOptions.isScrolling then
-        Utils.debugPrint("Scrolling", "Doug: scrolling 002")
+        Utils.debugPrint("Layout", "Doug: scrolling 002")
         rowContent = Instance.new("ScrollingFrame")
         if rowOptions.scrollingDirection == Enum.ScrollingDirection.X then
-            Utils.debugPrint("Scrolling", "Doug: scrolling 003")
+            Utils.debugPrint("Layout", "Doug: scrolling 003")
             rowContent.AutomaticCanvasSize = Enum.AutomaticSize.XY
             rowContent.CanvasSize = UDim2.fromScale(0, 0)
             rowContent.ScrollingDirection = Enum.ScrollingDirection.X
         else
-            Utils.debugPrint("Scrolling", "Doug: scrolling 004")
+            Utils.debugPrint("Layout", "Doug: scrolling 004")
             assert(rowOptions.scrollingDirection == Enum.ScrollingDirection.Y or rowOptions.scrollingDirection == nil, "Unexpected Scrolling Direction")
             rowContent.AutomaticCanvasSize = Enum.AutomaticSize.Y
             rowContent.CanvasSize = UDim2.fromScale(1, 0)
             rowContent.ScrollingDirection = Enum.ScrollingDirection.Y
         end
-        Utils.debugPrint("Scrolling", "Doug: scrolling 005")
+        Utils.debugPrint("Layout", "Doug: scrolling 005")
         rowContent.ScrollingDirection = Enum.ScrollingDirection.Y
         rowContent.ScrollBarImageColor3 = Color3.new(0.5, 0.5, 0.5)
     else
-        Utils.debugPrint("Scrolling", "Doug: scrolling 006")
+        Utils.debugPrint("Layout", "Doug: scrolling 006")
         rowContent = Instance.new("Frame")
     end
 
@@ -343,6 +357,9 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
 
     -- Rows usually contain ordered list of widgets, add a layout order generator.
     GuiUtils.addLayoutOrderGenerator(rowContent)
+
+    Utils.debugPrint("Layout", "Doug: rowName = ", rowName)
+    Utils.debugPrint("Layout", "Doug: rowOptions = ", rowOptions)
 
     if rowOptions.useGridLayout then
         local uiGridLayout = Instance.new("UIGridLayout")
@@ -360,10 +377,11 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
             FillDirection = rowOptions.fillDirection or Enum.FillDirection.Horizontal,
             Wraps = rowOptions.wraps or false,
             HorizontalAlignment = rowOptions.horizontalAlignment or Enum.HorizontalAlignment.Center,
+            Padding = rowOptions.uiListLayoutPadding,
         })
     end
 
-    GuiUtils.applyInstanceOptions(rowContent, opt_instanceOptions)
+    applyInstanceOptions(rowContent, opt_instanceOptions)
 
     return rowContent
 end
@@ -378,6 +396,7 @@ end
 -- Parent contains rows.
 -- Find row with given name, return the rowContent frame for that row.
 GuiUtils.getRowContent = function(parent: GuiObject, rowName: string): Frame
+    Utils.debugPrint("Layout", "Doug: getRowContent rowName = ", rowName)
     local row = parent:FindFirstChild(rowName)
     assert(row, "row should exist")
     local rowContent = row:FindFirstChild(GuiConstants.rowContentName)
@@ -385,8 +404,24 @@ GuiUtils.getRowContent = function(parent: GuiObject, rowName: string): Frame
     return rowContent
 end
 
+local function updateButtonWhenActiveChanges(button: GuiButton, onActive: (GuiObject) -> nil, onInactive: (GuiObject) -> nil)
+    assert(button, "Should have a button")
+
+    button.Changed:Connect(function(propertyName)
+        if propertyName == "Active" then
+            if button.Active then
+                onActive(button)
+                button.AutoButtonColor = true
+            else
+                onInactive(button)
+                button.AutoButtonColor = false
+            end
+        end
+    end)
+end
+
 -- Make a button with common look & feel.
-GuiUtils.addTextButton = function(parent: Instance, text: string, callback: () -> ()): Instance
+GuiUtils.addTextButton = function(parent: Instance, text: string, callback: () -> (), opt_instanceOptions: InstanceOptions): Instance
     local button = Instance.new("TextButton")
     button.Name = GuiConstants.textButtonName
     button.Parent = parent
@@ -395,35 +430,32 @@ GuiUtils.addTextButton = function(parent: Instance, text: string, callback: () -
     button.Position = UDim2.fromScale(0, 0)
     button.Text = text
     button.TextSize = 14
-    button.MouseButton1Click:Connect(function()
+
+    button.Activated:Connect(function()
         if not button.Active then
             return
         end
         callback()
     end)
+
     button.TextColor3 = GuiConstants.enabledButtonTextColor
     button.AutoButtonColor = true
     button.Active = true
 
     GuiUtils.addCorner(button)
-    GuiUtils.addPadding(button)
+    GuiUtils.addPadding(button, {
+        PaddingRight = UDim.new(0, GuiConstants.buttonInternalSidePadding),
+        PaddingLeft = UDim.new(0, GuiConstants.buttonInternalSidePadding),
+    })
 
     -- Listen for enabled/disabled.
-    button.Changed:Connect(function(propertyName)
-        Utils.debugPrint("Button", "Doug: Button changed 001")
-        if propertyName == "Active" then
-            Utils.debugPrint("Button", "Doug: Button changed 002")
-            if button.Active then
-                Utils.debugPrint("Button", "Doug: Button changed 004")
-                button.TextColor3 = GuiConstants.enabledButtonTextColor
-                button.AutoButtonColor = true
-            else
-                button.TextColor3 = GuiConstants.disabledButtonTextColor
-                Utils.debugPrint("Button", "Doug: Button changed 003")
-                button.AutoButtonColor = false
-            end
-        end
+    updateButtonWhenActiveChanges(button, function(_b)
+        _b.TextColor3 = GuiConstants.enabledButtonTextColor
+    end, function(_b)
+        button.TextColor3 = GuiConstants.disabledButtonTextColor
     end)
+
+    applyInstanceOptions(button, opt_instanceOptions)
 
     return button
 end
@@ -454,13 +486,13 @@ GuiUtils.addTableButton = function(parent: Instance, tableDescription: CommonTyp
     button.Parent = parent
 
     button.Text = ""
-    button.Name = "TableButton"
+    button.Name = GuiConstants.tableButtonName
     button.Activated:Connect(onButtonCiicked)
 
     local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
     assert(gameDetails, "Should have gameDetails")
 
-    button.Size = UDim2.fromOffset(GuiConstants.tableWidgetX, GuiConstants.tableWidgetY)
+    button.Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableWidgetHeight)
 
     button.BackgroundColor3 = Color3.new(1, 1, 1)
 
@@ -509,7 +541,7 @@ end
 local function addUserImageOverTextLabel(frame: GuiObject, userId: CommonTypes.UserId): (ImageLabel, TextLabel)
     assert(userId, "Should have gameDetails")
     assert(frame, "Should have frame")
-    frame.Size = UDim2.fromOffset(GuiConstants.userWidgetX, GuiConstants.userWidgetY)
+    frame.Size = UDim2.fromOffset(GuiConstants.userWidgetWidth, GuiConstants.userWidgetHeight)
 
     local imageLabel, textLabel = addImageOverTextLabel(frame)
 
@@ -537,7 +569,7 @@ GuiUtils.addGameButton = function(parent: Instance, gameDetails: CommonTypes.Gam
     button.Parent = parent
 
     button.Text = ""
-    button.Name = "GameButton"
+    button.Name = GuiConstants.gameButtonName
     button.Activated:Connect(onButtonClicked)
 
     addGameImageOverTextLabel(button, gameDetails)
@@ -566,13 +598,39 @@ GuiUtils.addUserWidget = function(parent: Instance, userId: CommonTypes.UserId):
     return frame
 end
 
+local function removeInactiveOverlay(button: Frame)
+    local overlay = button:FindFirstChild(GuiConstants.inactiveOverlayName)
+    if overlay then
+        overlay:Destroy()
+    end
+end
+
+local function addInactiveOverlay(button: Frame)
+    local overlay = button:FindFirstChild(GuiConstants.inactiveOverlayName)
+    if not overlay then
+        overlay = Instance.new("Frame")
+        overlay.Name = GuiConstants.inactiveOverlayName
+        overlay.Size = UDim2.fromScale(1, 1)
+        overlay.BackgroundColor3 = Color3.new(1, 1, 1)
+        overlay.BackgroundTransparency = 0.5
+        overlay.Parent = button
+        overlay.ZIndex = GuiConstants.itemWidgetOverlayZIndex
+        overlay.BorderSizePixel = 0
+    end
+    return overlay
+end
+
 GuiUtils.addUserButton = function(parent: Instance, userId: CommonTypes.UserId, onButtonClicked: (userId: CommonTypes.UserId) -> nil): GuiObject
     local textButton = Instance.new("TextButton")
     textButton.Text = ""
-    textButton.Name = "UserTextButton"
+    textButton.Name = GuiConstants.userButtonName
     textButton.Parent = parent
+    textButton.Active = true
 
     textButton.Activated:Connect(function()
+        if not textButton.Active then
+            return
+        end
         onButtonClicked(userId)
     end)
 
@@ -724,7 +782,7 @@ GuiUtils.updateWidgetContainerChildren = function(parentFrame:Frame,
         renderEmptyList: (Frame) -> nil,
         cleanupEmptyList: (Frame) -> nil,
         skipTweens: boolean)
-    local tweensToKill = {} :: CommonTypes.TweensToKill
+    local tweensToKill = {} :: TweenHandling.TweensToKill
     assert(parentFrame, "parentFrame should exist")
     -- Get all the existing widgets containers.
     local widgetContainers = collectWidgetContainers(parentFrame)
@@ -831,6 +889,7 @@ local makeWidgetContainer = function(parent:GuiObject, widgetType: string, opt_i
     widgetContainer.LayoutOrder = GuiUtils.getLayoutOrder(parent)
     widgetContainer.AutomaticSize = Enum.AutomaticSize.XY
     widgetContainer.BackgroundTransparency = 1
+    widgetContainer.ClipsDescendants = true
 
     local intValue = Instance.new("IntValue")
     intValue.Value = itemId
@@ -842,12 +901,16 @@ local makeWidgetContainer = function(parent:GuiObject, widgetType: string, opt_i
     stringValue.Parent = widgetContainer
     stringValue.Name = "ItemType"
 
+    GuiUtils.addCorner(widgetContainer)
+
     return widgetContainer
 end
 
 -- Make a widgetContainer containing a user (name, thumbnail, etc).
 -- If a callback is given, make it a button, else it's just a static frame.
-GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, opt_onClick: ((userId: CommonTypes.UserId) -> nil)?): Frame
+GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, opt_config: any): Frame
+    local config = opt_config or {}
+
     -- So what will happen:
     -- We return a table button container with "loading" message.
     -- We fire off a fetch to get async info.
@@ -856,21 +919,36 @@ GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, opt
     -- Make nicer: loading message could be a swirly or whatever.
     local userWidgetContainer = makeWidgetContainer(parent, "User", userId)
 
-    if opt_onClick then
-        Utils.debugPrint("WidgetContainer", "Doug: addUserWidgetContainer 001")
-        GuiUtils.addUserButton(userWidgetContainer, userId, function()
-            Utils.debugPrint("WidgetContainer", "Doug: addUserWidgetContainer 002")
-            opt_onClick(userId)
+    if config.onClick then
+        Utils.debugPrint("Layout", "Doug: addUserWidgetContainer 001")
+        local button
+        local modifiedCallback = function()
+            Utils.debugPrint("Layout", "Doug: addUserWidgetContainer 002")
+            if not button.Active then
+                return
+            end
+            config.onClick(userId)
+        end
+
+        button = GuiUtils.addUserButton(userWidgetContainer, userId, modifiedCallback)
+
+        -- Add active/inactive logic.
+        updateButtonWhenActiveChanges(button, function(_)
+            removeInactiveOverlay(userWidgetContainer)
+        end, function(_)
+            addInactiveOverlay(userWidgetContainer)
         end)
 
-        -- The only reason we ever use this button is to kick the user out.  Put a little x indicator on the button.
-        local redXImage = Instance.new("ImageLabel")
-        redXImage.Parent = userWidgetContainer
-        redXImage.Size = UDim2.fromOffset(GuiConstants.redXSize, GuiConstants.redXSize)
-        redXImage.Position = UDim2.new(1, -(GuiConstants.redXSize + GuiConstants.redXMargin), 0, GuiConstants.redXMargin)
-        redXImage.Image = GuiConstants.redXImage
-        redXImage.BackgroundTransparency = 1
-        redXImage.ZIndex = GuiConstants.itemWidgetOverlayZIndex
+        if config.useRedX then
+            -- The only reason we ever use this button is to kick the user out.  Put a little x indicator on the button.
+            local redXImage = Instance.new("ImageLabel")
+            redXImage.Parent = userWidgetContainer
+            redXImage.Size = UDim2.fromOffset(GuiConstants.redXSize, GuiConstants.redXSize)
+            redXImage.Position = UDim2.new(1, -(GuiConstants.redXSize + GuiConstants.redXMargin), 0, GuiConstants.redXMargin)
+            redXImage.Image = GuiConstants.redXImage
+            redXImage.BackgroundTransparency = 1
+            redXImage.ZIndex = GuiConstants.itemWidgetRedXZIndex
+        end
     else
         GuiUtils.addUserWidget(userWidgetContainer, userId)
     end
@@ -886,7 +964,7 @@ end
 
 -- Make standard "nothing there" indicator.
 -- Idempotent: will remove old/previous one if present.
-GuiUtils.addNullWidget = function(parent: Instance, message: string, opt_instanceOptions: CommonTypes.InstanceOptions): Frame
+GuiUtils.addNullWidget = function(parent: Instance, message: string, opt_instanceOptions: InstanceOptions): Frame
     -- Make sure old widget is gone.
     GuiUtils.removeNullWidget(parent)
     local instanceOptions = opt_instanceOptions or {}
@@ -921,37 +999,13 @@ GuiUtils.addTableButtonWidgetContainer = function(parent: Instance, tableId: num
     return tableButtonContainer
 end
 
--- A generic text button in a widget container.
-GuiUtils.addTextButtonWidgetContainer = function(parent: Instance, text: string, onClick: () -> nil): Frame
-    local textButtonContainer = makeWidgetContainer(parent, "TextButtonWidgetContainer", nil)
-    GuiUtils.addTextButton(textButtonContainer, text, onClick)
-    return textButtonContainer
-end
-
--- Make a widget container containing a text label.
-GuiUtils.addTextLabelWidgetContainer = function(parent: Instance, text: string, opt_instanceOptions: CommonTypes.InstanceOptions): Frame
-    local textLabelContainer = makeWidgetContainer(parent, "TextLabelWidgetContainer", nil)
-    GuiUtils.addTextLabel(textLabelContainer, text, opt_instanceOptions)
-    return textLabelContainer
-end
-
-GuiUtils.updateTextLabelWidgetContainer = function(widgetContainer: Frame, text: string): boolean
-    local textLabel = widgetContainer:FindFirstChild(GuiConstants.textLabelName)
+GuiUtils.updateTextLabel = function(textLabel: TextLabel, text: string): boolean
     assert(textLabel, "Should have a textLabel")
     if textLabel.Text == text then
         return false
     end
     textLabel.Text = text
     return true
-end
-
-GuiUtils.updateTextButtonEnabledInWidgetContainer = function(widgetContainer: Frame, enabled: boolean)
-    Utils.debugPrint("WidgetContainer", "Doug: updateTextButtonEnabledInWidgetContainer ", enabled)
-    assert(widgetContainer, "Should have a widgetContainer")
-    local textButton = widgetContainer:FindFirstChild(GuiConstants.textButtonName)
-    assert(textButton, "Should have a textButton")
-    Utils.debugPrint("WidgetContainer", "Doug: textButton.Active ", textButton.Active)
-    textButton.Active = enabled
 end
 
 local function getOptionValue(gameOption: CommonTypes.GameOption, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions): string?
@@ -1023,7 +1077,7 @@ end
 
 -- A row with a text label and a row of same-size items.
 -- Row is just one item high. Will add scrollbar if needed.
-GuiUtils.addRowOfUniformItems = function(frame: Frame, name: string, labelText: string, itemHeight: number): Frame
+GuiUtils.addRowOfUniformItemsAndReturnRowContent = function(frame: Frame, name: string, labelText: string, itemHeight: number): Frame
     assert(frame, "Should have frame")
     assert(name, "Should have name")
     assert(labelText, "Should have labelText")
@@ -1056,7 +1110,7 @@ GuiUtils.addRowOfUniformItems = function(frame: Frame, name: string, labelText: 
     return rowContent
 end
 
-GuiUtils.addRowWithItemGridAndReturnRowContent = function(parent:GuiObject, rowName: string, itemHeight: number, itemWidth: number)
+GuiUtils.addRowWithItemGridAndReturnRowContent = function(parent:GuiObject, rowName: string, itemWidth: number, itemHeight: number)
     local rowOptions = {
         isScrolling = true,
         useGridLayout = true,

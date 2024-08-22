@@ -10,9 +10,20 @@ local RobloxBoardGameStarterGui = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 
-local dialogToMainScreenMargin = 20
-
 local DialogUtils = {}
+
+export type DialogButtonConfig = {
+    text: string,
+    callback: (() -> ())?,
+}
+
+export type DialogConfig = {
+    title: string,
+    description: string,
+    dialogButtonConfigs: {DialogButtonConfig}?,
+    makeCustomDialogContent: ((parent: Frame) -> nil)?,
+}
+
 
 DialogUtils.getDialogBackground = function(): Frame?
     local mainScreenGui = GuiUtils.getMainScreenGui()
@@ -30,13 +41,13 @@ end
 
 -- Throw up a dialog using the given config.
 -- Clicking any button in the config will kill the dialog and hit the associated callback.
-DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame?
+DialogUtils.makeDialog = function(dialogConfig: DialogUtils.DialogConfig): Frame?
     local mainScreenGui = GuiUtils.getMainScreenGui()
 
     -- Can't have two dialogs up at once.
     local existingDialogBackground = DialogUtils.getDialogBackground()
     if existingDialogBackground then
-        Utils.debugPrint("Dialogs", "Error: tried to put up a dialog when one is already up")
+        Utils.debugPrint("Layout", "Error: tried to put up a dialog when one is already up")
         return nil
     end
 
@@ -118,19 +129,20 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     end
 
     if hasDialogButtonConfigs then
-        local controlsContent = GuiUtils.addRowAndReturnRowContent(dialogContentFrame, "Row_Controls", {
+        local rowOptions : GuiUtils.RowOptions = {
             horizontalAlignment = Enum.HorizontalAlignment.Center,
             wraps = true,
-        })
+            uiListLayoutPadding = UDim.new(0, GuiConstants.buttonsUIListLayoutPadding),
+        }
 
-        -- Adjust usual spacing for buttons.
-        local uiListLayout = controlsContent:FindFirstChildOfClass("UIListLayout")
-        assert(uiListLayout, "Should have a UIListLayout")
-        uiListLayout.Padding = UDim.new(0, GuiConstants.dialogButtonsUIListLayoutPadding)
+        local controlsContent = GuiUtils.addRowAndReturnRowContent(dialogContentFrame, "Row_Controls", rowOptions)
 
-        Utils.debugPrint("Dialogs", "Doug: dialogConfig.dialogButtonConfigs = ", dialogConfig.dialogButtonConfigs)
+        Utils.debugPrint("Layout", "Doug: dialogConfig.dialogButtonConfigs = ", dialogConfig.dialogButtonConfigs)
         for _, dialogButtonConfig in ipairs(dialogConfig.dialogButtonConfigs) do
-            GuiUtils.addTextButtonWidgetContainer(controlsContent, dialogButtonConfig.text, function()
+            -- Should be properly configured.
+            assert(dialogButtonConfig.text, "Should have text")
+
+            GuiUtils.addTextButton(controlsContent, dialogButtonConfig.text, function()
                 -- Destroy the dialog.
                 DialogUtils.cleanupDialog()
                 -- Hit callback if provided.
@@ -149,7 +161,7 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
     cancelButton.Position = UDim2.new(1, -GuiConstants.redXSize - GuiConstants.redXMargin, 0, GuiConstants.redXMargin)
     cancelButton.Image = GuiConstants.redXImage
     cancelButton.BackgroundTransparency = 1
-    cancelButton.MouseButton1Click:Connect(function()
+    cancelButton.Activated:Connect(function()
         DialogUtils.cleanupDialog()
     end)
 
@@ -157,7 +169,7 @@ DialogUtils.makeDialog = function(dialogConfig: CommonTypes.DialogConfig): Frame
 end
 
 DialogUtils.showConfirmationDialog = function(title: string, description: string, onConfirm: () -> nil): Frame?
-    local dialogButtonConfigs = {} :: {CommonTypes.DialogButtonConfig}
+    local dialogButtonConfigs = {} :: {DialogUtils.DialogButtonConfig}
     table.insert(dialogButtonConfigs, {
         text = "Cancel",
     })
@@ -170,7 +182,7 @@ DialogUtils.showConfirmationDialog = function(title: string, description: string
         title = title,
         description = description,
         dialogButtonConfigs = dialogButtonConfigs,
-    } :: CommonTypes.DialogConfig
+    } :: DialogUtils.DialogConfig
 
     return DialogUtils.makeDialog(dialogConfig)
 end

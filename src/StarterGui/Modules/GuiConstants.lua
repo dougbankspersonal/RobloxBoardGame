@@ -24,6 +24,12 @@ GuiConstants.deadMeatTweeningOutName = "DeadMeatTweeningOut"
 
 GuiConstants.persistentNameStart = "Persistent_"
 
+GuiConstants.inactiveOverlayName = "InactiveOverlay"
+
+GuiConstants.userButtonName = "UserButton"
+GuiConstants.gameButtonName = "GameButton"
+GuiConstants.tableButtonName = "TableButton"
+
 -- Font sizes
 GuiConstants.textLabelFontSize = 14
 GuiConstants.largeTextLabelFontSize = 18
@@ -36,7 +42,7 @@ GuiConstants.rowHeaderFontSize = 16
 GuiConstants.standardCornerSize = 10
 
 GuiConstants.rowLabelWidth = 200
-GuiConstants.standardPadding = 5
+GuiConstants.standardPadding = 10
 GuiConstants.mainFramePadding = 20
 GuiConstants.mainFrameTopPadding = 80
 GuiConstants.paddingBetweenRows = 14
@@ -54,11 +60,11 @@ GuiConstants.userLabelHeight = 20
 GuiConstants.gameWidgetWidth = math.max(GuiConstants.gameImageWidth, GuiConstants.gameLabelWidth) + 2 * GuiConstants.standardPadding
 GuiConstants.gameWidgetHeight = GuiConstants.gameImageHeight + GuiConstants.gameLabelHeight + 3 * GuiConstants.standardPadding
 
-GuiConstants.userWidgetX = math.max(GuiConstants.userImageWidth, GuiConstants.userLabelWidth) + 2 * GuiConstants.standardPadding
-GuiConstants.userWidgetY = GuiConstants.userImageHeight + GuiConstants.userLabelHeight + 3 * GuiConstants.standardPadding
+GuiConstants.userWidgetWidth = math.max(GuiConstants.userImageWidth, GuiConstants.userLabelWidth) + 2 * GuiConstants.standardPadding
+GuiConstants.userWidgetHeight = GuiConstants.userImageHeight + GuiConstants.userLabelHeight + 3 * GuiConstants.standardPadding
 
-GuiConstants.tableWidgetX = GuiConstants.userWidgetX
-GuiConstants.tableWidgetY = GuiConstants.gameImageHeight + GuiConstants.gameLabelHeight + GuiConstants.userLabelHeight + 4 * GuiConstants.standardPadding
+GuiConstants.tableWidgeWidth = GuiConstants.userWidgetWidth
+GuiConstants.tableWidgetHeight = GuiConstants.gameImageHeight + GuiConstants.gameLabelHeight + GuiConstants.userLabelHeight + 4 * GuiConstants.standardPadding
 
 GuiConstants.redXSize = 20
 GuiConstants.redXMargin = 5
@@ -67,7 +73,8 @@ GuiConstants.screenToDialogPadding = 50
 GuiConstants.dialogToContentPadding = 20
 
 GuiConstants.defaultUIListLayoutPadding = 5
-GuiConstants.dialogButtonsUIListLayoutPadding = 15
+GuiConstants.buttonsUIListLayoutPadding = 20
+GuiConstants.buttonInternalSidePadding = 20
 
 -- Z indices
 GuiConstants.mainFrameZIndex = 2
@@ -75,10 +82,12 @@ GuiConstants.dialogBackgroundZIndex = 3
 GuiConstants.dialogInputSinkZIndex = 4
 GuiConstants.dialogZIndex = 5
 
+
 -- itemWidget = a widget for a user, game, or user.  Has images, text, and possible button overlays.
 GuiConstants.itemWidgetImageZIndex = 2
 GuiConstants.itemWidgetTextZIndex = 3
-GuiConstants.itemWidgetOverlayZIndex = 4
+GuiConstants.itemWidgetRedXZIndex = 4
+GuiConstants.itemWidgetOverlayZIndex = 5
 
 -- Colors
 GuiConstants.whiteToGrayColorSequence = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(0.8, 0.8, 0.8))

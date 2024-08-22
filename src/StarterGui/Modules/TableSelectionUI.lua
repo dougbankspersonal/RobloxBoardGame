@@ -41,8 +41,8 @@ local function updateInvitedTables(mainFrame: GuiObject)
     local tableIdsForInvitedWaitingTables = TableDescriptions.getTableIdsForInvitedWaitingTables(localUserId)
 
     GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, makeWidgetContainerForTable, function(parent)
-        GuiUtils.addNullWidget(parent, "<i>Sorry, no table invites right now.</i>", {
-            Size = UDim2.fromOffset(GuiConstants.tableWidgetX, GuiConstants.tableWidgetY)
+        GuiUtils.addNullWidget(parent, "<i>There are no table invites.</i>", {
+            Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableWidgetHeight)
         })
     end, GuiUtils.removeNullWidget)
 end
@@ -56,8 +56,8 @@ local function updatePublicTables(mainFrame: GuiObject)
     local tableIdsForPublicWaitingTables = TableDescriptions.getTableIdsForPublicWaitingTables(localUserId)
 
     GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, makeWidgetContainerForTable, function(parent)
-        GuiUtils.addNullWidget(parent, "<i>Sorry, no public tables to join right now.</i>", {
-            Size = UDim2.fromOffset(GuiConstants.tableWidgetX, GuiConstants.tableWidgetY)
+        GuiUtils.addNullWidget(parent, "<i>There are no public tables to join.</i>", {
+            Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableWidgetHeight)
         })
     end, GuiUtils.removeNullWidget)
 end
@@ -88,10 +88,12 @@ TableSelectionUI.build = function()
     })
 
     -- Row to add a new table.
-    local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_CreateTable", {
+    local rowOptions : GuiUtils.RowOptions = {
         horizontalAlignment = Enum.HorizontalAlignment.Center,
-    })
-    GuiUtils.addTextButtonWidgetContainer(rowContent, "Host a new Table", function()
+        uiListLayoutPadding = UDim.new(0, GuiConstants.buttonsUIListLayoutPadding),
+    }
+    local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_Controls", rowOptions)
+    GuiUtils.addTextButton(rowContent, "Host a new Table", function()
         -- user must select a game and whether it is public or invite-only.
         TableConfigDialog.makeGameSelectionDialog(function(gameId, isPublic)
             -- Send all this along to the server.
@@ -99,8 +101,8 @@ TableSelectionUI.build = function()
         end)
     end)
 
-    GuiUtils.addRowOfUniformItems(mainFrame, "Row_InvitedTables", "Open Invitations:", GuiConstants.tableWidgetY)
-    GuiUtils.addRowOfUniformItems(mainFrame, "Row_PublicTables", "Public Tables:", GuiConstants.tableWidgetY)
+    GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_InvitedTables", "Open Invitations:", GuiConstants.tableWidgetHeight)
+    GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_PublicTables", "Public Tables:", GuiConstants.tableWidgetHeight)
 end
 
 -- update ui elements for the table creation/selection ui.

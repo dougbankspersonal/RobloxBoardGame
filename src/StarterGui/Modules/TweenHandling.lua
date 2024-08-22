@@ -29,7 +29,11 @@ local Cryo = require(ReplicatedStorage.Cryo)
 
 local TweenHandling = {}
 
-local tweensToKill = {}:: CommonTypes.TweensToKill
+export type TweensToKill = {
+    [string]: Tween,
+}
+
+local tweensToKill = {} :: TweensToKill
 
 TweenHandling.cancelTween = function(key: string): boolean
     if tweensToKill[key] then
@@ -53,7 +57,7 @@ end
 
 -- We have some new tweens to monitor.
 -- Make sure when they die they are removed from our global list.
-TweenHandling.saveTweens = function(newTweensToKill: CommonTypes.TweensToKill)
+TweenHandling.saveTweens = function(newTweensToKill: TweensToKill)
     for key, tween in newTweensToKill do
         tween.Completed:Connect(function(_)
             tweensToKill[key] = nil

@@ -144,6 +144,15 @@ ServerEventManagement.createClientToServerEvents = function()
         end
     end)
 
+    -- Set the invites to this set of people, removing or adding as needed.
+    -- Returns true if anything actually changed.
+    -- If some invites are bad and some good, we apply the bad and ignore the good.
+    createGameTableRemoteEvent("SetTableInvites", function(player: Player, gameTable, inviteeIds: {CommonTypes.UserId})
+        if gameTable:setInvites(player.UserId, inviteeIds) then
+            sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
+        end
+    end)
+
     -- Event to remove someone to table.
     createGameTableRemoteEvent("RemoveGuestFromTable", function(player, gameTable, userId)
         if gameTable:removeGuestFromTable(player.UserId, userId) then
@@ -256,7 +265,7 @@ ServerEventManagement.createClientToServerEvents = function()
 
             -- If not public, invite the player who sent the mock.
             if not isPublic then
-                gameTable:inviteToTable(player.UserId, mockUserId)
+                gameTable:inviteToTable(mockUserId, player.UserId)
             end
 
             gameTable.isMock = true

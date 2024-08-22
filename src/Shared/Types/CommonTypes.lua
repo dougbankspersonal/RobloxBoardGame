@@ -35,19 +35,6 @@ export type UserId = number
 -- Standard Roblox asset
 export type AssetId = number
 
--- How to configure a dialog.
-export type DialogButtonConfig = {
-    text: string,
-    callback: (() -> ())?,
-}
-
-export type DialogConfig = {
-    title: string,
-    description: string,
-    dialogButtonConfigs: {DialogButtonConfig}?,
-    makeCustomDialogContent: ((parent: Frame) -> nil)?,
-}
-
 export type GameOptionId = string
 
 export type BooleanOrNumber = boolean | number
@@ -77,7 +64,7 @@ export type TableDescription = {
     gameTableState: GameTableState,
 
     -- Any game-specific tweaks that have been set.
-opt_nonDefaultGameOptions: NonDefaultGameOptions?,
+    opt_nonDefaultGameOptions: NonDefaultGameOptions?,
 }
 
 -- We tend to keep these in a table indexed on tableId so it's easy
@@ -113,7 +100,6 @@ These are all keyed by GameId, so you can look up the data for a game by its id.
 When using the library, you need to provide these three blocks of data for each game you want to support.
 The blocks of data go in XXXbyGameId tables, where the key is the GameId.
 ]]
-
 export type GameOptionVariant = {
     name: string,
     description: string,
@@ -167,30 +153,6 @@ export type GameUIs = {
 
 export type GameUIsByGameId = {
     [GameId]: GameUIs,
-}
-
-export type TweensToKill = {
-    [string]: Tween,
-}
-
-export type RowOptions = {
-    isScrolling: boolean?,
-    scrollingDirection: Enum.ScrollingDirection?,
-    useGridLayout: boolean?,
-    labelText: string?,
-    gridCellSize: UDim2?,
-    horizontalAlignment: Enum.HorizontalAlignment?,
-}
-
-export type InstanceOptions = {
-    [string]: any,
-}
-
-export type FriendFromFriendPages = {
-    DisplayName	: string,
-    Id: number,
-    IsOnline: boolean,
-    Username: string,
 }
 
 local CommonTypes = {

@@ -15,17 +15,15 @@ local Cryo = require(ReplicatedStorage.Cryo)
 local Utils = {}
 
 local debugPrintEnabledLabels = {
-    Button = false,
-    Dialogs = false,
-    Friends = false,
-    GameMetadata = true,
+    Friends = true,
+    GameMetadata = false,
     InviteToTable = false,
+    Layout = false,
     Mocks = false,
     RemoveInvite = false,
-    Scrolling = false,
     Sound = false,
+    TableDescriptions = false,
     TableUpdated = false,
-    WidgetContainer = false,
 }
 
 -- String starts with given start.

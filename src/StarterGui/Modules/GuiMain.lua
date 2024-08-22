@@ -42,38 +42,35 @@ local uiModeBasedOnTableDescriptions: CommonTypes.UIMode = UIModes.Loading
 -- Iff local user is at a table (either waiting, playing, or finished), this describes that table.
 local currentTableDescription: CommonTypes.TableDescription? = nil
 
+local mockLayoutOrder = 0
+local getNextMockLayoutOrder = function(): number
+    mockLayoutOrder = mockLayoutOrder + 1
+    return mockLayoutOrder
+end
+
 local summonMocksDialog = function(): Frame?
+    mockLayoutOrder = 0
+
     local dialogButtonConfigs = {
         {
             text = "Create Mock Public Table",
             callback = function()
                 ClientEventManagement.mockTable(true)
-            end
-        } :: CommonTypes.DialogButtonConfig,
+            end,
+        } :: DialogUtils.DialogButtonConfig,
         {
             text = "Create Mock Private Table",
             callback = function()
                 ClientEventManagement.mockTable(false)
-            end
-        } :: CommonTypes.DialogButtonConfig,
+            end,
+        } :: DialogUtils.DialogButtonConfig,
         {
             text = "Destroy Mock Tables",
             callback = function()
                 ClientEventManagement.destroyAllMockTables(false)
-            end
-        } :: CommonTypes.DialogButtonConfig,
-    } :: {CommonTypes.DialogButtonConfig}
-
-    -- Debug stuff.
-    for i = 1, 20 do
-        local config = {
-            text = "Mock plus " .. tostring(i),
-            callback = function()
-                print("Doug: Mock plus " .. tostring(i))
-            end
-        } :: CommonTypes.DialogButtonConfig
-        table.insert(dialogButtonConfigs, config)
-    end
+            end,
+        } :: DialogUtils.DialogButtonConfig,
+    } :: {DialogUtils.DialogButtonConfig}
 
     -- Mocks to add/remove invites and members while waiting.
     if currentTableDescription and currentUIMode == UIModes.TableWaitingForPlayers then
@@ -85,25 +82,25 @@ local summonMocksDialog = function(): Frame?
                 text = "Add Mock Member",
                 callback = function()
                     ClientEventManagement.addMockMember(tableId)
-                end
-            } :: CommonTypes.DialogButtonConfig)
+                end,
+            } :: DialogUtils.DialogButtonConfig)
         else
             table.insert(dialogButtonConfigs, {
                 text = "Add Mock Invite",
                 callback = function()
                     ClientEventManagement.addMockInvite(tableId)
-                end
-            } :: CommonTypes.DialogButtonConfig)
+                end,
+            } :: DialogUtils.DialogButtonConfig)
             table.insert(dialogButtonConfigs, {
                 text = "Mock Invite Acceptance",
                 callback = function()
                     ClientEventManagement.mockInviteAcceptance(tableId)
-                end
-            } :: CommonTypes.DialogButtonConfig)
+                end,
+            } :: DialogUtils.DialogButtonConfig)
         end
     end
 
-    local dialogConfig: CommonTypes.DialogConfig = {
+    local dialogConfig: DialogUtils.DialogConfig = {
         title = "Mocks",
         description = "Various debug options.",
         dialogButtonConfigs = dialogButtonConfigs,
@@ -230,7 +227,7 @@ GuiMain.updateUI = function()
             TableSelectionUI.build()
         elseif currentUIMode == UIModes.TableWaitingForPlayers then
             assert(currentTableDescription, "Should have a currentTableDescription")
-            TableWaitingUI.build(currentTableDescription)
+            TableWaitingUI.build(currentTableDescription.tableId)
         elseif currentUIMode == UIModes.TablePlaying then
             assert(currentTableDescription, "Should have a currentTableDescription")
             buildTablePlayingUI()
@@ -261,20 +258,26 @@ GuiMain.onTableCreated = function(tableDescription: CommonTypes.TableDescription
 end
 
 GuiMain.onTableDestroyed = function(tableId: CommonTypes.TableId)
-    -- If this was your table, throw up a dialog.
     if TableDescriptions.localPlayerIsAtTable(tableId) then
-        local dialogConfig: CommonTypes.DialogConfig = {
-            title = "Table Destroyed",
-            description = "The table at which you were seated has been destroyed.",
-            dialogButtonConfigs = {
-                {
-                    text = "OK",
-                    callback = function()
-                    end
-                } :: CommonTypes.DialogButtonConfig,
-            } :: {CommonTypes.DialogConfig},
-        }
-        DialogUtils.makeDialog(dialogConfig)
+        -- If this was your table, throw up a dialog.
+        -- Not if you are the host (if you're the host you did this yourself, already know).
+        local tableDescription = TableDescriptions.getTableDescription(tableId)
+        assert(tableDescription, "Should have a tableDescription")
+        if tableDescription.hostUserId ~= localUserId then
+            -- If you were at the table, throw up a dialog.
+            local dialogConfig: DialogUtils.DialogConfig = {
+                title = "Table Destroyed",
+                description = "The table at which you were seated has been destroyed.",
+                dialogButtonConfigs = {
+                    {
+                        text = "OK",
+                        callback = function()
+                        end
+                    } :: DialogUtils.DialogButtonConfig,
+                } :: {DialogUtils.DialogConfig},
+            }
+            DialogUtils.makeDialog(dialogConfig)
+        end
     end
     TableDescriptions.removeTableDescription(tableId)
     GuiMain.updateUI()
