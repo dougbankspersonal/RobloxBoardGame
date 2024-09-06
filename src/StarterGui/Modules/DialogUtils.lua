@@ -2,7 +2,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
-local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- StarterGui
@@ -80,7 +79,7 @@ DialogUtils.makeDialog = function(dialogConfig: DialogUtils.DialogConfig): Frame
     dialog.Name = GuiConstants.dialogName
     dialog.BorderSizePixel = 0
     dialog.ZIndex = GuiConstants.dialogZIndex
-    GuiUtils.addUIGradient(dialog, GuiConstants.whiteToGrayColorSequence)
+    GuiUtils.addUIGradient(dialog, GuiConstants.whiteToBlueColorSequence)
     GuiUtils.addCorner(dialog)
 
     -- A separate frame for content since the cancel button ignores UIListLayout.
@@ -142,7 +141,7 @@ DialogUtils.makeDialog = function(dialogConfig: DialogUtils.DialogConfig): Frame
             -- Should be properly configured.
             assert(dialogButtonConfig.text, "Should have text")
 
-            GuiUtils.addTextButton(controlsContent, dialogButtonConfig.text, function()
+            GuiUtils.addTextButtonInContainer(controlsContent, dialogButtonConfig.text, function()
                 -- Destroy the dialog.
                 DialogUtils.cleanupDialog()
                 -- Hit callback if provided.
@@ -186,5 +185,20 @@ DialogUtils.showConfirmationDialog = function(title: string, description: string
 
     return DialogUtils.makeDialog(dialogConfig)
 end
+DialogUtils.showAckDialog = function(title: string, description: string): Frame?
+    local dialogButtonConfigs = {} :: {DialogUtils.DialogButtonConfig}
+    table.insert(dialogButtonConfigs, {
+        text = "OK",
+    })
+
+    local dialogConfig = {
+        title = title,
+        description = description,
+        dialogButtonConfigs = dialogButtonConfigs,
+    } :: DialogUtils.DialogConfig
+
+    return DialogUtils.makeDialog(dialogConfig)
+end
+
 
 return DialogUtils

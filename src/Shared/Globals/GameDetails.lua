@@ -37,4 +37,15 @@ GameDetails.getAllGameDetails = function(): CommonTypes.GameDetailsByGameId
     return gameDetailsByGameId
 end
 
+GameDetails.getGameOptionById = function(gameDetails:CommonTypes.GameDetails, optionId: string): CommonTypes.GameOption?
+    assert(gameDetails, "gameDetails must be provided")
+    assert(optionId, "optionId must be provided")
+    for _, option in gameDetails.gameOptions do
+        if option.gameOptionId == optionId then
+            return option
+        end
+    end
+    return nil
+end
+
 return GameDetails

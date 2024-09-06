@@ -148,7 +148,9 @@ export type GameInstanceFunctionsByGameId = {
 }
 
 export type GameUIs = {
-    setupUI: () -> nil,
+    build: () -> nil,
+    destroy: () -> nil,
+    handlePlayerLeftGame: (userId:UserId) -> nil,
 }
 
 export type GameUIsByGameId = {

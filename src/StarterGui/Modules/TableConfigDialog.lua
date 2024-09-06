@@ -58,7 +58,7 @@ local function _makeCustomDialogContent(parent: Frame, gameDetailsByGameId: Comm
         return a.name < b.name
      end)
     for _, gameDetails in gameDetailsArray do
-        GuiUtils.addGameButton(rowContent, gameDetails, function()
+        GuiUtils.addGameButtonInContainer(rowContent, gameDetails, function()
             DialogUtils.cleanupDialog()
             makePublicOrPrivateDialog(gameDetails.gameId, onTableConfigSelected)
         end)

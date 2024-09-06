@@ -54,9 +54,11 @@ export type GameTable = {
     removeGuestFromTable: (self: GameTable, userId: CommonTypes.UserId, guestId: CommonTypes.UserId) -> boolean,
     removeInviteForTable: (self: GameTable, userId: CommonTypes.UserId, inviteId: CommonTypes.UserId) -> boolean,
     leaveTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
+    updateGameOptions: (self: GameTable, userId: CommonTypes.UserId, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions) -> boolean,
 
     startGame: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
     endGame: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
+    endGameEarly: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
     transitionFromEndToReplay: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
 }
 
@@ -137,6 +139,8 @@ function GameTable:isInvitedToTable(userId: CommonTypes.UserId): boolean
 end
 
 function GameTable:isHost(userId: CommonTypes.UserId): boolean
+    Utils.debugPrint("TablePlaying", "GameTable:isHost userId = ", userId)
+    Utils.debugPrint("TablePlaying", "GameTable:isHost self.tableDescription.hostUserId = ", self.tableDescription.hostUserId)
     return self.tableDescription.hostUserId == userId
 end
 
@@ -330,29 +334,88 @@ function GameTable:leaveTable(userId): boolean
     return true
 end
 
+function GameTable:updateGameOptions(userId: CommonTypes.UserId, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions): boolean
+    -- Only host can update game options.
+    Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 001 nonDefaultGameOptions = ", nonDefaultGameOptions)
+    Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 001 self.gameDetails = ", self.gameDetails)
+
+    if not self:isHost(userId) then
+        Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 002")
+        return false
+    end
+
+    -- Must be in waiting mode.
+    if self.tableDescription.gameTableState ~= GameTableStates.WaitingForPlayers then
+        Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 003")
+        return false
+    end
+
+    -- Game options should all make sense.
+
+    for gameOptionId, value in nonDefaultGameOptions do
+        local gameOption = GameDetails.getGameOptionById(self.gameDetails, gameOptionId)
+        if not gameOption then
+            Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 004 bad gameOptionId = ", gameOptionId)
+            return false
+        end
+
+        if gameOption.opt_variants then
+            Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 006")
+            if type(value) ~= "number" then
+                Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 007")
+                return false
+            end
+            if value < 1 or value > #gameOption.opt_variants then
+                Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 008")
+                return false
+            end
+            Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 009")
+        else
+            Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 010")
+            if type(value) ~= "boolean" then
+                Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 011")
+                return false
+            end
+        end
+    end
+
+    Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 012")
+    -- Slap them in there.
+    self.tableDescription.opt_nonDefaultGameOptions = nonDefaultGameOptions
+    return true
+end
+
 function GameTable:startGame(userId: CommonTypes.UserId): boolean
+    Utils.debugPrint("TablePlaying", "Doug: GameTable:startGame 001 userId = ", userId)
     -- Only host can start.
-    if self:isHost(userId) then
+    if not self:isHost(userId) then
+        Utils.debugPrint("TablePlaying", "Doug: GameTable:startGame 002")
         return false
     end
 
     -- Game already started, no.
     if self.tableDescription.gameTableState == GameTableStates.Playing then
+        Utils.debugPrint("TablePlaying", "Doug: GameTable:startGame 003")
         return false
     end
 
     -- Right number of players?
     local numPlayers = Utils.tableSize(self.tableDescription.memberUserIds)
     if numPlayers < self.gameDetails.minPlayers then
+        Utils.debugPrint("TablePlaying", "Doug: GameTable:startGame 004")
         return false
     end
     if numPlayers > self.gameDetails.maxPlayers then
+        Utils.debugPrint("TablePlaying", "Doug: GameTable:startGame 005")
         return false
     end
 
+    Utils.debugPrint("TablePlaying", "Doug: GameTable:startGame 006")
     assert(self.gameInstance == nil, "Game instance already exists"	)
     self.tableDescription.gameTableState = GameTableStates.Playing
     self.gameInstance = GameInstance.new(self:getTableId(), self:getGameId())
+
+    Utils.debugPrint("TablePlaying", "Doug: GameTable:startGame 007")
 
     return true
 end
@@ -374,6 +437,26 @@ function GameTable:endGame(userId: CommonTypes.UserId): boolean
 
     return true
 end
+
+
+function GameTable:endGameEarly(userId: CommonTypes): boolean
+    -- Must be the host.
+    if not self:isHost(userId) then
+        return false
+    end
+
+    -- Game isn't playing, no.
+    if self.tableDescription.gameTableState ~= GameTableStates.Playing then
+        return false
+    end
+
+    self.tableDescription.gameTableState = GameTableStates.Finished
+    self.gameInstance:endGame()
+    self.gameInstance = nil
+
+    return true
+end
+
 
 function GameTable:transitionFromEndToReplay(userId: CommonTypes.UserId): CommonTypes.TableDescription
     -- Must be the host.

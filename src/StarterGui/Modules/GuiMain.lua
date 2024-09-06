@@ -20,14 +20,15 @@ local Utils = require(RobloxBoardGameShared.Modules.Utils)
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
-local GameUIs = require(RobloxBoardGameStarterGui.Globals.GameUIs)
 local LoadingUI = require(RobloxBoardGameStarterGui.Modules.LoadingUI)
 local TableSelectionUI = require(RobloxBoardGameStarterGui.Modules.TableSelectionUI)
 local TableWaitingUI = require(RobloxBoardGameStarterGui.Modules.TableWaitingUI)
+local TablePlayingUI = require(RobloxBoardGameStarterGui.Modules.TablePlayingUI)
 local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
 local ClientEventManagement= require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
+local GameUIs = require(RobloxBoardGameStarterGui.Globals.GameUIs)
 
 -- Globals
 local localUserId = Players.LocalPlayer.UserId
@@ -42,26 +43,30 @@ local uiModeBasedOnTableDescriptions: CommonTypes.UIMode = UIModes.Loading
 -- Iff local user is at a table (either waiting, playing, or finished), this describes that table.
 local currentTableDescription: CommonTypes.TableDescription? = nil
 
-local mockLayoutOrder = 0
-local getNextMockLayoutOrder = function(): number
-    mockLayoutOrder = mockLayoutOrder + 1
-    return mockLayoutOrder
-end
-
 local summonMocksDialog = function(): Frame?
-    mockLayoutOrder = 0
-
     local dialogButtonConfigs = {
         {
-            text = "Create Mock Public Table",
+            text = "Mock Public Table (not joined)",
             callback = function()
-                ClientEventManagement.mockTable(true)
+                ClientEventManagement.mockTable(true, false)
             end,
         } :: DialogUtils.DialogButtonConfig,
         {
-            text = "Create Mock Private Table",
+            text = "Mock Private Table (not joined)",
             callback = function()
-                ClientEventManagement.mockTable(false)
+                ClientEventManagement.mockTable(false, false)
+            end,
+        } :: DialogUtils.DialogButtonConfig,
+        {
+            text = "Mock Public Table (joined)",
+            callback = function()
+                ClientEventManagement.mockTable(true, true)
+            end,
+        } :: DialogUtils.DialogButtonConfig,
+        {
+            text = "Mock Private Table (joined)",
+            callback = function()
+                ClientEventManagement.mockTable(false, true)
             end,
         } :: DialogUtils.DialogButtonConfig,
         {
@@ -72,7 +77,7 @@ local summonMocksDialog = function(): Frame?
         } :: DialogUtils.DialogButtonConfig,
     } :: {DialogUtils.DialogButtonConfig}
 
-    -- Mocks to add/remove invites and members while waiting.
+    -- Mocks for waiting at a table.
     if currentTableDescription and currentUIMode == UIModes.TableWaitingForPlayers then
         local tableId = currentTableDescription.tableId
         assert(tableId, "Should have a tableId")
@@ -95,6 +100,15 @@ local summonMocksDialog = function(): Frame?
                 text = "Mock Invite Acceptance",
                 callback = function()
                     ClientEventManagement.mockInviteAcceptance(tableId)
+                end,
+            } :: DialogUtils.DialogButtonConfig)
+        end
+
+        if currentTableDescription.hostUserId ~= localUserId then
+            table.insert(dialogButtonConfigs, {
+                text = "Start Mock Game",
+                callback = function()
+                    ClientEventManagement.mockStartGame(tableId)
                 end,
             } :: DialogUtils.DialogButtonConfig)
         end
@@ -138,7 +152,8 @@ GuiMain.makeMainFrame = function(): Frame
 
     local mainFrame = Instance.new("Frame")
     mainFrame.Size = UDim2.fromScale(1, 1)
-    mainFrame.BackgroundTransparency = 1
+    mainFrame.BackgroundTransparency = 0
+    mainFrame.BackgroundColor3 = Color3.new(1, 1, 1)
     mainFrame.Parent = containingScrollingFrame
     mainFrame.Name = GuiConstants.mainFrameName
     mainFrame.BorderSizePixel= 0
@@ -146,24 +161,6 @@ GuiMain.makeMainFrame = function(): Frame
 
     return mainFrame
 end
-
-local function buildTablePlayingUI(): nil
-    assert(currentTableDescription, "Should have a currentTableDescription")
-    assert(currentTableDescription.gameId, "Should have a currentTableDescription.gameId")
-
-    local gameUI = GameUIs.getGameUI(currentTableDescription.gameId)
-    assert(gameUI, "Should have a gameUI")
-    local mainFrame = GuiUtils.getMainFrame()
-    assert(mainFrame, "Should have a mainFrame")
-
-    gameUI.buildUI(mainFrame, currentTableDescription)
-end
-
--- update ui elements for the "in a table and game is playing" UI.
-local updateTablePlayingUI = function()
-    assert(false, "FIXME(dbanks) updateTablePlayingUI")
-end
-
 
 local function setCurrentTableAndUIMode()
     currentTableDescription = TableDescriptions.getTableWithUserId(localUserId)
@@ -213,24 +210,32 @@ end
     Updates UI to reflect current state.
 ]]
 GuiMain.updateUI = function()
+    Utils.debugPrint("TablePlaying", "Doug: updateUI 001")
     -- Figure out which, if any, table we're at, and from that we know what ui mode we are in.
     setCurrentTableAndUIMode()
 
     -- Should never call this if we are still loading.
     assert(uiModeBasedOnTableDescriptions ~= UIModes.Loading, "Should not call updateUI while loading")
 
+    Utils.debugPrint("TablePlaying", "Doug: updateUI 002 uiModeBasedOnTableDescriptions = " .. tostring(uiModeBasedOnTableDescriptions))
+    Utils.debugPrint("TablePlaying", "Doug: updateUI 002 currentUIMode = " .. tostring(currentUIMode))
+
     -- If this causes a change in UIMode, destroy the old UI and build a new one.
     if currentUIMode ~= uiModeBasedOnTableDescriptions then
+        Utils.debugPrint("TablePlaying", "Doug: updateUI 003")
         cleanupCurrentUI()
         currentUIMode = uiModeBasedOnTableDescriptions
         if currentUIMode == UIModes.TableSelection then
+            Utils.debugPrint("TablePlaying", "Doug: updateUI 004")
             TableSelectionUI.build()
         elseif currentUIMode == UIModes.TableWaitingForPlayers then
+            Utils.debugPrint("TablePlaying", "Doug: updateUI 005")
             assert(currentTableDescription, "Should have a currentTableDescription")
             TableWaitingUI.build(currentTableDescription.tableId)
         elseif currentUIMode == UIModes.TablePlaying then
+            Utils.debugPrint("TablePlaying", "Doug: updateUI 006")
             assert(currentTableDescription, "Should have a currentTableDescription")
-            buildTablePlayingUI()
+            TablePlayingUI.build(currentTableDescription.tableId)
         else
             -- ???
             assert(false, "Unknown UI Mode")
@@ -239,11 +244,17 @@ GuiMain.updateUI = function()
 
     -- Update the existing UI based on what we know about tables.
     if currentUIMode == UIModes.TableSelection then
+        Utils.debugPrint("TablePlaying", "Doug: updateUI 007")
         TableSelectionUI.update()
     elseif currentUIMode == UIModes.TableWaitingForPlayers then
+        Utils.debugPrint("TablePlaying", "Doug: updateUI 008")
         TableWaitingUI.update()
     elseif currentUIMode == UIModes.TablePlaying then
-        updateTablePlayingUI()
+        Utils.debugPrint("TablePlaying", "Doug: updateUI 009")
+        TablePlayingUI.update()
+    else
+        -- ???
+        assert(false, "Unknown UI Mode")
     end
 end
 
@@ -264,23 +275,57 @@ GuiMain.onTableDestroyed = function(tableId: CommonTypes.TableId)
         local tableDescription = TableDescriptions.getTableDescription(tableId)
         assert(tableDescription, "Should have a tableDescription")
         if tableDescription.hostUserId ~= localUserId then
-            -- If you were at the table, throw up a dialog.
-            local dialogConfig: DialogUtils.DialogConfig = {
-                title = "Table Destroyed",
-                description = "The table at which you were seated has been destroyed.",
-                dialogButtonConfigs = {
-                    {
-                        text = "OK",
-                        callback = function()
-                        end
-                    } :: DialogUtils.DialogButtonConfig,
-                } :: {DialogUtils.DialogConfig},
-            }
-            DialogUtils.makeDialog(dialogConfig)
+            DialogUtils.showAckDialog("Table Destroyed", "The table you were at has been destroyed.")
         end
     end
     TableDescriptions.removeTableDescription(tableId)
     GuiMain.updateUI()
+end
+
+-- Doesn't change state: just an opportunity for to update users on what happened.
+-- Host may be prompted to do something about it.
+GuiMain.onPlayerLeftTable = function(tableId: CommonTypes.TableId, userId: CommonTypes.UserId)
+    -- Non-table members don't care.
+    if not TableDescriptions.localPlayerIsAtTable(tableId) then
+        return
+    end
+
+    -- We only really care if the game is playing.
+    local tableDescription = TableDescriptions.getTableDescription(tableId)
+    if tableDescription.gameTableState ~= GameTableStates.Playing then
+        return
+    end
+
+    if tableDescription.hostUserId == localUserId then
+        -- Host is given an opportunity to do something about it in game-logic land.
+        local gameUIs = GameUIs.getGameUIs(tableDescription.gameId)
+        assert(gameUIs, "Should have gameUIs")
+        gameUIs.onPlayerLeftTable(userId)
+    else
+        if localUserId ~= userId then
+            -- Non-host, non-leavers just get a notification.
+            local playerName = Players:GetNameFromUserIdAsync(userId)
+            local title = "Player \"" .. playerName .. "\" Left"
+            local description = "Player \"" .. playerName .. "\" has left the table.  The host may need a moment to decide how to handle this: please be patient."
+            DialogUtils.showAckDialog(title, description)
+        end
+    end
+end
+
+-- Doesn't change state: just an opportunity for to update users on what happened.
+GuiMain.onHostAbortedGame = function(tableId: CommonTypes.TableId)
+    -- Non-table members don't care.
+    if not TableDescriptions.localPlayerIsAtTable(tableId) then
+        return
+    end
+    -- If this was your table, throw up a dialog.
+    -- Not if you are the host (if you're the host you did this yourself, already know).
+    local tableDescription = TableDescriptions.getTableDescription(tableId)
+    assert(tableDescription, "Should have a tableDescription")
+    if tableDescription.hostUserId ~= localUserId then
+        -- If you were at the table, throw up a dialog.
+        DialogUtils.showAckDialog("Game Ended Early", "The game was ended early by the host.")
+    end
 end
 
 GuiMain.onTableUpdated = function(tableDescription: CommonTypes.TableDescription)
@@ -294,12 +339,13 @@ end
 GuiMain.addMocksButton = function(screenGui: ScreenGui)
     -- Throw on a button with a very high z index to summon mocks.
     if RunService:IsStudio() then
-        local textButton = GuiUtils.addTextButton(screenGui, "Mocks", summonMocksDialog)
-        textButton.Name = GuiConstants.persistentNameStart .. "MocksButton"
-        textButton.AnchorPoint = Vector2.new(1, 1)
-        textButton.Position = UDim2.new(1, -10, 1, -10)
-        textButton.ZIndex = 1000
-        textButton.BackgroundColor3 = Color3.new(0.5, 0.9, 0.5)
+        GuiUtils.addTextButtonInContainer(screenGui, "Mocks", summonMocksDialog, {
+            Name = "MocksButton",
+        }, {
+            AnchorPoint = Vector2.new(1, 1),
+            Position = UDim2.new(1, -10, 1, -10),
+            ZIndex = 1000,
+        })
     end
 end
 

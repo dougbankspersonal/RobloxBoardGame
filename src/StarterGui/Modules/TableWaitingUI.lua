@@ -31,6 +31,7 @@ local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
 local FriendSelectionDialog = require(RobloxBoardGameStarterGui.Modules.FriendSelectionDialog)
+local GameConfigDialog = require(RobloxBoardGameStarterGui.Modules.GameConfigDialog)
 local UserGuiUtils = require(RobloxBoardGameStarterGui.Modules.UserGuiUtils)
 
 local TableWaitingUI = {}
@@ -122,6 +123,17 @@ local onManageInvitesClicked = function(tableId: CommonTypes.TableId)
     FriendSelectionDialog.selectFriends(friendSelectionDialogConfig)
 end
 
+local onConfigureGameClicked = function(tableId: CommonTypes.TableId)
+    assert(tableId, "Should have a tableId")
+
+    local tableDescription = TableDescriptions.getTableDescription(tableId)
+
+    GameConfigDialog.setGameConfig(tableDescription, function(nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions)
+        Utils.debugPrint("GameConfig", "Doug calling setTableGameOptions with nonDefaultGameOptions = ", nonDefaultGameOptions)
+        ClientEventManagement.setTableGameOptions(tableId, nonDefaultGameOptions)
+    end)
+end
+
 local addTableControls = function (frame: Frame, tableDescription: CommonTypes.TableDescription, isHost: boolean)
     -- Make a row for controls.
     local rowOptions : GuiUtils.RowOptions = {
@@ -141,20 +153,22 @@ local addTableControls = function (frame: Frame, tableDescription: CommonTypes.T
         -- * configure game (for game with gameOptions).
         --
         -- Keep track of the id for the start game button: we need to update it later.
-        startButton = GuiUtils.addTextButton(controlsRowContent, "Start Game", function()
+        local _, _startButton = GuiUtils.addTextButtonInContainer(controlsRowContent, "Start Game", function()
+            Utils.debugPrint("TablePlaying", "Doug: Start Game clicked")
             ClientEventManagement.startGame(tableId)
         end)
+        startButton = _startButton
         assert(startButton, "Should have startButton")
         startButtonWidgetContainerName = startButton.Name
 
-        GuiUtils.addTextButton(controlsRowContent, "Destroy Table", function()
+        GuiUtils.addTextButtonInContainer(controlsRowContent, "Destroy Table", function()
             DialogUtils.showConfirmationDialog("Destroy Table?", "Please confirm you want to destroy this table.", function()
                 ClientEventManagement.destroyTable(tableId)
             end)
         end)
 
         if not tableDescription.isPublic then
-            GuiUtils.addTextButton(controlsRowContent, "Manage Invites", function()
+            GuiUtils.addTextButtonInContainer(controlsRowContent, "Manage Invites", function()
                 Utils.debugPrint("Friends", "Doug: Manage Invites clicked")
                 onManageInvitesClicked(tableId)
             end)
@@ -163,14 +177,13 @@ local addTableControls = function (frame: Frame, tableDescription: CommonTypes.T
         local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
         assert(gameDetails, "Should have gameDetails")
         if gameDetails.gameOptions and #gameDetails.gameOptions > 0 then
-            GuiUtils.addTextButton(controlsRowContent, "Configure Game", function()
-                -- FIXME(dbanks)
-                -- Put up a dialog to configure game.
+            GuiUtils.addTextButtonInContainer(controlsRowContent, "Configure Game", function()
+                onConfigureGameClicked(tableId)
             end)
         end
     else
         -- Guests can leave table.
-        GuiUtils.addTextButton(controlsRowContent, "Leave Table", function()
+        GuiUtils.addTextButtonInContainer(controlsRowContent, "Leave Table", function()
             ClientEventManagement.leaveTable(tableId)
         end)
     end
@@ -195,7 +208,7 @@ TableWaitingUI.build = function(tableId: CommonTypes.TableId)
     local mainFrame = GuiUtils.getMainFrame()
     assert(mainFrame, "MainFrame not found")
 
-    GuiUtils.addUIGradient(mainFrame, GuiConstants.whiteToGrayColorSequence)
+    GuiUtils.addUIGradient(mainFrame, GuiConstants.whiteToBlueColorSequence)
     GuiUtils.addStandardMainFramePadding(mainFrame)
     GuiUtils.addLayoutOrderGenerator(mainFrame)
     GuiUtils.addUIListLayout(mainFrame, {
@@ -279,7 +292,8 @@ local updateMembers = function(isHost: boolean, localUserId: CommonTypes.UserId,
     UserGuiUtils.updateUserRowContent(membersRowContent, TableWaitingUI.justBuilt, memberUserIds, canRemoveGuest,
         removeGuestCallback, function(parent)
             GuiUtils.addNullWidget(parent, "<i>No players have joined yet.</i>", {
-                Size = UDim2.fromOffset(GuiConstants.userWidgetWidth, GuiConstants.userWidgetHeight)
+                Size = UDim2.fromOffset(GuiConstants.userWidgetWidth, GuiConstants.userWidgetHeight),
+                BackgroundColor3 = GuiConstants.userWidgetBackgroundColor,
             })
         end, GuiUtils.removeNullWidget)
 end
@@ -314,7 +328,8 @@ local updateInvites = function(isHost: boolean, tableDescription: CommonTypes.Ta
     UserGuiUtils.updateUserRowContent(invitesRowContent, TableWaitingUI.justBuilt, Cryo.Dictionary.keys(tableDescription.invitedUserIds),
         canRemoveInvite, removeInviteCallback, function(parent)
             GuiUtils.addNullWidget(parent, "<i>No outstanding invitations.</i>", {
-                Size = UDim2.fromOffset(GuiConstants.userWidgetWidth, GuiConstants.userWidgetHeight)
+                Size = UDim2.fromOffset(GuiConstants.userWidgetWidth, GuiConstants.userWidgetHeight),
+                BackgroundColor3 = GuiConstants.userWidgetBackgroundColor,
             })
         end, GuiUtils.removeNullWidget)
 end

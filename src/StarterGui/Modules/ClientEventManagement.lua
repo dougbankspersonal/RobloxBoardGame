@@ -33,9 +33,51 @@ ClientEventManagement.fetchTableDescriptionsByTableIdAsync = function(): CommonT
     return tableDescriptionsByTableId
 end
 
+local setupMockEventFunctions = function()
+    assert(RunService:IsStudio(), "setupMockEventFunctions should only be called in Studio")
+
+    ClientEventManagement.mockTable = function(isPublic: boolean, alreadyJoined: boolean)
+        local event = ReplicatedStorage.TableEvents:WaitForChild("MockTable")
+        assert(event, "MockTable event missing")
+        event:FireServer(isPublic, alreadyJoined)
+    end
+
+    ClientEventManagement.destroyAllMockTables = function()
+        local event = ReplicatedStorage.TableEvents:WaitForChild("DestroyAllMockTables")
+        assert(event, "DestroyAllMockTables event missing")
+        event:FireServer()
+    end
+
+    ClientEventManagement.addMockMember = function(tableId: CommonTypes.TableId)
+        local event = ReplicatedStorage.TableEvents:WaitForChild("AddMockMember")
+        assert(event, "AddMockMember event missing")
+        event:FireServer(tableId)
+    end
+
+    ClientEventManagement.addMockInvite = function(tableId: CommonTypes.TableId)
+        local event = ReplicatedStorage.TableEvents:WaitForChild("AddMockInvite")
+        assert(event, "AddMockInvite event missing")
+        event:FireServer(tableId)
+    end
+
+    ClientEventManagement.mockInviteAcceptance = function(tableId: CommonTypes.TableId)
+        local event = ReplicatedStorage.TableEvents:WaitForChild("MockInviteAcceptance")
+        assert(event, "MockInviteAcceptance event missing")
+        event:FireServer(tableId)
+    end
+
+    ClientEventManagement.mockStartGame = function(tableId: CommonTypes.TableId)
+        local event = ReplicatedStorage.TableEvents:WaitForChild("MockStartGame")
+        assert(event, "MockStartGame event missing")
+        event:FireServer(tableId)
+    end
+end
+
 ClientEventManagement.listenToServerEvents = function(onTableCreated: (tableDescription: CommonTypes.TableDescription) -> nil,
     onTableDestroyed: (tableId: CommonTypes.TableId) -> nil,
-    onTableUpdated: (tableDescription: CommonTypes.TableDescription) -> nil)
+    onTableUpdated: (tableDescription: CommonTypes.TableDescription) -> nil,
+    onHostAbortedGame: (tableId: CommonTypes.TableId) -> nil,
+    onPlayerLeftTable: (tableId: CommonTypes.TableId, userId: CommonTypes.UserId) -> nil)
 
     assert(onTableCreated, "tableCreated must be provided")
     assert(onTableDestroyed, "tableDestroyed must be provided")
@@ -55,6 +97,14 @@ ClientEventManagement.listenToServerEvents = function(onTableCreated: (tableDesc
     event = tableEvents:WaitForChild("TableUpdated")
     assert(event, "TableUpdated event missing")
     event.OnClientEvent:Connect(onTableUpdated)
+
+    event = tableEvents:WaitForChild("HostAbortedGame")
+    assert(event, "HostAbortedGame event missing")
+    event.OnClientEvent:Connect(onHostAbortedGame)
+
+    event = tableEvents:WaitForChild("PlayerLeftTable")
+    assert(event, "PlayerLeftTable event missing")
+    event.OnClientEvent:Connect(onPlayerLeftTable)
 end
 
 ClientEventManagement.createTable = function(gameId: CommonTypes.GameId, isPublic: boolean)
@@ -82,6 +132,7 @@ ClientEventManagement.leaveTable = function(tableId: CommonTypes.TableId)
 end
 
 ClientEventManagement.startGame = function(tableId: CommonTypes.TableId)
+    Utils.debugPrint("TablePlaying", "Doug: ClientEventManagement.startGame tableId = ", tableId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("StartGame")
     assert(event, "StartGame event missing")
     event:FireServer(tableId)
@@ -111,44 +162,22 @@ ClientEventManagement.removeInviteForTable = function(tableId: CommonTypes.Table
     event:FireServer(tableId, userId)
 end
 
-ClientEventManagement.mockTable = function(isPublic: boolean)
-    if RunService:IsStudio() then
-        local event = ReplicatedStorage.TableEvents:WaitForChild("MockTable")
-        assert(event, "MockTable event missing")
-        event:FireServer(isPublic)
-    end
+ClientEventManagement.setTableGameOptions = function(tableId: CommonTypes.TableId, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions)
+    Utils.debugPrint("GameConfig", "Doug ClientEventManagement.setTableGameOptions with nonDefaultGameOptions = ", nonDefaultGameOptions)
+    local event = ReplicatedStorage.TableEvents:WaitForChild("SetTableGameOptions")
+    assert(event, "SetTableGameOptions event missing")
+    event:FireServer(tableId, nonDefaultGameOptions)
 end
 
-ClientEventManagement.destroyAllMockTables = function()
-    if RunService:IsStudio() then
-        local event = ReplicatedStorage.TableEvents:WaitForChild("DestroyAllMockTables")
-        assert(event, "DestroyAllMockTables event missing")
-        event:FireServer()
-    end
+ClientEventManagement.endGameEarly = function(tableId: CommonTypes.TableId)
+    Utils.debugPrint("GameConfig", "Doug ClientEventManagement.endGameEarly")
+    local event = ReplicatedStorage.TableEvents:WaitForChild("EndGameEarly")
+    assert(event, "EndGameEarly event missing")
+    event:FireServer(tableId)
 end
 
-ClientEventManagement.addMockMember = function(tableId: CommonTypes.TableId)
-    if RunService:IsStudio() then
-        local event = ReplicatedStorage.TableEvents:WaitForChild("AddMockMember")
-        assert(event, "AddMockMember event missing")
-        event:FireServer(tableId)
-    end
-end
-
-ClientEventManagement.addMockInvite = function(tableId: CommonTypes.TableId)
-    if RunService:IsStudio() then
-        local event = ReplicatedStorage.TableEvents:WaitForChild("AddMockInvite")
-        assert(event, "AddMockInvite event missing")
-        event:FireServer(tableId)
-    end
-end
-
-ClientEventManagement.mockInviteAcceptance = function(tableId: CommonTypes.TableId)
-    if RunService:IsStudio() then
-        local event = ReplicatedStorage.TableEvents:WaitForChild("MockInviteAcceptance")
-        assert(event, "MockInviteAcceptance event missing")
-        event:FireServer(tableId)
-    end
+if RunService:IsStudio() then
+    setupMockEventFunctions()
 end
 
 return ClientEventManagement

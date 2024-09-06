@@ -42,7 +42,8 @@ local function updateInvitedTables(mainFrame: GuiObject)
 
     GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, makeWidgetContainerForTable, function(parent)
         GuiUtils.addNullWidget(parent, "<i>No table invites</i>", {
-            Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableWidgetHeight)
+            Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableWidgetHeight),
+            BackgroundColor3 = GuiConstants.tableWidgetBackgroundColor,
         })
     end, GuiUtils.removeNullWidget)
 end
@@ -57,7 +58,8 @@ local function updatePublicTables(mainFrame: GuiObject)
 
     GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, makeWidgetContainerForTable, function(parent)
         GuiUtils.addNullWidget(parent, "<i>No public tables</i>", {
-            Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableWidgetHeight)
+            Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableWidgetHeight),
+            BackgroundColor3 = GuiConstants.tableWidgetBackgroundColor,
         })
     end, GuiUtils.removeNullWidget)
 end
@@ -78,7 +80,7 @@ TableSelectionUI.build = function()
     local mainFrame = GuiUtils.getMainFrame()
     assert(mainFrame, "MainFrame not found")
 
-    GuiUtils.addUIGradient(mainFrame, GuiConstants.whiteToGrayColorSequence)
+    GuiUtils.addUIGradient(mainFrame, GuiConstants.whiteToBlueColorSequence)
     GuiUtils.addStandardMainFramePadding(mainFrame)
     GuiUtils.addLayoutOrderGenerator(mainFrame)
 
@@ -93,7 +95,7 @@ TableSelectionUI.build = function()
         uiListLayoutPadding = UDim.new(0, GuiConstants.buttonsUIListLayoutPadding),
     }
     local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_Controls", rowOptions)
-    GuiUtils.addTextButton(rowContent, "Host a new Table", function()
+    GuiUtils.addTextButtonInContainer(rowContent, "Host a new Table", function()
         -- user must select a game and whether it is public or invite-only.
         TableConfigDialog.makeGameSelectionDialog(function(gameId, isPublic)
             -- Send all this along to the server.

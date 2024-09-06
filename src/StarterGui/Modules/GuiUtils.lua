@@ -11,7 +11,6 @@
 local GuiUtils = {}
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TextService = game:GetService("TextService")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 
@@ -48,34 +47,154 @@ export type InstanceOptions = {
     [string]: any,
 }
 
+local function applyInstanceOptions(instance: Instance, opt_defaultOptions: InstanceOptions?, opt_instanceOptions: InstanceOptions?)
+    assert(instance, "Should have instance")
+    local defaultOptions = opt_defaultOptions or {}
+    local instanceOptions = opt_instanceOptions or {}
+
+    local finalOptions = Cryo.Dictionary.join(defaultOptions, instanceOptions)
+
+    for key, value in pairs(finalOptions) do
+        -- Note: I could pcall this to make it not die if you use a bad property name but I'd rather things fail so
+        -- you notice something is wrong.
+        instance[key] = value
+        Utils.debugPrint("Buttons", "Doug instanceApplyOptions key = ", key)
+        Utils.debugPrint("Buttons", "Doug instanceApplyOptions value = ", value)
+        Utils.debugPrint("Buttons", "Doug instanceApplyOptions instance[key] = ", instance[key])
+    end
+end
+
 -- An "item" is a user or a game.
 -- We have a standard notion of size/style for an image for an item.
-local addItemImage = function(parent: GuiObject): ImageLabel
+local addItemImage = function(parent: GuiObject, opt_instanceOptions: InstanceOptions?): ImageLabel
     assert(parent, "Should have parent")
     local imageLabel = Instance.new("ImageLabel")
-    imageLabel.Name = "ItemImage"
-    imageLabel.ScaleType = Enum.ScaleType.Fit
-    imageLabel.BackgroundTransparency = 1
-    imageLabel.Parent = parent
-    imageLabel.LayoutOrder = 1
-    imageLabel.ZIndex = GuiConstants.itemWidgetImageZIndex
+
+    applyInstanceOptions(imageLabel, {
+        Name = "ItemImage",
+        ScaleType = Enum.ScaleType.Fit,
+        BackgroundTransparency = 1,
+        Parent = parent,
+        ZIndex = GuiConstants.itemWidgetImageZIndex,
+    }, opt_instanceOptions)
+
     GuiUtils.addCorner(imageLabel)
     return imageLabel
 end
 
 -- An "item" is a user or a game.
 -- We have a standard notion of size/style for a text label for an item.
-local addItemTextLabel = function(parent:GuiObject): TextLabel
-    local userTextLabel = GuiUtils.addTextLabel(parent, "", {
+local addItemTextLabel = function(parent:GuiObject, opt_instanceOptions: InstanceOptions?): TextLabel
+    local incomingInstanceOptions = opt_instanceOptions or {}
+    local instanceOptions = {
         TextXAlignment = Enum.TextXAlignment.Center,
         TextTruncate = Enum.TextTruncate.AtEnd,
-    })
-    userTextLabel.AutomaticSize = Enum.AutomaticSize.None
-    userTextLabel.LayoutOrder = 2
-    userTextLabel.Name = "ItemText"
-    userTextLabel.ZIndex = GuiConstants.itemWidgetTextZIndex
+        AutomaticSize = Enum.AutomaticSize.XY,
+        Name = "ItemText",
+        ZIndex = GuiConstants.itemWidgetTextZIndex,
+        TextColor3 = GuiConstants.buttonTextColor,
+    }
+    local finalInstanceOptions = Cryo.Dictionary.join(instanceOptions, incomingInstanceOptions)
+
+    local userTextLabel = GuiUtils.addTextLabel(parent, "", finalInstanceOptions)
+
     return userTextLabel
 end
+
+local function updateButtonWhenActiveChanges(button: GuiButton, onActive: (GuiObject) -> nil, onInactive: (GuiObject) -> nil)
+    assert(button, "Should have a button")
+
+    button.Changed:Connect(function(propertyName)
+        if propertyName == "Active" then
+            if button.Active then
+                onActive(button)
+                button.AutoButtonColor = true
+            else
+                onInactive(button)
+                button.AutoButtonColor = false
+            end
+        end
+    end)
+end
+
+local function removeInactiveOverlay(parent: Frame)
+    local overlay = parent:FindFirstChild(GuiConstants.inactiveOverlayName)
+    if overlay then
+        overlay:Destroy()
+    end
+end
+
+local function addInactiveOverlay(parent: Frame)
+    local overlay = parent:FindFirstChild(GuiConstants.inactiveOverlayName)
+    if not overlay then
+        overlay = Instance.new("Frame")
+        overlay.Name = GuiConstants.inactiveOverlayName
+        overlay.Size = UDim2.fromScale(1, 1)
+        overlay.Position = UDim2.fromScale(0.5, 0.5)
+        overlay.AnchorPoint = Vector2.new(0.5, 0.5)
+        overlay.BackgroundColor3 = Color3.new(1, 1, 1)
+        overlay.BackgroundTransparency = 0.5
+        overlay.Parent = parent
+        overlay.ZIndex = GuiConstants.itemWidgetOverlayZIndex
+        overlay.BorderSizePixel = 0
+    end
+    return overlay
+end
+
+local addStandardTextButtonInContainer = function(parent: Frame, name: string, opt_buttonOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, TextButton)
+    local container = Instance.new("Frame")
+    applyInstanceOptions(container, {
+        Parent = parent,
+        ClipsDescendants = true,
+        AutomaticSize = Enum.AutomaticSize.XY,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+    }, opt_containerOptions)
+
+    local textButton = Instance.new("TextButton")
+    GuiUtils.addCorner(textButton)
+
+    local buttonOptions = {
+        Text = "",
+        Name = name,
+        Parent = container,
+        Font = Enum.Font.Merriweather,
+        TextColor3 = GuiConstants.buttonTextColor,
+        BackgroundColor3 = GuiConstants.buttonBackgroundColor,
+    }
+    applyInstanceOptions(textButton, buttonOptions, opt_buttonOptions)
+
+    -- Add active/inactive logic.
+    updateButtonWhenActiveChanges(textButton, function(_)
+        removeInactiveOverlay(container)
+    end, function(_)
+        addInactiveOverlay(container)
+    end)
+
+    return container, textButton
+end
+
+local addFrameInContainer = function(parent: Frame, name: string, opt_frameOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, Frame)
+    local container = Instance.new("Frame")
+    applyInstanceOptions(container, {
+        Parent = parent,
+        ClipsDescendants = true,
+        AutomaticSize = Enum.AutomaticSize.XY,
+    }, opt_containerOptions)
+
+    GuiUtils.addCorner(container)
+
+    local frame = Instance.new("Frame")
+
+    local instanceOptions = {
+        Name = name,
+        Parent = container,
+    }
+    applyInstanceOptions(frame, instanceOptions, opt_frameOptions)
+
+    return container, frame
+end
+
 
 -- Standard notion of displaying a user name in a label.
 -- Start with basic "item text", tweak the size, deal with async nature of loading the name.
@@ -89,6 +208,7 @@ local configureUserTextLabel = function(textLabel:TextLabel, userId: CommonTypes
 
     -- Async get and set the contents of name
     task.spawn(function()
+        Utils.debugPrint("TablePlaying", "Doug: configureUserTextLabel userId = ", userId)
         local playerName = PlayerUtils.getNameAsync(userId)
         assert(playerName, "playerName should exist")
 
@@ -123,7 +243,7 @@ end
 local configureGameTextLabel = function(textLabel:TextLabel, gameDetails: CommonTypes.GameDetails)
     assert(textLabel, "Should have textLabel")
     assert(gameDetails, "Should have gameDetails")
-    textLabel.Size = UDim2.new(1, 0, 0, GuiConstants.gameLabelHeight)
+    textLabel.Text = gameDetails.name
     textLabel.TextSize = GuiConstants.gameTextLabelFontSize
     textLabel.Text = gameDetails.name
 end
@@ -167,30 +287,20 @@ GuiUtils.setMainScreenGui = function(msg: ScreenGui)
     mainScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 end
 
-local function applyInstanceOptions(instance: Instance, opt_instanceOptions: InstanceOptions?)
-    if not opt_instanceOptions then
-        return
-    end
-    for key, value in pairs(opt_instanceOptions) do
-        -- Note: I could pcall this to make it not die if you use a bad property name but I'd rather things fail so
-        -- you notice something is wrong.
-        instance[key] = value
-    end
-end
-
-
 GuiUtils.addPadding = function(guiObject: GuiObject, opt_instanceOptions: InstanceOptions?): UIPadding
     local uiPadding = Instance.new("UIPadding")
-    uiPadding.Parent = guiObject
-    uiPadding.Name = "UniformPadding"
     local defaultPadding = UDim.new(0, GuiConstants.standardPadding)
 
-    uiPadding.PaddingLeft = defaultPadding
-    uiPadding.PaddingRight = defaultPadding
-    uiPadding.PaddingTop = defaultPadding
-    uiPadding.PaddingBottom = defaultPadding
+    local instanceOptions = {
+        Parent = guiObject,
+        Name = "UniformPadding",
+        PaddingLeft = defaultPadding,
+        PaddingRight = defaultPadding,
+        PaddingTop = defaultPadding,
+        PaddingBottom = defaultPadding,
+    }
 
-    applyInstanceOptions(uiPadding, opt_instanceOptions)
+    applyInstanceOptions(uiPadding, instanceOptions, opt_instanceOptions)
 
     return uiPadding
 end
@@ -204,13 +314,15 @@ GuiUtils.addStandardMainFramePadding = function(frame: Frame): UIPadding
     })
 end
 
-GuiUtils.addUIGradient = function(frame:Frame, colorSequence: ColorSequence, opt_instanceOptions: InstanceOptions): UIGradient
+GuiUtils.addUIGradient = function(frame:Frame, colorSequence: ColorSequence, opt_instanceOptions: InstanceOptions?): UIGradient
     local uiGradient = Instance.new("UIGradient")
-    uiGradient.Parent = frame
-    uiGradient.Color = colorSequence
-    uiGradient.Rotation = 90
+    local instanceOptions = {
+        Parent = frame,
+        Color = colorSequence,
+        Rotation = 90,
+    }
 
-    applyInstanceOptions(uiGradient, opt_instanceOptions)
+    applyInstanceOptions(uiGradient, instanceOptions, opt_instanceOptions)
 end
 
 GuiUtils.getLayoutOrder = function(parent:Instance): number
@@ -234,66 +346,217 @@ GuiUtils.addLayoutOrderGenerator = function(parent:Instance)
 end
 
 -- Make a text label, standardized look & feel.
-GuiUtils.addTextLabel = function(parent: Instance, text: string, opt_instanceOptions: InstanceOptions): TextLabel
+GuiUtils.addTextLabel = function(parent: Instance, text: string, opt_instanceOptions: InstanceOptions?): TextLabel
     local textLabel = Instance.new("TextLabel")
-    textLabel.Name = GuiConstants.textLabelName
 
-    textLabel.Parent = parent
-    textLabel.Size = UDim2.fromOffset(0, 0)
-    textLabel.Position = UDim2.fromScale(0, 0)
-    textLabel.AutomaticSize = Enum.AutomaticSize.XY
-    textLabel.Text = text
-    textLabel.TextSize = GuiConstants.textLabelFontSize
-    textLabel.BorderSizePixel = 0
-    textLabel.BackgroundTransparency = 1
-    textLabel.TextXAlignment = Enum.TextXAlignment.Left
-    textLabel.TextYAlignment = Enum.TextYAlignment.Center
-
-    applyInstanceOptions(textLabel, opt_instanceOptions)
+    applyInstanceOptions(textLabel, {
+        Name = GuiConstants.textLabelName,
+        Parent = parent,
+        Size = UDim2.fromOffset(0, 0),
+        Position = UDim2.fromScale(0, 0),
+        AutomaticSize = Enum.AutomaticSize.XY,
+        Text = text,
+        TextSize = GuiConstants.textLabelFontSize,
+        Font = Enum.Font.Merriweather,
+        BorderSizePixel = 0,
+        BackgroundTransparency = 1,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Center,
+    }, opt_instanceOptions)
 
     return textLabel
 end
 
 -- Make a text box, standardized look & feel.
-GuiUtils.addTextBox = function(parent: Instance, opt_instanceOptions: InstanceOptions): TextBox
+GuiUtils.addTextBox = function(parent: Instance, opt_instanceOptions: InstanceOptions?): TextBox
     local textBox = Instance.new("TextBox")
-    textBox.Name = GuiConstants.textBoxName
-
-    textBox.Parent = parent
-    textBox.Size = UDim2.fromOffset(0, 0)
-    textBox.Position = UDim2.fromScale(0, 0)
-    textBox.AutomaticSize = Enum.AutomaticSize.XY
-    textBox.TextSize = GuiConstants.textBoxFontSize
-    textBox.BorderSizePixel = 0
-    textBox.BackgroundTransparency = 0
-    textBox.BackgroundColor3 = Color3.new(0.8, 0.8, 1)
-    textBox.TextXAlignment = Enum.TextXAlignment.Left
-    textBox.TextYAlignment = Enum.TextYAlignment.Center
 
     GuiUtils.addPadding(textBox)
     GuiUtils.addCorner(textBox)
 
-    applyInstanceOptions(textBox, opt_instanceOptions)
+    applyInstanceOptions(textBox, {
+        Name = GuiConstants.textBoxName,
+        Parent = parent,
+        Size = UDim2.fromOffset(0, 0),
+        Position = UDim2.fromScale(0, 0),
+        AutomaticSize = Enum.AutomaticSize.XY,
+        TextSize = GuiConstants.textBoxFontSize,
+        BorderSizePixel = 0,
+        BackgroundTransparency = 0,
+        BackgroundColor3 = Color3.new(0.8, 0.8, 1),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Center,
+    }, opt_instanceOptions)
 
     return textBox
 end
+
+export type CheckboxOptions = {
+    cornerRadius: UDim?,
+    mark: string?,
+    onOnly: boolean?,
+}
+
+local updateCheckboxLook = function(checkbox: TextButton, isOn: boolean)
+    local stringValue = checkbox:FindFirstChildWhichIsA("StringValue")
+    assert(stringValue, "Should have stringValue")
+
+    if isOn then
+        checkbox.Text = stringValue.Value
+    else
+        checkbox.Text = ""
+    end
+end
+
+local toggleCheckbox = function(checkbox: TextButton, callback: (boolean))
+    assert(checkbox, "Should have checkbox")
+    assert(callback, "Should have callback")
+
+    local isOn = (checkbox.Text ~= "")
+    isOn = not isOn
+    updateCheckboxLook(checkbox, isOn)
+    callback(isOn)
+end
+
+GuiUtils.addCheckbox = function(parent:Frame, startValue: boolean, callback: (boolean), opt_checkboxOptions: CheckboxOptions?, opt_instanceOptions: InstanceOptions?)
+    local checkboxOptions = opt_checkboxOptions or {}
+
+    local mark = checkboxOptions.mark or GuiConstants.checkMarkString
+
+    local checkbox = Instance.new("TextButton")
+    local stringValue = Instance.new("StringValue")
+    stringValue.Parent = checkbox
+    stringValue.Value = mark
+
+    if opt_instanceOptions then
+        Utils.debugPrint("GameConfig", "Doug: addCheckbox opt_instanceOptions = ", opt_instanceOptions)
+    end
+
+    applyInstanceOptions(checkbox, {
+        Name = GuiConstants.checkboxName,
+        Parent = parent,
+        Size = UDim2.fromOffset(GuiConstants.checkboxSize, GuiConstants.checkboxSize),
+        Position = UDim2.fromScale(0, 0),
+        TextSize = 20,
+        BorderSizePixel = 2,
+        BackgroundColor3 = Color3.new(0.8, 0.8, 1),
+        AutoButtonColor = true,
+        Active = true,
+    }, opt_instanceOptions)
+
+    updateCheckboxLook(checkbox, startValue)
+
+    GuiUtils.addCorner(checkbox, {
+        CornerRadius = checkboxOptions.cornerRadius,
+    })
+
+    checkbox.Activated:Connect(function()
+        Utils.debugPrint("GameConfig", "Doug: checkbox clicked 001 name = ", checkbox.Name)
+        if checkboxOptions.onOnly then
+            Utils.debugPrint("GameConfig", "Doug: checkbox clicked 002")
+            if checkbox.Text == "" then
+                toggleCheckbox(checkbox, callback)
+            end
+        else
+            toggleCheckbox(checkbox, callback)
+        end
+    end)
+
+    return checkbox
+end
+
+GuiUtils.addRadioButtonFamily = function(parent: Frame, options: {string}, startValue: number, callback: (number))
+    Utils.debugPrint("GameConfig", "Doug: addRadioButtonFamily 001 startValue = ", startValue)
+    local allButtonsStack = Instance.new("Frame")
+    allButtonsStack.BackgroundTransparency = 1
+    allButtonsStack.AutomaticSize = Enum.AutomaticSize.XY
+    allButtonsStack.BorderSizePixel = 0
+    allButtonsStack.Size = UDim2.fromScale(0, 0)
+    allButtonsStack.Parent = parent
+    allButtonsStack.Name = "AllButtonsStack"
+
+    local currentValue = startValue
+    Utils.debugPrint("GameConfig", "Doug: addRadioButtonFamily 002 currentValue = ", currentValue)
+
+    GuiUtils.addUIListLayout(allButtonsStack, {
+        FillDirection = Enum.FillDirection.Vertical,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
+    })
+
+    local radioButtons = {}
+
+    local radioButtonCheckboxOptions = {
+        cornerRadius = UDim.new(0.5, 0),
+        mark = GuiConstants.bulletString,
+        onOnly = true,
+    } :: CheckboxOptions
+
+
+    for index, option in options do
+        local buttonWithLabelFrame = Instance.new("Frame")
+        buttonWithLabelFrame.BackgroundTransparency = 1
+        buttonWithLabelFrame.AutomaticSize = Enum.AutomaticSize.XY
+        buttonWithLabelFrame.BorderSizePixel = 0
+        buttonWithLabelFrame.Size = UDim2.fromScale(0, 0)
+        buttonWithLabelFrame.Parent = allButtonsStack
+        buttonWithLabelFrame.Name = "ButtonWithLabelFrame"
+
+        GuiUtils.addUIListLayout(buttonWithLabelFrame, {
+            FillDirection = Enum.FillDirection.Horizontal,
+        })
+
+        local instanceOptions = {
+            Name = "RadioButton_" .. index,
+        }
+
+        local radioButton = GuiUtils.addCheckbox(buttonWithLabelFrame, index == startValue, function(checked: boolean)
+            Utils.debugPrint("GameConfig", "Doug: addRadioButtonFamily checkbox clicked, currentValue = ", currentValue)
+            Utils.debugPrint("GameConfig", "Doug: addRadioButtonFamily checkbox clicked, index = ", index)
+
+            if checked then
+                Utils.debugPrint("GameConfig", "Doug: addRadioButtonFamily checkbox clicked 001")
+                if currentValue ~= index then
+                    Utils.debugPrint("GameConfig", "Doug: addRadioButtonFamily checkbox clicked 002")
+                    currentValue = index
+                    callback(index)
+                    -- Unset everyone else.
+                    Utils.debugPrint("GameConfig", "Doug: addRadioButtonFamily checkbox clicked 003")
+                    for otherIndex, otherRadioButton in radioButtons do
+                        if otherIndex ~= index then
+                            Utils.debugPrint("GameConfig", "Doug: addRadioButtonFamily checkbox clicked 004 otherIndex = ", otherIndex)
+                            otherRadioButton.Text = ""
+                        end
+                    end
+                end
+            end
+        end, radioButtonCheckboxOptions, instanceOptions)
+        table.insert(radioButtons, radioButton)
+
+        GuiUtils.addTextLabel(buttonWithLabelFrame, option, {
+            TextSize = GuiConstants.radioButtonLabelFontSize,
+            AutomaticSize = Enum.AutomaticSize.XY,
+            RichText = true,
+        })
+    end
+end
+
 
 -- Conveniencce for adding ui list layout.
 -- Defaults to vertical fill direction, vertical align center, horizontal align left.
 -- This can be overridden with options.
 -- Defaults to center/center.
-GuiUtils.addUIListLayout = function(frame: Frame, opt_instanceOptions: InstanceOptions) : UIListLayout
+GuiUtils.addUIListLayout = function(frame: Frame, opt_instanceOptions: InstanceOptions?) : UIListLayout
     local uiListLayout = Instance.new("UIListLayout")
-    uiListLayout.Name = "UIListLayout"
-    uiListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    uiListLayout.Parent = frame
-    uiListLayout.Padding = UDim.new(0, GuiConstants.defaultUIListLayoutPadding)
 
-    uiListLayout.FillDirection = Enum.FillDirection.Vertical
-    uiListLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-    uiListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
-    applyInstanceOptions(uiListLayout, opt_instanceOptions)
+    applyInstanceOptions(uiListLayout, {
+        Name = "UIListLayout",
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = frame,
+        Padding = UDim.new(0, GuiConstants.defaultUIListLayoutPadding),
+        FillDirection = Enum.FillDirection.Vertical,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+    }, opt_instanceOptions)
 
     return uiListLayout
 end
@@ -365,14 +628,17 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
         rowContent = Instance.new("Frame")
     end
 
-    rowContent.Name = GuiConstants.rowContentName
-    rowContent.Size = UDim2.new(1, -usedRowWidth, 0, 0)
-    rowContent.Parent = row
-    rowContent.AutomaticSize = Enum.AutomaticSize.Y
-    rowContent.Position = UDim2.fromScale(0, 0)
-    rowContent.LayoutOrder = 2
-    rowContent.BackgroundTransparency = 1
-    rowContent.BorderSizePixel = 0
+    applyInstanceOptions(rowContent, {
+        Name = GuiConstants.rowContentName,
+        Size = UDim2.new(1, -usedRowWidth, 0, 0),
+        Parent = row,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Position = UDim2.fromScale(0, 0),
+        LayoutOrder = 2,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+    }, opt_instanceOptions)
+
 
     -- Rows usually contain ordered list of widgets, add a layout order generator.
     GuiUtils.addLayoutOrderGenerator(rowContent)
@@ -400,15 +666,17 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
         })
     end
 
-    applyInstanceOptions(rowContent, opt_instanceOptions)
-
     return rowContent
 end
 
-GuiUtils.addCorner = function(parent: Frame): UICorner
+GuiUtils.addCorner = function(parent: Frame, opt_instanceOptions: InstanceOptions?): UICorner
     local uiCorner = Instance.new("UICorner")
-    uiCorner.Parent = parent
-    uiCorner.CornerRadius = UDim.new(0, GuiConstants.standardCornerSize)
+
+    applyInstanceOptions(uiCorner, {
+        Parent = parent,
+        CornerRadius = UDim.new(0, GuiConstants.standardCornerSize),
+    }, opt_instanceOptions)
+
     return uiCorner
 end
 
@@ -423,60 +691,33 @@ GuiUtils.getRowContent = function(parent: GuiObject, rowName: string): Frame
     return rowContent
 end
 
-local function updateButtonWhenActiveChanges(button: GuiButton, onActive: (GuiObject) -> nil, onInactive: (GuiObject) -> nil)
-    assert(button, "Should have a button")
-
-    button.Changed:Connect(function(propertyName)
-        if propertyName == "Active" then
-            if button.Active then
-                onActive(button)
-                button.AutoButtonColor = true
-            else
-                onInactive(button)
-                button.AutoButtonColor = false
-            end
-        end
-    end)
-end
-
 -- Make a button with common look & feel.
-GuiUtils.addTextButton = function(parent: Instance, text: string, callback: () -> (), opt_instanceOptions: InstanceOptions): Instance
-    local button = Instance.new("TextButton")
-    button.Name = GuiConstants.textButtonName
-    button.Parent = parent
-    button.Size = UDim2.fromScale(0, 0)
-    button.AutomaticSize = Enum.AutomaticSize.XY
-    button.Position = UDim2.fromScale(0, 0)
-    button.Text = text
-    button.TextSize = 14
+GuiUtils.addTextButtonInContainer = function(parent: Instance, text: string, callback: () -> (), opt_instanceOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, Instance)
+    local container, textButton = addStandardTextButtonInContainer(parent, GuiConstants.textButtonName, {
+        Text = text,
+    }, opt_containerOptions)
 
-    button.Activated:Connect(function()
-        if not button.Active then
+    applyInstanceOptions(textButton, {
+        Size = UDim2.fromOffset(0, GuiConstants.textButtonHeight),
+        AutomaticSize = Enum.AutomaticSize.X,
+        TextSize = 14,
+        AutoButtonColor = true,
+        Active = true,
+    }, opt_instanceOptions)
+
+    textButton.Activated:Connect(function()
+        if not textButton.Active then
             return
         end
         callback()
     end)
 
-    button.TextColor3 = GuiConstants.enabledButtonTextColor
-    button.AutoButtonColor = true
-    button.Active = true
-
-    GuiUtils.addCorner(button)
-    GuiUtils.addPadding(button, {
+    GuiUtils.addPadding(textButton, {
         PaddingRight = UDim.new(0, GuiConstants.buttonInternalSidePadding),
         PaddingLeft = UDim.new(0, GuiConstants.buttonInternalSidePadding),
     })
 
-    -- Listen for enabled/disabled.
-    updateButtonWhenActiveChanges(button, function(_b)
-        _b.TextColor3 = GuiConstants.enabledButtonTextColor
-    end, function(_b)
-        button.TextColor3 = GuiConstants.disabledButtonTextColor
-    end)
-
-    applyInstanceOptions(button, opt_instanceOptions)
-
-    return button
+    return container, textButton
 end
 
 GuiUtils.getPlayerName = function(playerId: CommonTypes.UserId): string?
@@ -500,59 +741,58 @@ end
 --[[
     Make a clickable button representing a game table.
 ]]
-GuiUtils.addTableButton = function(parent: Instance, tableDescription: CommonTypes.TableDescription, onButtonCiicked: () -> nil): GuiObject
-    local button = Instance.new("TextButton")
-    button.Parent = parent
+GuiUtils.addTableButtonInContainer = function(parent: Instance, tableDescription: CommonTypes.TableDescription, onButtonCiicked: () -> nil): (Frame, TextButton)
+    local frame, textButton = addStandardTextButtonInContainer(parent, GuiConstants.tableButtonName, {
+        BackgroundColor3 = GuiConstants.tableButtonBackgroundColor,
+    })
 
-    button.Text = ""
-    button.Name = GuiConstants.tableButtonName
-    button.Activated:Connect(onButtonCiicked)
+    textButton.Activated:Connect(onButtonCiicked)
 
     local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
     assert(gameDetails, "Should have gameDetails")
 
-    button.Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableWidgetHeight)
+    textButton.Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableWidgetHeight)
 
-    button.BackgroundColor3 = Color3.new(1, 1, 1)
-
-    GuiUtils.addUIGradient(button, GuiConstants.whiteToGrayColorSequence)
-    GuiUtils.addCorner(button)
-    GuiUtils.addUIListLayout(button, {
+    GuiUtils.addUIListLayout(textButton, {
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
     })
-    GuiUtils.addPadding(button)
+    GuiUtils.addPadding(textButton)
 
-    local imageLabel = addItemImage(button)
+    local imageLabel = addItemImage(textButton, {
+        LayoutOrder = 1,
+    })
+    local gameTextLabel = addItemTextLabel(textButton, {
+        LayoutOrder = 2,
+    })
 
-    local gameTextLabel = addItemTextLabel(button)
-    local hostTextLabel = addItemTextLabel(button)
-    hostTextLabel.LayoutOrder = 3
-    hostTextLabel.RichText = true
-
-    configureGameTextLabel(gameTextLabel, gameDetails)
+    local hostTextLabel = addItemTextLabel(textButton, {
+        LayoutOrder = 3,
+        RichText = true,
+    })
     local formatString = "<i>Hosted by</i> %s"
-    configureUserTextLabel(hostTextLabel, tableDescription.hostUserId, formatString)
 
     configureGameImage(imageLabel, gameDetails)
+    configureGameTextLabel(gameTextLabel, gameDetails)
+    configureUserTextLabel(hostTextLabel, tableDescription.hostUserId, formatString)
 
-    return button
+    return frame, textButton
 
 end
 
 local addImageOverTextLabel = function(frame: GuiObject): (ImageLabel, TextLabel)
     assert(frame, "Should have parent")
 
-    frame.BackgroundColor3 = Color3.new(1, 1, 1)
-
-    GuiUtils.addUIGradient(frame, GuiConstants.whiteToGrayColorSequence)
-    GuiUtils.addCorner(frame)
     GuiUtils.addUIListLayout(frame, {
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
     })
     GuiUtils.addPadding(frame)
 
-    local imageLabel = addItemImage(frame)
-    local textLabel = addItemTextLabel(frame)
+    local imageLabel = addItemImage(frame, {
+        LayoutOrder = 1,
+    })
+    local textLabel = addItemTextLabel(frame, {
+        LayoutOrder = 2,
+    })
 
     return imageLabel, textLabel
 end
@@ -583,79 +823,55 @@ local function addGameImageOverTextLabel(frame: GuiObject, gameDetails: CommonTy
     return imageLabel, textLabel
 end
 
-GuiUtils.addGameButton = function(parent: Instance, gameDetails: CommonTypes.GameDetails, onButtonClicked: () -> nil): GuiObject
-    local button = Instance.new("TextButton")
-    button.Parent = parent
+GuiUtils.addGameButtonInContainer = function(parent: Instance, gameDetails: CommonTypes.GameDetails, onButtonClicked: () -> nil): (Frame, TextButton)
+    local frame, textButton = addStandardTextButtonInContainer(parent, GuiConstants.gameButtonName, {
+        BackgroundColor3 = GuiConstants.gameButtonBackgroundColor,
+    })
 
-    button.Text = ""
-    button.Name = GuiConstants.gameButtonName
-    button.Activated:Connect(onButtonClicked)
+    textButton.Activated:Connect(onButtonClicked)
 
-    addGameImageOverTextLabel(button, gameDetails)
+    addGameImageOverTextLabel(textButton, gameDetails)
 
-    return button
+    return frame, textButton
 end
 
-GuiUtils.addGameWidget = function(parent: Instance, gameDetails: CommonTypes.GameDetails): GuiObject
-    -- Frame with name and image.
-    -- FIXME(dbanks)
-    -- Make this look cooler.
-    local frame = Instance.new("Frame")
-    frame.Name = "GameWidget"
-    frame.Parent = parent
-    addGameImageOverTextLabel(frame, gameDetails)
-    return frame
-end
-
-GuiUtils.addUserWidget = function(parent: Instance, userId: CommonTypes.UserId): GuiObject
-    local frame = Instance.new("Frame")
-    frame.Name = "UserWidget"
-    frame.Parent = parent
+GuiUtils.addUserWidgetInContainer = function(parent: Instance, userId: CommonTypes.UserId): (Frame, Frame)
+    local container, frame = addFrameInContainer(parent, GuiConstants.userWidgetName, {
+        BackgroundColor3 = GuiConstants.userWidgetBackgroundColor,
+    })
 
     addUserImageOverTextLabel(frame, userId)
 
-    return frame
+    return container, frame
 end
 
-local function removeInactiveOverlay(button: Frame)
-    local overlay = button:FindFirstChild(GuiConstants.inactiveOverlayName)
-    if overlay then
-        overlay:Destroy()
-    end
-end
-
-local function addInactiveOverlay(button: Frame)
-    local overlay = button:FindFirstChild(GuiConstants.inactiveOverlayName)
-    if not overlay then
-        overlay = Instance.new("Frame")
-        overlay.Name = GuiConstants.inactiveOverlayName
-        overlay.Size = UDim2.fromScale(1, 1)
-        overlay.BackgroundColor3 = Color3.new(1, 1, 1)
-        overlay.BackgroundTransparency = 0.5
-        overlay.Parent = button
-        overlay.ZIndex = GuiConstants.itemWidgetOverlayZIndex
-        overlay.BorderSizePixel = 0
-    end
-    return overlay
-end
-
-GuiUtils.addUserButton = function(parent: Instance, userId: CommonTypes.UserId, onButtonClicked: (userId: CommonTypes.UserId) -> nil): GuiObject
-    local textButton = Instance.new("TextButton")
-    textButton.Text = ""
-    textButton.Name = GuiConstants.userButtonName
-    textButton.Parent = parent
-    textButton.Active = true
+GuiUtils.addUserButtonInContainer = function(parent: Instance, userId: CommonTypes.UserId, onButtonClicked: (TextButton, CommonTypes.UserId) -> nil): (Frame, TextButton)
+    local frame, textButton = addStandardTextButtonInContainer(parent, GuiConstants.userButtonName, {
+        BackgroundColor3 = GuiConstants.userButtonBackgroundColor,
+    })
 
     textButton.Activated:Connect(function()
         if not textButton.Active then
             return
         end
-        onButtonClicked(userId)
+        onButtonClicked(textButton, userId)
     end)
 
     addUserImageOverTextLabel(textButton, userId)
 
-    return textButton
+    return frame, textButton
+end
+
+GuiUtils.addMiniUserWidget = function(parent: Instance, userId: CommonTypes.UserId): GuiObject
+    local container, widget = GuiUtils.addUserWidgetInContainer(parent, userId)
+
+    --[[
+
+    imageLabel.Size = UDim2.fromOffset(GuiConstants.miniUserImageWidth, GuiConstants.miniUserImageHeight)
+    frame.Size = UDim2.fromOffset(GuiConstants.miniUserWidgetWidth, GuiConstants.miniUserWidgetHeight)
+    --]]
+
+    return widget
 end
 
 -- We want to have the set of widgets correspond 1-1 with the given ids.
@@ -920,8 +1136,6 @@ local makeWidgetContainer = function(parent:GuiObject, widgetType: string, opt_i
     stringValue.Parent = widgetContainer
     stringValue.Name = "ItemType"
 
-    GuiUtils.addCorner(widgetContainer)
-
     return widgetContainer
 end
 
@@ -951,28 +1165,20 @@ GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, opt
 
     if config.onClick then
         Utils.debugPrint("Layout", "Doug: addUserWidgetContainer 001")
-        local button
-        local modifiedCallback = function()
+        local modifiedCallback = function(b: TextButton, uid: CommonTypes.UserId)
             Utils.debugPrint("Layout", "Doug: addUserWidgetContainer 002")
-            if not button.Active then
+            if not b.Active then
                 return
             end
-            config.onClick(userId)
+            config.onClick(uid)
         end
 
-        button = GuiUtils.addUserButton(userWidgetContainer, userId, modifiedCallback)
-
-        -- Add active/inactive logic.
-        updateButtonWhenActiveChanges(button, function(_)
-            removeInactiveOverlay(userWidgetContainer)
-        end, function(_)
-            addInactiveOverlay(userWidgetContainer)
-        end)
+        local container, _ = GuiUtils.addUserButtonInContainer(userWidgetContainer, userId, modifiedCallback)
 
         if config.useRedX then
             -- The only reason we ever use this button is to kick the user out.  Put a little x indicator on the button.
             local redXImage = Instance.new("ImageLabel")
-            redXImage.Parent = userWidgetContainer
+            redXImage.Parent = container
             redXImage.Size = UDim2.fromOffset(GuiConstants.redXSize, GuiConstants.redXSize)
             redXImage.Position = UDim2.new(1, -(GuiConstants.redXSize + GuiConstants.redXMargin), 0, GuiConstants.redXMargin)
             redXImage.Image = GuiConstants.redXImage
@@ -980,7 +1186,7 @@ GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, opt
             redXImage.ZIndex = GuiConstants.itemWidgetRedXZIndex
         end
     else
-        GuiUtils.addUserWidget(userWidgetContainer, userId)
+        GuiUtils.addUserWidgetInContainer(userWidgetContainer, userId)
     end
 
     return userWidgetContainer
@@ -994,11 +1200,11 @@ end
 
 -- Make standard "nothing there" indicator.
 -- Idempotent: will remove old/previous one if present.
-GuiUtils.addNullWidget = function(parent: Instance, message: string, opt_instanceOptions: InstanceOptions): Frame
+GuiUtils.addNullWidget = function(parent: Instance, message: string, opt_instanceOptions: InstanceOptions?): Frame
     -- Make sure old widget is gone.
     GuiUtils.removeNullWidget(parent)
     local instanceOptions = opt_instanceOptions or {}
-    instanceOptions = Cryo.Dictionary.join(instanceOptions, {
+    instanceOptions = Cryo.Dictionary.join({
         TextXAlignment = Enum.TextXAlignment.Center,
         TextYAlignment = Enum.TextYAlignment.Center,
         RichText = true,
@@ -1006,9 +1212,10 @@ GuiUtils.addNullWidget = function(parent: Instance, message: string, opt_instanc
         BackgroundTransparency = 0,
         BackgroundColor3 = Color3.new(1, 1, 1),
         AutomaticSize = Enum.AutomaticSize.None,
-    })
+        TextColor3 = GuiConstants.buttonTextColor,
+    },
+    instanceOptions)
     local textLabel = GuiUtils.addTextLabel(parent, message, instanceOptions)
-    GuiUtils.addUIGradient(textLabel, GuiConstants.whiteToGrayColorSequence)
     GuiUtils.addCorner(textLabel)
     GuiUtils.addPadding(textLabel)
 
@@ -1024,7 +1231,7 @@ GuiUtils.addTableButtonWidgetContainer = function(parent: Instance, tableId: num
 
     local tableButtonContainer = makeWidgetContainer(parent, "Table", tableId)
 
-    GuiUtils.addTableButton(tableButtonContainer, tableDescription, onClick)
+    GuiUtils.addTableButtonInContainer(tableButtonContainer, tableDescription, onClick)
 
     return tableButtonContainer
 end
@@ -1039,23 +1246,32 @@ GuiUtils.updateTextLabel = function(textLabel: TextLabel, text: string): boolean
 end
 
 local function getOptionValue(gameOption: CommonTypes.GameOption, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions): string?
+    Utils.debugPrint("GameConfig", "Doug: getOptionValue")
+    Utils.debugPrint("GameConfig", "Doug: gameOption= ", gameOption)
+    Utils.debugPrint("GameConfig", "Doug: nonDefaultGameOptions = ", nonDefaultGameOptions)
     -- Does this particular option have a non-default value?
     local opt_nonDefaultGameOption = nonDefaultGameOptions[gameOption.gameOptionId]
+
+    Utils.debugPrint("GameConfig", "Doug: opt_nonDefaultGameOption = ", opt_nonDefaultGameOption)
     if opt_nonDefaultGameOption then
+        Utils.debugPrint("GameConfig", "Doug: gameOption.opt_variants = ", gameOption.opt_variants)
         -- Yes it does.  How we write about the value turns on whether the option is a bool or has variants.
         if gameOption.opt_variants then
             -- This is a variant option: the value of the non-default option is an index.
             assert(typeof(opt_nonDefaultGameOption) == "number", "Should have a number")
             local variant = gameOption.opt_variants[opt_nonDefaultGameOption]
             assert(variant, "Should have a variant")
-            return variant.Name
+            Utils.debugPrint("GameConfig", "Doug: variant.name = ", variant.name)
+            return variant.name
         end
 
         -- It's a bool.
         assert(typeof(opt_nonDefaultGameOption) == "boolean", "Should have a boolean")
         if opt_nonDefaultGameOption then
+            Utils.debugPrint("GameConfig", "Doug: Yes")
             return "Yes"
         else
+            Utils.debugPrint("GameConfig", "Doug: No")
             return "No"
         end
     end
@@ -1066,10 +1282,12 @@ local function getOptionValue(gameOption: CommonTypes.GameOption, nonDefaultGame
         assert(#gameOption.opt_variants > 0, "Should have at least one variant")
         local variant = gameOption.opt_variants[1]
         assert(variant, "Should have a variant")
+        Utils.debugPrint("GameConfig", "Doug: variant.name 001 = ", variant.name)
         return variant.name
     end
 
     -- It's a bool, and default is "off"/"no"
+    Utils.debugPrint("GameConfig", "Doug: No 002")
     return "No"
 end
 
@@ -1085,11 +1303,14 @@ GuiUtils.getSelectedGameOptionsString = function(tableDescription: CommonTypes.T
     local nonDefaultGameOptions = tableDescription.opt_nonDefaultGameOptions or {}
 
     for _, gameOption in gameDetails.gameOptions do
-        local optionName = gameOption.name
-        assert(optionName, "Should have an optionName")
+        Utils.debugPrint("GameConfig", "Doug: gameOption = ", gameOption)
+        Utils.debugPrint("GameConfig", "Doug: nonDefaultGameOptions = ", nonDefaultGameOptions)
         local optionValue = getOptionValue(gameOption, nonDefaultGameOptions)
-        assert(optionValue, "Should have an optionValue"
-    )
+        assert(optionValue, "Should have an optionValue")
+
+        local optionName = gameOption.name
+        Utils.debugPrint("GameConfig", "Doug: optionName = ", optionName)
+        assert(optionName, "Should have an optionName")
         local optionString = optionName .. ": " .. optionValue
 
         table.insert(enabledOptionsStrings, optionString)

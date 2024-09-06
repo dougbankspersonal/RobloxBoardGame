@@ -15,7 +15,9 @@ local Cryo = require(ReplicatedStorage.Cryo)
 local Utils = {}
 
 local debugPrintEnabledLabels = {
-    Friends = true,
+    Buttons = false,
+    Friends = false,
+    GameConfig = true,
     GameMetadata = false,
     InviteToTable = false,
     Layout = false,
@@ -23,6 +25,7 @@ local debugPrintEnabledLabels = {
     RemoveInvite = false,
     Sound = false,
     TableDescriptions = false,
+    TablePlaying = false,
     TableUpdated = false,
 }
 
@@ -102,7 +105,9 @@ end
 Utils.sanityCheckGameUIsByGameId = function(gameUIsByGameId: CommonTypes.GameUIsByGameId)
     assert(gameUIsByGameId ~= nil, "Should have non-nil gameUIsByGameId")
     for _, gameUIs in pairs(gameUIsByGameId) do
-        assert(gameUIs.setupUI ~= nil, "Should have non-nil setupUI")
+        assert(gameUIs.build ~= nil, "Should have non-nil build")
+        assert(gameUIs.destroy ~= nil, "Should have non-nil destroy")
+        assert(gameUIs.handlePlayerLeftGame ~= nil, "Should have non-nil handlePlayerLeftGame")
     end
 end
 
