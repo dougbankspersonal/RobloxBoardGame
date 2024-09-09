@@ -68,13 +68,13 @@ updateSelectedFriendsRowContent = function(justBuilt: boolean?)
         updateSelectedFriendsRowContent(false)
     end
 
-    local function makeNullWidget(_parent: Frame)
-        GuiUtils.addNullWidget(_parent, "<i>No friends selected.</i>", {
-            Size = UDim2.fromOffset(GuiConstants.userWidgetWidth, GuiConstants.userWidgetHeight)
+    local function makeNullLabel(_parent: Frame)
+        GuiUtils.addNullLabel(_parent, "<i>No friends selected.</i>", {
+            Size = UDim2.fromOffset(GuiConstants.userLabelWidth, GuiConstants.userLabelHeight)
         })
     end
 
-    UserGuiUtils.updateUserRowContent(selectedFriendsRowContent, justBuilt == true, selectedUserIds, canDeselectFriend, deselectFriendCallback, makeNullWidget, GuiUtils.removeNullWidget)
+    UserGuiUtils.updateUserRowContent(selectedFriendsRowContent, justBuilt == true, selectedUserIds, canDeselectFriend, deselectFriendCallback, makeNullLabel, GuiUtils.removeNullLabel)
 
     -- Anyone in grid not in selectedUserIds should be enabled.
     -- Anyone in grid in selectedUserIds should be disabled.
@@ -115,12 +115,7 @@ local function appendFriendsToGrid(friendsFromFriendPages: {FriendFromFriendPage
             end
         end
 
-        local userWidgetContainerConfig = {
-            onClick = onFriendSelected,
-            addRedX = false,
-        }
-
-        local userWidgetContainer = GuiUtils.addUserWidgetContainer(gridRowContent, userId, userWidgetContainerConfig)
+        local userWidgetContainer = GuiUtils.addUserButtonWidgetContainer(gridRowContent, userId, onFriendSelected, false)
 
         if config.isMultiSelect then
             -- If this is multi-select, we want to disable the button if it's already selected.
@@ -202,7 +197,7 @@ end
 local function _makeCustomDialogContent(parent:Frame, config: FriendSelectionDialogConfig): GuiObject
     -- If this is multi-select, we want a row to show all currently selected friends.
     if config.isMultiSelect then
-        selectedFriendsRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(parent, "Row_SelectedFriends", "Selected Friends: ", GuiConstants.userWidgetHeight)
+        selectedFriendsRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(parent, "Row_SelectedFriends", "Selected Friends: ", GuiConstants.userLabelHeight)
     end
 
     -- Add the filter widget.
@@ -210,7 +205,7 @@ local function _makeCustomDialogContent(parent:Frame, config: FriendSelectionDia
     addFilterTextBox(filterWidgetContent)
 
     -- Grid of friends.
-    gridRowContent = GuiUtils.addRowWithItemGridAndReturnRowContent(parent, "Row_AvailableFriends", GuiConstants.userWidgetWidth, GuiConstants.userWidgetHeight)
+    gridRowContent = GuiUtils.addRowWithItemGridAndReturnRowContent(parent, "Row_AvailableFriends", GuiConstants.userLabelWidth, GuiConstants.userLabelHeight)
     fillGridInRowContentWithFriends(config)
 
     if config.isMultiSelect then

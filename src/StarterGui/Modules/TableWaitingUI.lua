@@ -220,10 +220,10 @@ TableWaitingUI.build = function(tableId: CommonTypes.TableId)
 
     -- Make a row for members (players who have joined), invites (players invited who have not yet joined)
     -- but do not fill in as this info will change: we set this in update function.
-    membersRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_Members", "Members: ", GuiConstants.userWidgetHeight)
+    membersRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_Members", "Members: ", GuiConstants.userLabelHeight)
 
     if not tableDescription.isPublic then
-        invitesRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_Invites", "Invites: ", GuiConstants.userWidgetHeight)
+        invitesRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_Invites", "Invites: ", GuiConstants.userLabelHeight)
     end
 
     addTableControls(mainFrame, tableDescription, isHost)
@@ -291,11 +291,11 @@ local updateMembers = function(isHost: boolean, localUserId: CommonTypes.UserId,
 
     UserGuiUtils.updateUserRowContent(membersRowContent, TableWaitingUI.justBuilt, memberUserIds, canRemoveGuest,
         removeGuestCallback, function(parent)
-            GuiUtils.addNullWidget(parent, "<i>No players have joined yet.</i>", {
-                Size = UDim2.fromOffset(GuiConstants.userWidgetWidth, GuiConstants.userWidgetHeight),
-                BackgroundColor3 = GuiConstants.userWidgetBackgroundColor,
+            GuiUtils.addNullLabel(parent, "<i>No players have joined yet.</i>", {
+                Size = UDim2.fromOffset(GuiConstants.userLabelWidth, GuiConstants.userLabelHeight),
+                BackgroundColor3 = GuiConstants.userLabelBackgroundColor,
             })
-        end, GuiUtils.removeNullWidget)
+        end, GuiUtils.removeNullLabel)
 end
 
 local updateInvites = function(isHost: boolean, tableDescription: CommonTypes.TableDescription)
@@ -327,11 +327,11 @@ local updateInvites = function(isHost: boolean, tableDescription: CommonTypes.Ta
 
     UserGuiUtils.updateUserRowContent(invitesRowContent, TableWaitingUI.justBuilt, Cryo.Dictionary.keys(tableDescription.invitedUserIds),
         canRemoveInvite, removeInviteCallback, function(parent)
-            GuiUtils.addNullWidget(parent, "<i>No outstanding invitations.</i>", {
-                Size = UDim2.fromOffset(GuiConstants.userWidgetWidth, GuiConstants.userWidgetHeight),
-                BackgroundColor3 = GuiConstants.userWidgetBackgroundColor,
+            GuiUtils.addNullLabel(parent, "<i>No outstanding invitations.</i>", {
+                Size = UDim2.fromOffset(GuiConstants.userLabelWidth, GuiConstants.userLabelHeight),
+                BackgroundColor3 = GuiConstants.userLabelBackgroundColor,
             })
-        end, GuiUtils.removeNullWidget)
+        end, GuiUtils.removeNullLabel)
 end
 
 local updateTableControls = function(tableDescription: CommonTypes.TableDescription, isHost: boolean)

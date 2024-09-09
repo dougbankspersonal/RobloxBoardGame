@@ -38,9 +38,9 @@ UserGuiUtils.updateUserRowContent = function(rowContent: Frame, justBuilt: boole
                 onClick = buttonCallback,
                 useRedX = true,
             }
-            userWidgetContainer = GuiUtils.addUserWidgetContainer(frame, userId, config)
+            userWidgetContainer = GuiUtils.addUserButtonWidgetContainer(frame, userId, config, buttonCallback, true)
         else
-            userWidgetContainer = GuiUtils.addUserWidgetContainer(frame, userId)
+            userWidgetContainer = GuiUtils.addUserLabelWidgetContainer(frame, userId)
         end
         return userWidgetContainer
     end

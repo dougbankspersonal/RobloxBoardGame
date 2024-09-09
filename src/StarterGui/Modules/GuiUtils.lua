@@ -75,7 +75,7 @@ local addItemImage = function(parent: GuiObject, opt_instanceOptions: InstanceOp
         ScaleType = Enum.ScaleType.Fit,
         BackgroundTransparency = 1,
         Parent = parent,
-        ZIndex = GuiConstants.itemWidgetImageZIndex,
+        ZIndex = GuiConstants.itemLabelImageZIndex,
     }, opt_instanceOptions)
 
     GuiUtils.addCorner(imageLabel)
@@ -91,7 +91,7 @@ local addItemTextLabel = function(parent:GuiObject, opt_instanceOptions: Instanc
         TextTruncate = Enum.TextTruncate.AtEnd,
         AutomaticSize = Enum.AutomaticSize.XY,
         Name = "ItemText",
-        ZIndex = GuiConstants.itemWidgetTextZIndex,
+        ZIndex = GuiConstants.itemLabelTextZIndex,
         TextColor3 = GuiConstants.buttonTextColor,
     }
     local finalInstanceOptions = Cryo.Dictionary.join(instanceOptions, incomingInstanceOptions)
@@ -135,8 +135,9 @@ local function addInactiveOverlay(parent: Frame)
         overlay.BackgroundColor3 = Color3.new(1, 1, 1)
         overlay.BackgroundTransparency = 0.5
         overlay.Parent = parent
-        overlay.ZIndex = GuiConstants.itemWidgetOverlayZIndex
+        overlay.ZIndex = GuiConstants.itemLabelOverlayZIndex
         overlay.BorderSizePixel = 0
+        GuiUtils.addCorner(overlay)
     end
     return overlay
 end
@@ -145,6 +146,7 @@ local addStandardTextButtonInContainer = function(parent: Frame, name: string, o
     local container = Instance.new("Frame")
     applyInstanceOptions(container, {
         Parent = parent,
+        Name = GuiConstants.containerName,
         ClipsDescendants = true,
         AutomaticSize = Enum.AutomaticSize.XY,
         BackgroundTransparency = 1,
@@ -751,7 +753,7 @@ GuiUtils.addTableButtonInContainer = function(parent: Instance, tableDescription
     local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
     assert(gameDetails, "Should have gameDetails")
 
-    textButton.Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableWidgetHeight)
+    textButton.Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableLabelHeight)
 
     GuiUtils.addUIListLayout(textButton, {
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -800,7 +802,7 @@ end
 local function addUserImageOverTextLabel(frame: GuiObject, userId: CommonTypes.UserId): (ImageLabel, TextLabel)
     assert(userId, "Should have gameDetails")
     assert(frame, "Should have frame")
-    frame.Size = UDim2.fromOffset(GuiConstants.userWidgetWidth, GuiConstants.userWidgetHeight)
+    frame.Size = UDim2.fromOffset(GuiConstants.userLabelWidth, GuiConstants.userLabelHeight)
 
     local imageLabel, textLabel = addImageOverTextLabel(frame)
 
@@ -813,7 +815,7 @@ end
 local function addGameImageOverTextLabel(frame: GuiObject, gameDetails: CommonTypes.GameDetails): (ImageLabel, TextLabel)
     assert(gameDetails, "Should have gameDetails")
     assert(frame, "Should have frame")
-    frame.Size = UDim2.fromOffset(GuiConstants.gameWidgetWidth, GuiConstants.gameWidgetHeight)
+    frame.Size = UDim2.fromOffset(GuiConstants.gameLabelWidth, GuiConstants.gameLabelHeight)
 
     local imageLabel, textLabel = addImageOverTextLabel(frame)
 
@@ -835,9 +837,9 @@ GuiUtils.addGameButtonInContainer = function(parent: Instance, gameDetails: Comm
     return frame, textButton
 end
 
-GuiUtils.addUserWidgetInContainer = function(parent: Instance, userId: CommonTypes.UserId): (Frame, Frame)
-    local container, frame = addFrameInContainer(parent, GuiConstants.userWidgetName, {
-        BackgroundColor3 = GuiConstants.userWidgetBackgroundColor,
+GuiUtils.addUserLabelnContainer = function(parent: Instance, userId: CommonTypes.UserId): (Frame, Frame)
+    local container, frame = addFrameInContainer(parent, GuiConstants.userLabeName, {
+        BackgroundColor3 = GuiConstants.userLabelBackgroundColor,
     })
 
     addUserImageOverTextLabel(frame, userId)
@@ -845,8 +847,10 @@ GuiUtils.addUserWidgetInContainer = function(parent: Instance, userId: CommonTyp
     return container, frame
 end
 
-GuiUtils.addUserButtonInContainer = function(parent: Instance, userId: CommonTypes.UserId, onButtonClicked: (TextButton, CommonTypes.UserId) -> nil): (Frame, TextButton)
-    local frame, textButton = addStandardTextButtonInContainer(parent, GuiConstants.userButtonName, {
+GuiUtils.addUserButtonInContainer = function(parent: Instance, userId: CommonTypes.UserId, onButtonClicked: (CommonTypes.UserId) -> nil, useRedX: boolean): (Frame, TextButton)
+    Utils.debugPrint("Layout", "Doug: addUserButtonInContainer 001")
+
+    local container, textButton = addStandardTextButtonInContainer(parent, GuiConstants.userButtonName, {
         BackgroundColor3 = GuiConstants.userButtonBackgroundColor,
     })
 
@@ -859,16 +863,27 @@ GuiUtils.addUserButtonInContainer = function(parent: Instance, userId: CommonTyp
 
     addUserImageOverTextLabel(textButton, userId)
 
-    return frame, textButton
+    if useRedX then
+        -- Add a little x indicator on the button.
+        local redXImage = Instance.new("ImageLabel")
+        redXImage.Parent = container
+        redXImage.Size = UDim2.fromOffset(GuiConstants.redXSize, GuiConstants.redXSize)
+        redXImage.Position = UDim2.new(1, -(GuiConstants.redXSize + GuiConstants.redXMargin), 0, GuiConstants.redXMargin)
+        redXImage.Image = GuiConstants.redXImage
+        redXImage.BackgroundTransparency = 1
+        redXImage.ZIndex = GuiConstants.itemWidgetRedXZIndex
+    end
+
+    return container, textButton
 end
 
-GuiUtils.addMiniUserWidget = function(parent: Instance, userId: CommonTypes.UserId): GuiObject
-    local container, widget = GuiUtils.addUserWidgetInContainer(parent, userId)
+GuiUtils.addMiniUserLabel = function(parent: Instance, userId: CommonTypes.UserId): GuiObject
+    local container, widget = GuiUtils.addUserLabelnContainer(parent, userId)
 
     --[[
 
     imageLabel.Size = UDim2.fromOffset(GuiConstants.miniUserImageWidth, GuiConstants.miniUserImageHeight)
-    frame.Size = UDim2.fromOffset(GuiConstants.miniUserWidgetWidth, GuiConstants.miniUserWidgetHeight)
+    frame.Size = UDim2.fromOffset(GuiConstants.miniuserLabelWidth, GuiConstants.miniuserLabelHeight)
     --]]
 
     return widget
@@ -1151,58 +1166,45 @@ GuiUtils.getNameFromUserWidgetContainer = function(widgetContainer: Instance): s
 end
 
 -- Make a widgetContainer containing a user (name, thumbnail, etc).
--- If a callback is given, make it a button, else it's just a static frame.
-GuiUtils.addUserWidgetContainer = function(parent: Instance, userId: number, opt_config: any): Frame
-    local config = opt_config or {}
-
-    -- So what will happen:
-    -- We return a table button container with "loading" message.
+-- It's button.
+GuiUtils.addUserButtonWidgetContainer = function(parent: Instance, userId: number, callback: (CommonTypes.UserId) -> nil, addRedX: boolean): Frame
+    -- We return a user button with "loading" message.
     -- We fire off a fetch to get async info.
     -- When that resolves we remove loading message and add the real info.
     -- FIXME(dbanks)
     -- Make nicer: loading message could be a swirly or whatever.
     local userWidgetContainer = makeWidgetContainer(parent, "User", userId)
 
-    if config.onClick then
-        Utils.debugPrint("Layout", "Doug: addUserWidgetContainer 001")
-        local modifiedCallback = function(b: TextButton, uid: CommonTypes.UserId)
-            Utils.debugPrint("Layout", "Doug: addUserWidgetContainer 002")
-            if not b.Active then
-                return
-            end
-            config.onClick(uid)
-        end
-
-        local container, _ = GuiUtils.addUserButtonInContainer(userWidgetContainer, userId, modifiedCallback)
-
-        if config.useRedX then
-            -- The only reason we ever use this button is to kick the user out.  Put a little x indicator on the button.
-            local redXImage = Instance.new("ImageLabel")
-            redXImage.Parent = container
-            redXImage.Size = UDim2.fromOffset(GuiConstants.redXSize, GuiConstants.redXSize)
-            redXImage.Position = UDim2.new(1, -(GuiConstants.redXSize + GuiConstants.redXMargin), 0, GuiConstants.redXMargin)
-            redXImage.Image = GuiConstants.redXImage
-            redXImage.BackgroundTransparency = 1
-            redXImage.ZIndex = GuiConstants.itemWidgetRedXZIndex
-        end
-    else
-        GuiUtils.addUserWidgetInContainer(userWidgetContainer, userId)
-    end
+    GuiUtils.addUserButtonInContainer(userWidgetContainer, userId, callback, addRedX)
 
     return userWidgetContainer
 end
 
-GuiUtils.removeNullWidget = function(parent:Instance)
-    if parent:FindFirstChild(GuiConstants.nullWidgetName) then
-        parent:FindFirstChild(GuiConstants.nullWidgetName):Destroy()
+-- Make a widgetContainer containing a user (name, thumbnail, etc).
+-- It's a label: no click functionality.
+GuiUtils.addUserLabelWidgetContainer = function(parent: Instance, userId: number): Frame
+    local userWidgetContainer = makeWidgetContainer(parent, "User", userId)
+    -- We return a user label with "loading" message.
+    -- We fire off a fetch to get async info.
+    -- When that resolves we remove loading message and add the real info.
+    -- FIXME(dbanks)
+    -- Make nicer: loading message could be a swirly or whatever.
+    GuiUtils.addUserLabelnContainer(userWidgetContainer, userId)
+
+    return userWidgetContainer
+end
+
+GuiUtils.removeNullLabel = function(parent:Instance)
+    if parent:FindFirstChild(GuiConstants.nullLabelName) then
+        parent:FindFirstChild(GuiConstants.nullLabelName):Destroy()
     end
 end
 
 -- Make standard "nothing there" indicator.
 -- Idempotent: will remove old/previous one if present.
-GuiUtils.addNullWidget = function(parent: Instance, message: string, opt_instanceOptions: InstanceOptions?): Frame
-    -- Make sure old widget is gone.
-    GuiUtils.removeNullWidget(parent)
+GuiUtils.addNullLabel = function(parent: Instance, message: string, opt_instanceOptions: InstanceOptions?): Frame
+    -- Make sure old label is gone.
+    GuiUtils.removeNullLabel(parent)
     local instanceOptions = opt_instanceOptions or {}
     instanceOptions = Cryo.Dictionary.join({
         TextXAlignment = Enum.TextXAlignment.Center,
@@ -1219,7 +1221,7 @@ GuiUtils.addNullWidget = function(parent: Instance, message: string, opt_instanc
     GuiUtils.addCorner(textLabel)
     GuiUtils.addPadding(textLabel)
 
-    textLabel.Name = GuiConstants.nullWidgetName
+    textLabel.Name = GuiConstants.nullLabelName
     return textLabel
 end
 

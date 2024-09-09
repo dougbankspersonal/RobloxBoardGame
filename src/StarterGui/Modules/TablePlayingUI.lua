@@ -41,7 +41,7 @@ local addTopBar = function(mainFrame: GuiObject, tableDescription: CommonTypes.T
         FontSize = Enum.FontSize.Size24,
     })
     GuiUtils.addTextLabel(content, "Host:")
-    GuiUtils.addMiniUserWidget(content, tableDescription.hostUserId)
+    GuiUtils.addMiniUserLabel(content, tableDescription.hostUserId)
     GuiUtils.addTextLabel(content, "Players:")
     Utils.debugPrint("TablePlaying", "Doug: addTopBar tableDescription.memberUserIds = ", tableDescription.memberUserIds)
     for userId, _  in tableDescription.memberUserIds do
@@ -49,7 +49,7 @@ local addTopBar = function(mainFrame: GuiObject, tableDescription: CommonTypes.T
         if userId ~= tableDescription.hostUserId then
             Utils.debugPrint("TablePlaying", "Doug: addTopBar 002 userId = ", userId)
             Utils.debugPrint("TablePlaying", "Doug: addTopBar 002 typeof(userId) = ", typeof(userId))
-            GuiUtils.addMiniUserWidget(content, userId)
+            GuiUtils.addMiniUserLabel(content, userId)
         end
     end
 
@@ -65,7 +65,7 @@ local addBottomBar = function(mainFrame: GuiObject, tableId: CommonTypes.TableId
     content.Parent.Position = UDim2.new(0, 0, 1, -GuiConstants.bottomBarHeight)
 
     if isHost then
-        GuiUtils.addTextButtonInContainer(content, "Abort Game", function()
+        GuiUtils.addTextButtonInContainer(content, "End Game Immediately", function()
             DialogUtils.showConfirmationDialog("End the game early?", "Please confirm you want to end this game immediately.", function()
                 ClientEventManagement.endGameEarly(tableId)
             end)

@@ -41,11 +41,11 @@ local function updateInvitedTables(mainFrame: GuiObject)
     local tableIdsForInvitedWaitingTables = TableDescriptions.getTableIdsForInvitedWaitingTables(localUserId)
 
     GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, makeWidgetContainerForTable, function(parent)
-        GuiUtils.addNullWidget(parent, "<i>No table invites</i>", {
-            Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableWidgetHeight),
-            BackgroundColor3 = GuiConstants.tableWidgetBackgroundColor,
+        GuiUtils.addNullLabel(parent, "<i>No table invites</i>", {
+            Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableLabelHeight),
+            BackgroundColor3 = GuiConstants.tableLabelBackgroundColor,
         })
-    end, GuiUtils.removeNullWidget)
+    end, GuiUtils.removeNullLabel)
 end
 
 local function updatePublicTables(mainFrame: GuiObject)
@@ -57,11 +57,11 @@ local function updatePublicTables(mainFrame: GuiObject)
     local tableIdsForPublicWaitingTables = TableDescriptions.getTableIdsForPublicWaitingTables(localUserId)
 
     GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, makeWidgetContainerForTable, function(parent)
-        GuiUtils.addNullWidget(parent, "<i>No public tables</i>", {
-            Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableWidgetHeight),
-            BackgroundColor3 = GuiConstants.tableWidgetBackgroundColor,
+        GuiUtils.addNullLabel(parent, "<i>No public tables</i>", {
+            Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableLabelHeight),
+            BackgroundColor3 = GuiConstants.tableLabelBackgroundColor,
         })
-    end, GuiUtils.removeNullWidget)
+    end, GuiUtils.removeNullLabel)
 end
 
 --[[
@@ -103,8 +103,8 @@ TableSelectionUI.build = function()
         end)
     end)
 
-    GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_InvitedTables", "Open Invitations:", GuiConstants.tableWidgetHeight)
-    GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_PublicTables", "Public Tables:", GuiConstants.tableWidgetHeight)
+    GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_InvitedTables", "Open Invitations:", GuiConstants.tableLabelHeight)
+    GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_PublicTables", "Public Tables:", GuiConstants.tableLabelHeight)
 end
 
 -- update ui elements for the table creation/selection ui.

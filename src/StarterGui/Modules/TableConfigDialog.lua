@@ -51,7 +51,7 @@ end
 
 -- Helper for non-standard controls in the dialog.
 local function _makeCustomDialogContent(parent: Frame, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
-    local rowContent = GuiUtils.addRowWithItemGridAndReturnRowContent(parent, "Row_Controls", GuiConstants.gameWidgetWidth, GuiConstants.gameWidgetHeight)
+    local rowContent = GuiUtils.addRowWithItemGridAndReturnRowContent(parent, "Row_Controls", GuiConstants.gameLabelWidth, GuiConstants.gameLabelHeight)
 
     local gameDetailsArray = Cryo.Dictionary.values(gameDetailsByGameId)
      table.sort(gameDetailsArray, function(a, b)
