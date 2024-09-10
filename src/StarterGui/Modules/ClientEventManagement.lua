@@ -163,14 +163,12 @@ ClientEventManagement.removeInviteForTable = function(tableId: CommonTypes.Table
 end
 
 ClientEventManagement.setTableGameOptions = function(tableId: CommonTypes.TableId, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions)
-    Utils.debugPrint("GameConfig", "Doug ClientEventManagement.setTableGameOptions with nonDefaultGameOptions = ", nonDefaultGameOptions)
     local event = ReplicatedStorage.TableEvents:WaitForChild("SetTableGameOptions")
     assert(event, "SetTableGameOptions event missing")
     event:FireServer(tableId, nonDefaultGameOptions)
 end
 
 ClientEventManagement.endGameEarly = function(tableId: CommonTypes.TableId)
-    Utils.debugPrint("GameConfig", "Doug ClientEventManagement.endGameEarly")
     local event = ReplicatedStorage.TableEvents:WaitForChild("EndGameEarly")
     assert(event, "EndGameEarly event missing")
     event:FireServer(tableId)

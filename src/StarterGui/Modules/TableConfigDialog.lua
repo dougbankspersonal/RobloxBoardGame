@@ -22,6 +22,7 @@ local RobloxBoardGameStarterGui = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
 local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
+local GameGuiUtils = require(RobloxBoardGameStarterGui.Modules.GameGuiUtils)
 
 local makePublicOrPrivateDialog = function(gameId: CommonTypes.GameId, onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
     -- Put up a UI to get public or private.
@@ -51,14 +52,14 @@ end
 
 -- Helper for non-standard controls in the dialog.
 local function _makeCustomDialogContent(parent: Frame, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
-    local rowContent = GuiUtils.addRowWithItemGridAndReturnRowContent(parent, "Row_Controls", GuiConstants.gameLabelWidth, GuiConstants.gameLabelHeight)
+    local rowContent = GuiUtils.addRowWithItemGridAndReturnRowContent(parent, "Row_GameSelectionControls", GuiConstants.gameWidgetSize)
 
     local gameDetailsArray = Cryo.Dictionary.values(gameDetailsByGameId)
      table.sort(gameDetailsArray, function(a, b)
         return a.name < b.name
      end)
     for _, gameDetails in gameDetailsArray do
-        GuiUtils.addGameButtonInContainer(rowContent, gameDetails, function()
+        GameGuiUtils.addGameButtonInContainer(rowContent, gameDetails, function()
             DialogUtils.cleanupDialog()
             makePublicOrPrivateDialog(gameDetails.gameId, onTableConfigSelected)
         end)

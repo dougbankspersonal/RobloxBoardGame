@@ -17,7 +17,7 @@ local Utils = {}
 local debugPrintEnabledLabels = {
     Buttons = false,
     Friends = false,
-    GameConfig = true,
+    GameConfig = false,
     GameMetadata = false,
     InviteToTable = false,
     Layout = false,
@@ -27,6 +27,7 @@ local debugPrintEnabledLabels = {
     TableDescriptions = false,
     TablePlaying = false,
     TableUpdated = false,
+    UserLayout = true,
 }
 
 -- String starts with given start.

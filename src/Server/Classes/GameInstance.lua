@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
@@ -42,21 +43,25 @@ end
 
 function GameInstance:playGame()
     local gameInstanceFunctions = GameInstanceFunctions.getGameInstanceFunctions(self.gameId)
-    assert(gameInstanceFunctions, "GameInstanceFunctions not found for gameId: " .. self.gameId)
+    Utils.debugPrint("GameInstance", "Doug: playGame: gameId = ", self.gameId)
+    Utils.debugPrint("GameInstance", "Doug: playGame: gameId = ", self.gameInstanceFunctions)
+    assert(gameInstanceFunctions, "playGame: GameInstanceFunctions not found for gameId: " .. self.gameId)
     assert(gameInstanceFunctions.onPlay, "onPlay is required")
     return gameInstanceFunctions.onPlay()
 end
 
 function GameInstance:endGame()
     local gameInstanceFunctions = GameInstanceFunctions.getGameInstanceFunctions(self.gameId)
-    assert(gameInstanceFunctions, "GameInstanceFunctions not found for gameId: " .. self.gameId)
+    Utils.debugPrint("GameInstance", "Doug: endGame: gameId = ", self.gameId)
+    Utils.debugPrint("GameInstance", "Doug: endGame: gameId = ", self.gameInstanceFunctions)
+    assert(gameInstanceFunctions, "endGame: GameInstanceFunctions not found for gameId: " .. self.gameId)
     assert(gameInstanceFunctions.onEnd, "onEnd is required")
     return gameInstanceFunctions.onEnd()
 end
 
 function GameInstance:playerLeft(userId: CommonTypes.UserId)
     local gameInstanceFunctions = GameInstanceFunctions.getGameInstanceFunctions(self.gameId)
-    assert(gameInstanceFunctions, "GameInstanceFunctions not found for gameId: " .. self.gameId)
+    assert(gameInstanceFunctions, "playerLeft: GameInstanceFunctions not found for gameId: " .. self.gameId)
     assert(gameInstanceFunctions.onPlayerLeft, "onPlayerLeft is required")
     return gameInstanceFunctions.onPlayerLeft(userId)
 end

@@ -25,31 +25,36 @@ local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
 local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
 local GameUIs = require(RobloxBoardGameStarterGui.Globals.GameUIs)
+local UserGuiUtils = require(RobloxBoardGameStarterGui.Modules.UserGuiUtils)
 
 local topBarContent
 local bottomBarContent
 local gameSpecificContainer
 
 local addTopBar = function(mainFrame: GuiObject, tableDescription: CommonTypes.TableDescription, gameDetails: CommonTypes.GameDetails): Frame
-    local content = GuiUtils.addRowAndReturnRowContent(mainFrame, "TopBar", nil, {
-        AutomaticSize = Enum.AutomaticSize.None,
-        Size = UDim2.new(1, 0, 0, GuiConstants.topBarHeight),
-    })
+    local rowOptions = {
+        uiListLayoutPadding = UDim.new(0, GuiConstants.gamePlayingTopBarPadding),
+    }
+    local content = GuiUtils.addRowAndReturnRowContent(mainFrame, GuiConstants.topBarName, rowOptions)
 
-    GuiUtils.addTextLabel(content, "<b>" .. gameDetails.name .. "</b>", {
+    GuiUtils.addTextLabel(content,  GuiUtils.bold(gameDetails.name), {
         RichText = true,
-        FontSize = Enum.FontSize.Size24,
+        TextSize = GuiConstants.TablePlayingGameNameTextSize,
     })
-    GuiUtils.addTextLabel(content, "Host:")
-    GuiUtils.addMiniUserLabel(content, tableDescription.hostUserId)
-    GuiUtils.addTextLabel(content, "Players:")
+    GuiUtils.addTextLabel(content, GuiUtils.italicize("Host:"), {
+        RichText = true,
+    })
+    UserGuiUtils.addMiniUserWidget(content, tableDescription.hostUserId)
+    GuiUtils.addTextLabel(content, GuiUtils.italicize("Players:"), {
+        RichText = true,
+    })
     Utils.debugPrint("TablePlaying", "Doug: addTopBar tableDescription.memberUserIds = ", tableDescription.memberUserIds)
     for userId, _  in tableDescription.memberUserIds do
         Utils.debugPrint("TablePlaying", "Doug: addTopBar 001 userId = ", userId)
         if userId ~= tableDescription.hostUserId then
             Utils.debugPrint("TablePlaying", "Doug: addTopBar 002 userId = ", userId)
             Utils.debugPrint("TablePlaying", "Doug: addTopBar 002 typeof(userId) = ", typeof(userId))
-            GuiUtils.addMiniUserLabel(content, userId)
+            UserGuiUtils.addMiniUserWidget(content, userId)
         end
     end
 
@@ -117,8 +122,6 @@ TablePlayingUI.build = function(tableId: CommonTypes.TableId)
     assert(mainFrame, "MainFrame not found")
 
     GuiUtils.addUIGradient(mainFrame, GuiConstants.whiteToBlueColorSequence)
-    GuiUtils.addStandardMainFramePadding(mainFrame)
-    GuiUtils.addLayoutOrderGenerator(mainFrame)
 
     topBarContent = addTopBar(mainFrame, tableDescription, gameDetails)
     gameSpecificContainer = addGameSpecificContainer(mainFrame, tableDescription, gameDetails)

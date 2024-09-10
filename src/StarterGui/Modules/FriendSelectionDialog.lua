@@ -68,13 +68,13 @@ updateSelectedFriendsRowContent = function(justBuilt: boolean?)
         updateSelectedFriendsRowContent(false)
     end
 
-    local function makeNullLabel(_parent: Frame)
-        GuiUtils.addNullLabel(_parent, "<i>No friends selected.</i>", {
-            Size = UDim2.fromOffset(GuiConstants.userLabelWidth, GuiConstants.userLabelHeight)
+    local function addNullUserStaticWidget(_parent: Frame)
+        GuiUtils.addStaticWidget(_parent, GuiUtils.italicize("No friends selected."), {
+            Size = GuiConstants.userWidgetSize,
         })
     end
 
-    UserGuiUtils.updateUserRowContent(selectedFriendsRowContent, justBuilt == true, selectedUserIds, canDeselectFriend, deselectFriendCallback, makeNullLabel, GuiUtils.removeNullLabel)
+    UserGuiUtils.updateUserRowContent(selectedFriendsRowContent, justBuilt == true, selectedUserIds, canDeselectFriend, deselectFriendCallback, addNullUserStaticWidget, GuiUtils.removeNullStaticWidget)
 
     -- Anyone in grid not in selectedUserIds should be enabled.
     -- Anyone in grid in selectedUserIds should be disabled.
@@ -115,7 +115,7 @@ local function appendFriendsToGrid(friendsFromFriendPages: {FriendFromFriendPage
             end
         end
 
-        local userWidgetContainer = GuiUtils.addUserButtonWidgetContainer(gridRowContent, userId, onFriendSelected, false)
+        local userWidgetContainer = UserGuiUtils.addUserButtonWidgetContainer(gridRowContent, userId, onFriendSelected)
 
         if config.isMultiSelect then
             -- If this is multi-select, we want to disable the button if it's already selected.
@@ -205,7 +205,8 @@ local function _makeCustomDialogContent(parent:Frame, config: FriendSelectionDia
     addFilterTextBox(filterWidgetContent)
 
     -- Grid of friends.
-    gridRowContent = GuiUtils.addRowWithItemGridAndReturnRowContent(parent, "Row_AvailableFriends", GuiConstants.userLabelWidth, GuiConstants.userLabelHeight)
+    Utils.debugPrint("User", "Doug: _makeCustomDialogContent 001 GuiConstants.userWidgetSize = ", GuiConstants.userWidgetSize)
+    gridRowContent = GuiUtils.addRowWithItemGridAndReturnRowContent(parent, "Row_AvailableFriends", GuiConstants.userWidgetSize)
     fillGridInRowContentWithFriends(config)
 
     if config.isMultiSelect then

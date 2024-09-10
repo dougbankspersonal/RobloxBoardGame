@@ -336,17 +336,12 @@ end
 
 function GameTable:updateGameOptions(userId: CommonTypes.UserId, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions): boolean
     -- Only host can update game options.
-    Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 001 nonDefaultGameOptions = ", nonDefaultGameOptions)
-    Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 001 self.gameDetails = ", self.gameDetails)
-
     if not self:isHost(userId) then
-        Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 002")
         return false
     end
 
     -- Must be in waiting mode.
     if self.tableDescription.gameTableState ~= GameTableStates.WaitingForPlayers then
-        Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 003")
         return false
     end
 
@@ -355,31 +350,23 @@ function GameTable:updateGameOptions(userId: CommonTypes.UserId, nonDefaultGameO
     for gameOptionId, value in nonDefaultGameOptions do
         local gameOption = GameDetails.getGameOptionById(self.gameDetails, gameOptionId)
         if not gameOption then
-            Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 004 bad gameOptionId = ", gameOptionId)
             return false
         end
 
         if gameOption.opt_variants then
-            Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 006")
             if type(value) ~= "number" then
-                Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 007")
                 return false
             end
             if value < 1 or value > #gameOption.opt_variants then
-                Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 008")
                 return false
             end
-            Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 009")
         else
-            Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 010")
             if type(value) ~= "boolean" then
-                Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 011")
                 return false
             end
         end
     end
 
-    Utils.debugPrint("GameConfig", "Doug GameTable:updateGameOptions 012")
     -- Slap them in there.
     self.tableDescription.opt_nonDefaultGameOptions = nonDefaultGameOptions
     return true
@@ -439,7 +426,7 @@ function GameTable:endGame(userId: CommonTypes.UserId): boolean
 end
 
 
-function GameTable:endGameEarly(userId: CommonTypes): boolean
+function GameTable:endGameEarly(userId: CommonTypes.UserId): boolean
     -- Must be the host.
     if not self:isHost(userId) then
         return false

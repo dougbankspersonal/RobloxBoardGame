@@ -60,9 +60,9 @@ local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameD
     })
 
     task.spawn(function()
-        local gameNameString = gameDetails.name
-        local gameHostString = PlayerUtils.getNameAsync(tableDescription.hostUserId)
-        local metadataString1 = string.format("<b>%s</b>, hosted by <b>%s</b>", gameNameString, gameHostString)
+        local gameNameString =  GuiUtils.bold(gameDetails.name)
+        local gameHostString = GuiUtils.bold(PlayerUtils.getNameAsync(tableDescription.hostUserId))
+        local metadataString1 = string.format("%s, hosted by %s", gameNameString, gameHostString)
         assert(topTextLabel, "Should have topTextLabel")
         topTextLabel.Text = metadataString1
     end)
@@ -70,7 +70,8 @@ local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameD
     rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Metadata1")
     local tableSizeString = GuiUtils.getTableSizeString(gameDetails)
     local publicOrPrivateString = tableDescription.isPublic and "Public" or "Private"
-    local metadataString2 = string.format("<i>%s, %s</i>", tableSizeString, publicOrPrivateString)
+    local formatString = GuiUtils.italicize("%s, %s")
+    local metadataString2 = string.format(formatString, tableSizeString, publicOrPrivateString)
     GuiUtils.addTextLabel(rowContent, metadataString2, {
         RichText = true,
     })
@@ -129,7 +130,6 @@ local onConfigureGameClicked = function(tableId: CommonTypes.TableId)
     local tableDescription = TableDescriptions.getTableDescription(tableId)
 
     GameConfigDialog.setGameConfig(tableDescription, function(nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions)
-        Utils.debugPrint("GameConfig", "Doug calling setTableGameOptions with nonDefaultGameOptions = ", nonDefaultGameOptions)
         ClientEventManagement.setTableGameOptions(tableId, nonDefaultGameOptions)
     end)
 end
@@ -140,7 +140,7 @@ local addTableControls = function (frame: Frame, tableDescription: CommonTypes.T
         horizontalAlignment = Enum.HorizontalAlignment.Center,
         uiListLayoutPadding = UDim.new(0, GuiConstants.buttonsUIListLayoutPadding),
     }
-    controlsRowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Controls",rowOptions)
+    controlsRowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_TableWaitingControls",rowOptions)
 
     local tableId = tableDescription.tableId
 
@@ -220,10 +220,10 @@ TableWaitingUI.build = function(tableId: CommonTypes.TableId)
 
     -- Make a row for members (players who have joined), invites (players invited who have not yet joined)
     -- but do not fill in as this info will change: we set this in update function.
-    membersRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_Members", "Members: ", GuiConstants.userLabelHeight)
+    membersRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_Members", "Members: ", GuiConstants.userWidgetHeight)
 
     if not tableDescription.isPublic then
-        invitesRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_Invites", "Invites: ", GuiConstants.userLabelHeight)
+        invitesRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_Invites", "Invites: ", GuiConstants.userWidgetHeight)
     end
 
     addTableControls(mainFrame, tableDescription, isHost)
@@ -254,6 +254,14 @@ local updateGameOptions = function(parentOfRow: Frame, tableDescription: CommonT
     GuiUtils.updateTextLabel(gameOptionsTextLabel, selectedOptionsString)
 end
 
+local addMemberUserNullStaticWidget = function(parent: Frame)
+    print("Doug: addMemberUserNullStaticWidget GuiConstants.userWidgetSize = ", GuiConstants.userWidgetSize)
+    return GuiUtils.addNullStaticWidget(parent, GuiUtils.italicize("No players have joined yet."), {
+        Size = GuiConstants.userWidgetSize,
+        BackgroundColor3 = GuiConstants.userLabelBackgroundColor,
+    })
+end
+
 local updateMembers = function(isHost: boolean, localUserId: CommonTypes.UserId, tableDescription: CommonTypes.TableDescription)
     assert(membersRowContent, "Should have a rowContent")
     assert(localUserId, "Should have a localUserId")
@@ -280,7 +288,7 @@ local updateMembers = function(isHost: boolean, localUserId: CommonTypes.UserId,
             DialogUtils.showConfirmationDialog(title, desc, function()
                     ClientEventManagement.removeGuestFromTable(tableId, userId)
                 end)
-        end)
+        end )
     end
 
     -- We don't want to display the host as a member, remove him.
@@ -290,12 +298,15 @@ local updateMembers = function(isHost: boolean, localUserId: CommonTypes.UserId,
     table.insert(memberUserIds, 1, tableDescription.hostUserId)
 
     UserGuiUtils.updateUserRowContent(membersRowContent, TableWaitingUI.justBuilt, memberUserIds, canRemoveGuest,
-        removeGuestCallback, function(parent)
-            GuiUtils.addNullLabel(parent, "<i>No players have joined yet.</i>", {
-                Size = UDim2.fromOffset(GuiConstants.userLabelWidth, GuiConstants.userLabelHeight),
-                BackgroundColor3 = GuiConstants.userLabelBackgroundColor,
-            })
-        end, GuiUtils.removeNullLabel)
+        removeGuestCallback, addMemberUserNullStaticWidget, GuiUtils.removeNullStaticWidget)
+end
+
+local function addInvitedUserNullStaticWidget (parent)
+    print("Doug: addUserStaticInContainer GuiConstants.addInvitedUserNullStaticWidget = ", GuiConstants.userWidgetSize)
+    return GuiUtils.addNullStaticWidget(parent, GuiUtils.italicize(">No outstanding invitations."), {
+        Size = GuiConstants.userWidgetSize,
+        BackgroundColor3 = GuiConstants.userLabelBackgroundColor,
+    })
 end
 
 local updateInvites = function(isHost: boolean, tableDescription: CommonTypes.TableDescription)
@@ -324,14 +335,8 @@ local updateInvites = function(isHost: boolean, tableDescription: CommonTypes.Ta
                 ClientEventManagement.removeInviteForTable(tableId, userId)
             end)
     end
-
-    UserGuiUtils.updateUserRowContent(invitesRowContent, TableWaitingUI.justBuilt, Cryo.Dictionary.keys(tableDescription.invitedUserIds),
-        canRemoveInvite, removeInviteCallback, function(parent)
-            GuiUtils.addNullLabel(parent, "<i>No outstanding invitations.</i>", {
-                Size = UDim2.fromOffset(GuiConstants.userLabelWidth, GuiConstants.userLabelHeight),
-                BackgroundColor3 = GuiConstants.userLabelBackgroundColor,
-            })
-        end, GuiUtils.removeNullLabel)
+        UserGuiUtils.updateUserRowContent(invitesRowContent, TableWaitingUI.justBuilt, Cryo.Dictionary.keys(tableDescription.invitedUserIds),
+          canRemoveInvite, removeInviteCallback, addInvitedUserNullStaticWidget, GuiUtils.removeNullStaticWidget)
 end
 
 local updateTableControls = function(tableDescription: CommonTypes.TableDescription, isHost: boolean)

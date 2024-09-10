@@ -60,7 +60,9 @@ local _makeCustomDialogContent = function(parent: Frame, gameDetails: CommonType
             local currentValue = nonDefaultGameOptions[gameOption.gameOptionId] or 1
                 local optionStrings = {}
                 for _, variant in gameOption.opt_variants do
-                    local optionString = string.format("<b>%s</b>: <i>%s</i>", variant.name, variant.description)
+                    local key = GuiUtils.bold(variant.name)
+                    local value = GuiUtils.italicize(variant.description)
+                    local optionString = key .. ": " .. value
                     table.insert(optionStrings, optionString)
                 end
 

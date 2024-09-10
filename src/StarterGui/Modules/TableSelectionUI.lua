@@ -23,13 +23,28 @@ local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescrip
 local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
 local TableConfigDialog = require(RobloxBoardGameStarterGui.Modules.TableConfigDialog)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
+local TableGuiUtils= require(RobloxBoardGameStarterGui.Modules.TableGuiUtils)
 
 local TableSelectionUI = {}
 
 local makeWidgetContainerForTable = function(parent: Frame, tableId: CommonTypes.TableId): Frame
-    return GuiUtils.addTableButtonWidgetContainer(parent, tableId, function()
+    return TableGuiUtils.addTableButtonWidgetContainer(parent, tableId, function()
         ClientEventManagement.joinTable(tableId)
     end)
+end
+
+local function addInviteTableNullStaticWidget(parent: Frame)
+    return GuiUtils.addNullStaticWidget(parent, GuiUtils.italicize("No table invites"), {
+        Size = GuiConstants.tableWidgetSize,
+        BackgroundColor3 = GuiConstants.tableLabelBackgroundColor,
+    })
+end
+
+local function addPublicTableNullStaticWidget(parent: Frame)
+    return GuiUtils.addNullStaticWidget(parent, GuiUtils.italicize("No public tables"), {
+        Size = GuiConstants.tableWidgetSize,
+        BackgroundColor3 = GuiConstants.tableLabelBackgroundColor,
+    })
 end
 
 local function updateInvitedTables(mainFrame: GuiObject)
@@ -40,12 +55,7 @@ local function updateInvitedTables(mainFrame: GuiObject)
     assert(invitedRowContent, "Should have an invitedRowContent")
     local tableIdsForInvitedWaitingTables = TableDescriptions.getTableIdsForInvitedWaitingTables(localUserId)
 
-    GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, makeWidgetContainerForTable, function(parent)
-        GuiUtils.addNullLabel(parent, "<i>No table invites</i>", {
-            Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableLabelHeight),
-            BackgroundColor3 = GuiConstants.tableLabelBackgroundColor,
-        })
-    end, GuiUtils.removeNullLabel)
+    GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, makeWidgetContainerForTable, addInviteTableNullStaticWidget, GuiUtils.removeNullStaticWidget)
 end
 
 local function updatePublicTables(mainFrame: GuiObject)
@@ -56,12 +66,7 @@ local function updatePublicTables(mainFrame: GuiObject)
     assert(publicRowContent, "Should have an publicRowContent")
     local tableIdsForPublicWaitingTables = TableDescriptions.getTableIdsForPublicWaitingTables(localUserId)
 
-    GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, makeWidgetContainerForTable, function(parent)
-        GuiUtils.addNullLabel(parent, "<i>No public tables</i>", {
-            Size = UDim2.fromOffset(GuiConstants.tableWidgeWidth, GuiConstants.tableLabelHeight),
-            BackgroundColor3 = GuiConstants.tableLabelBackgroundColor,
-        })
-    end, GuiUtils.removeNullLabel)
+    GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, makeWidgetContainerForTable, addPublicTableNullStaticWidget, GuiUtils.removeNullStaticWidget)
 end
 
 --[[
@@ -94,7 +99,7 @@ TableSelectionUI.build = function()
         horizontalAlignment = Enum.HorizontalAlignment.Center,
         uiListLayoutPadding = UDim.new(0, GuiConstants.buttonsUIListLayoutPadding),
     }
-    local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_Controls", rowOptions)
+    local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_TableSelectionControls", rowOptions)
     GuiUtils.addTextButtonInContainer(rowContent, "Host a new Table", function()
         -- user must select a game and whether it is public or invite-only.
         TableConfigDialog.makeGameSelectionDialog(function(gameId, isPublic)
@@ -103,8 +108,8 @@ TableSelectionUI.build = function()
         end)
     end)
 
-    GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_InvitedTables", "Open Invitations:", GuiConstants.tableLabelHeight)
-    GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_PublicTables", "Public Tables:", GuiConstants.tableLabelHeight)
+    GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_InvitedTables", "Open Invitations:", GuiConstants.tableWidgetHeight)
+    GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_PublicTables", "Public Tables:", GuiConstants.tableWidgetHeight)
 end
 
 -- update ui elements for the table creation/selection ui.

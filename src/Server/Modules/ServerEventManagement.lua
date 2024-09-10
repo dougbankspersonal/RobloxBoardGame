@@ -259,9 +259,7 @@ ServerEventManagement.createClientToServerEvents = function()
 
     -- Event to update game options.
     createGameTableRemoteEvent("SetTableGameOptions", function(player, gameTable, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions)
-        Utils.debugPrint("GameConfig", "Doug Server SetTableGameOptions with nonDefaultGameOptions = ", nonDefaultGameOptions)
         if gameTable:updateGameOptions(player.UserId, nonDefaultGameOptions) then
-            Utils.debugPrint("GameConfig", "Doug Server SetTableGameOptions success tableDescription = ", gameTable:getTableDescription())
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end
     end)
@@ -292,9 +290,7 @@ ServerEventManagement.createClientToServerEvents = function()
 
     -- Event for host to end a game early.
     createGameTableRemoteEvent("EndGameEarly", function(player, gameTable)
-        Utils.debugPrint("GameConfig", "Doug Server EndGameEarly")
         if gameTable:endGameEarly(player.UserId) then
-            Utils.debugPrint("GameConfig", "Doug Server EndGameEarly success tableDescription = ", gameTable:getTableDescription())
             sendToAllPlayers("HostAbortedGame", gameTable:getTableDescription().tableId)
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end

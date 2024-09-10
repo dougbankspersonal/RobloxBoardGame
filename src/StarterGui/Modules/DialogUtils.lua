@@ -23,7 +23,6 @@ export type DialogConfig = {
     makeCustomDialogContent: ((parent: Frame) -> nil)?,
 }
 
-
 DialogUtils.getDialogBackground = function(): Frame?
     local mainScreenGui = GuiUtils.getMainScreenGui()
     assert(mainScreenGui, "ScreenGui not found")
@@ -40,7 +39,7 @@ end
 
 -- Throw up a dialog using the given config.
 -- Clicking any button in the config will kill the dialog and hit the associated callback.
-DialogUtils.makeDialog = function(dialogConfig: DialogUtils.DialogConfig): Frame?
+DialogUtils.makeDialog = function(dialogConfig: DialogConfig): Frame?
     local mainScreenGui = GuiUtils.getMainScreenGui()
 
     -- Can't have two dialogs up at once.
@@ -109,7 +108,7 @@ DialogUtils.makeDialog = function(dialogConfig: DialogUtils.DialogConfig): Frame
 
     local titleContent = GuiUtils.addRowAndReturnRowContent(dialogContentFrame, "Row_Title")
 
-    local title = GuiUtils.addTextLabel(titleContent, "<b>" .. dialogConfig.title .. "</b>", {RichText = true})
+    local title = GuiUtils.addTextLabel(titleContent, GuiUtils.bold(dialogConfig.title), {RichText = true})
     title.TextSize = GuiConstants.dialogTitleFontSize
 
     local descriptionContent = GuiUtils.addRowAndReturnRowContent(dialogContentFrame, "Row_Description")
@@ -134,7 +133,7 @@ DialogUtils.makeDialog = function(dialogConfig: DialogUtils.DialogConfig): Frame
             uiListLayoutPadding = UDim.new(0, GuiConstants.buttonsUIListLayoutPadding),
         }
 
-        local controlsContent = GuiUtils.addRowAndReturnRowContent(dialogContentFrame, "Row_Controls", rowOptions)
+        local controlsContent = GuiUtils.addRowAndReturnRowContent(dialogContentFrame, "Row_DialogControls", rowOptions)
 
         Utils.debugPrint("Layout", "Doug: dialogConfig.dialogButtonConfigs = ", dialogConfig.dialogButtonConfigs)
         for _, dialogButtonConfig in ipairs(dialogConfig.dialogButtonConfigs) do
@@ -168,7 +167,7 @@ DialogUtils.makeDialog = function(dialogConfig: DialogUtils.DialogConfig): Frame
 end
 
 DialogUtils.showConfirmationDialog = function(title: string, description: string, onConfirm: () -> nil): Frame?
-    local dialogButtonConfigs = {} :: {DialogUtils.DialogButtonConfig}
+    local dialogButtonConfigs = {} :: {DialogButtonConfig}
     table.insert(dialogButtonConfigs, {
         text = "Cancel",
     })
@@ -181,12 +180,12 @@ DialogUtils.showConfirmationDialog = function(title: string, description: string
         title = title,
         description = description,
         dialogButtonConfigs = dialogButtonConfigs,
-    } :: DialogUtils.DialogConfig
+    } :: DialogConfig
 
     return DialogUtils.makeDialog(dialogConfig)
 end
 DialogUtils.showAckDialog = function(title: string, description: string): Frame?
-    local dialogButtonConfigs = {} :: {DialogUtils.DialogButtonConfig}
+    local dialogButtonConfigs = {} :: {DialogButtonConfig}
     table.insert(dialogButtonConfigs, {
         text = "OK",
     })
@@ -195,7 +194,7 @@ DialogUtils.showAckDialog = function(title: string, description: string): Frame?
         title = title,
         description = description,
         dialogButtonConfigs = dialogButtonConfigs,
-    } :: DialogUtils.DialogConfig
+    } :: DialogConfig
 
     return DialogUtils.makeDialog(dialogConfig)
 end
