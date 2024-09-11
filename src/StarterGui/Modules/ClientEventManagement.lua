@@ -36,10 +36,10 @@ end
 local setupMockEventFunctions = function()
     assert(RunService:IsStudio(), "setupMockEventFunctions should only be called in Studio")
 
-    ClientEventManagement.mockTable = function(isPublic: boolean, alreadyJoined: boolean)
+    ClientEventManagement.mockTable = function(isPublic: boolean, joined: boolean, isHost: boolean)
         local event = ReplicatedStorage.TableEvents:WaitForChild("MockTable")
         assert(event, "MockTable event missing")
-        event:FireServer(isPublic, alreadyJoined)
+        event:FireServer(isPublic, joined, isHost)
     end
 
     ClientEventManagement.destroyAllMockTables = function()

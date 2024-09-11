@@ -45,7 +45,6 @@ export type GameTable = {
     getTableDescription: (self: GameTable) -> CommonTypes.TableDescription,
     getTableId: (self: GameTable) -> CommonTypes.TableId,
     getGameId: (self: GameTable) -> CommonTypes.GameId,
-
     -- non-const functions.  Each returns true iff something changed.
     destroyTable: (self: GameTable, userIds: {CommonTypes.UserId}) -> boolean,
     joinTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,

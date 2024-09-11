@@ -29,7 +29,7 @@ local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
 local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
 local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
-local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
+local ClientTableDescriptions = require(RobloxBoardGameStarterGui.Modules.ClientTableDescriptions)
 local FriendSelectionDialog = require(RobloxBoardGameStarterGui.Modules.FriendSelectionDialog)
 local GameConfigDialog = require(RobloxBoardGameStarterGui.Modules.GameConfigDialog)
 local UserGuiUtils = require(RobloxBoardGameStarterGui.Modules.UserGuiUtils)
@@ -104,7 +104,7 @@ local onManageInvitesClicked = function(tableId: CommonTypes.TableId)
     assert(tableId, "Should have a tableId")
     Utils.debugPrint("Friends", "Doug: tableId = ", tableId)
 
-    local tableDescription = TableDescriptions.getTableDescription(tableId)
+    local tableDescription = ClientTableDescriptions.getTableDescription(tableId)
     local inviteeIds = Cryo.Dictionary.keys(tableDescription.invitedUserIds)
 
     Utils.debugPrint("Friends", "Doug: inviteeIds = ", inviteeIds)
@@ -127,7 +127,7 @@ end
 local onConfigureGameClicked = function(tableId: CommonTypes.TableId)
     assert(tableId, "Should have a tableId")
 
-    local tableDescription = TableDescriptions.getTableDescription(tableId)
+    local tableDescription = ClientTableDescriptions.getTableDescription(tableId)
 
     GameConfigDialog.setGameConfig(tableDescription, function(nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions)
         ClientEventManagement.setTableGameOptions(tableId, nonDefaultGameOptions)
@@ -198,7 +198,7 @@ TableWaitingUI.build = function(tableId: CommonTypes.TableId)
     local localUserId = game.Players.LocalPlayer.UserId
     assert(localUserId, "Should have a localUserId")
 
-    local tableDescription = TableDescriptions.getTableDescription(tableId)
+    local tableDescription = ClientTableDescriptions.getTableDescription(tableId)
     assert(tableDescription, "Should have a tableDescription")
     local isHost = localUserId == tableDescription.hostUserId
 
@@ -208,7 +208,9 @@ TableWaitingUI.build = function(tableId: CommonTypes.TableId)
     local mainFrame = GuiUtils.getMainFrame()
     assert(mainFrame, "MainFrame not found")
 
-    GuiUtils.addUIGradient(mainFrame, GuiConstants.whiteToBlueColorSequence)
+    mainFrame.BackgroundColor3 = GuiConstants.tableWaitingBackgroundColor
+    GuiUtils.addUIGradient(mainFrame, GuiConstants.standardMainScreenColorSequence)
+
     GuiUtils.addStandardMainFramePadding(mainFrame)
     GuiUtils.addLayoutOrderGenerator(mainFrame)
     GuiUtils.addUIListLayout(mainFrame, {
@@ -258,7 +260,6 @@ local addMemberUserNullStaticWidget = function(parent: Frame)
     print("Doug: addMemberUserNullStaticWidget GuiConstants.userWidgetSize = ", GuiConstants.userWidgetSize)
     return GuiUtils.addNullStaticWidget(parent, GuiUtils.italicize("No players have joined yet."), {
         Size = GuiConstants.userWidgetSize,
-        BackgroundColor3 = GuiConstants.userLabelBackgroundColor,
     })
 end
 
@@ -302,10 +303,8 @@ local updateMembers = function(isHost: boolean, localUserId: CommonTypes.UserId,
 end
 
 local function addInvitedUserNullStaticWidget (parent)
-    print("Doug: addUserStaticInContainer GuiConstants.addInvitedUserNullStaticWidget = ", GuiConstants.userWidgetSize)
-    return GuiUtils.addNullStaticWidget(parent, GuiUtils.italicize(">No outstanding invitations."), {
+    return GuiUtils.addNullStaticWidget(parent, GuiUtils.italicize("No outstanding invitations."), {
         Size = GuiConstants.userWidgetSize,
-        BackgroundColor3 = GuiConstants.userLabelBackgroundColor,
     })
 end
 
@@ -366,7 +365,7 @@ local updateTableControls = function(tableDescription: CommonTypes.TableDescript
 end
 
 TableWaitingUI.update = function()
-    local tableDescription = TableDescriptions.getTableWithUserId(game.Players.LocalPlayer.UserId)
+    local tableDescription = ClientTableDescriptions.getTableWithUserId(game.Players.LocalPlayer.UserId)
     -- Make sure we have all the stuff we need.
     assert(tableDescription, "Should have a tableDescription")
     local mainFrame = GuiUtils.getMainFrame()

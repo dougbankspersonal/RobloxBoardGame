@@ -24,7 +24,7 @@ local LoadingUI = require(RobloxBoardGameStarterGui.Modules.LoadingUI)
 local TableSelectionUI = require(RobloxBoardGameStarterGui.Modules.TableSelectionUI)
 local TableWaitingUI = require(RobloxBoardGameStarterGui.Modules.TableWaitingUI)
 local TablePlayingUI = require(RobloxBoardGameStarterGui.Modules.TablePlayingUI)
-local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
+local ClientTableDescriptions = require(RobloxBoardGameStarterGui.Modules.ClientTableDescriptions)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
 local ClientEventManagement= require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
@@ -67,6 +67,18 @@ local summonMocksDialog = function(): Frame?
             text = "Mock Private Table (joined)",
             callback = function()
                 ClientEventManagement.mockTable(false, true)
+            end,
+        } :: DialogUtils.DialogButtonConfig,
+        {
+            text = "Mock Public Table (hosted)",
+            callback = function()
+                ClientEventManagement.mockTable(true, true, true)
+            end,
+        } :: DialogUtils.DialogButtonConfig,
+        {
+            text = "Mock Private Table (hosted)",
+            callback = function()
+                ClientEventManagement.mockTable(false, true, true)
             end,
         } :: DialogUtils.DialogButtonConfig,
         {
@@ -122,12 +134,25 @@ local summonMocksDialog = function(): Frame?
     return DialogUtils.makeDialog(dialogConfig)
 end
 
-GuiMain.makeContaintingScrollingFrame = function()
+GuiMain.makeUberBackground = function(parent: Instance)
+    local backgroundScreenGui = Instance.new("ScreenGui")
+    backgroundScreenGui.Name = "BackgroundScreenGui"
+    backgroundScreenGui.Parent = parent
+    backgroundScreenGui.DisplayOrder = 0
+    backgroundScreenGui.IgnoreGuiInset = true
+
+    local uberBackground = Instance.new("Frame")
+    uberBackground.Name = "UberBackground"
+    uberBackground.Parent = backgroundScreenGui
+    uberBackground.Size = UDim2.new(1, 0, 1, 0)
+    uberBackground.BackgroundColor3 = GuiConstants.uberBackgroundColor
+end
+
+GuiMain.makeContainingScrollingFrame = function()
     local mainScreenGui = GuiUtils.getMainScreenGui()
     assert(mainScreenGui, "Should have a mainScreenGui")
 
     local containingScrollingFrame = Instance.new("ScrollingFrame")
-    containingScrollingFrame.Size = UDim2.fromScale(1, 1)
     containingScrollingFrame.BackgroundColor3 = Color3.new(1, 1, 1)
     containingScrollingFrame.Parent = mainScreenGui
     containingScrollingFrame.Name = GuiConstants.containingScrollingFrameName
@@ -136,6 +161,8 @@ GuiMain.makeContaintingScrollingFrame = function()
     containingScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     containingScrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
     containingScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(0.5, 0.5, 0.5)
+    containingScrollingFrame.Position = UDim2.fromOffset(0, GuiConstants.robloxTopBarBottomPadding)
+    containingScrollingFrame.Size = UDim2.new(1, 0, 1, -GuiConstants.robloxTopBarBottomPadding)
 
     return containingScrollingFrame
 end
@@ -163,7 +190,7 @@ GuiMain.makeMainFrame = function(): Frame
 end
 
 local function setCurrentTableAndUIMode()
-    currentTableDescription = TableDescriptions.getTableWithUserId(localUserId)
+    currentTableDescription = ClientTableDescriptions.getTableWithUserId(localUserId)
 
     -- The local player is not part of any table: we show them the "select/create table" UI.
     if not currentTableDescription then
@@ -263,22 +290,22 @@ GuiMain.onTableCreated = function(tableDescription: CommonTypes.TableDescription
     assert(typeof(tableDescription) == "table", "tableDescription must be a table")
 
     -- Sending table description from server to client messes with some types. Fix it.
-    tableDescription = TableDescriptions.cleanUpTypes(tableDescription)
-    TableDescriptions.addTableDescription(tableDescription)
+    tableDescription = ClientTableDescriptions.cleanUpTypes(tableDescription)
+    ClientTableDescriptions.addTableDescription(tableDescription)
     GuiMain.updateUI()
 end
 
 GuiMain.onTableDestroyed = function(tableId: CommonTypes.TableId)
-    if TableDescriptions.localPlayerIsAtTable(tableId) then
+    if ClientTableDescriptions.localPlayerIsAtTable(tableId) then
         -- If this was your table, throw up a dialog.
         -- Not if you are the host (if you're the host you did this yourself, already know).
-        local tableDescription = TableDescriptions.getTableDescription(tableId)
+        local tableDescription = ClientTableDescriptions.getTableDescription(tableId)
         assert(tableDescription, "Should have a tableDescription")
         if tableDescription.hostUserId ~= localUserId then
             DialogUtils.showAckDialog("Table Destroyed", "The table you were at has been destroyed.")
         end
     end
-    TableDescriptions.removeTableDescription(tableId)
+    ClientTableDescriptions.removeTableDescription(tableId)
     GuiMain.updateUI()
 end
 
@@ -286,12 +313,12 @@ end
 -- Host may be prompted to do something about it.
 GuiMain.onPlayerLeftTable = function(tableId: CommonTypes.TableId, userId: CommonTypes.UserId)
     -- Non-table members don't care.
-    if not TableDescriptions.localPlayerIsAtTable(tableId) then
+    if not ClientTableDescriptions.localPlayerIsAtTable(tableId) then
         return
     end
 
     -- We only really care if the game is playing.
-    local tableDescription = TableDescriptions.getTableDescription(tableId)
+    local tableDescription = ClientTableDescriptions.getTableDescription(tableId)
     if tableDescription.gameTableState ~= GameTableStates.Playing then
         return
     end
@@ -315,12 +342,12 @@ end
 -- Doesn't change state: just an opportunity for to update users on what happened.
 GuiMain.onHostAbortedGame = function(tableId: CommonTypes.TableId)
     -- Non-table members don't care.
-    if not TableDescriptions.localPlayerIsAtTable(tableId) then
+    if not ClientTableDescriptions.localPlayerIsAtTable(tableId) then
         return
     end
     -- If this was your table, throw up a dialog.
     -- Not if you are the host (if you're the host you did this yourself, already know).
-    local tableDescription = TableDescriptions.getTableDescription(tableId)
+    local tableDescription = ClientTableDescriptions.getTableDescription(tableId)
     assert(tableDescription, "Should have a tableDescription")
     if tableDescription.hostUserId ~= localUserId then
         -- If you were at the table, throw up a dialog.
@@ -330,9 +357,9 @@ end
 
 GuiMain.onTableUpdated = function(tableDescription: CommonTypes.TableDescription)
     -- Sending table description from server to client messes with some types. Fix it.
-    tableDescription = TableDescriptions.cleanUpTypes(tableDescription)
+    tableDescription = ClientTableDescriptions.cleanUpTypes(tableDescription)
 
-    TableDescriptions.updateTableDescription(tableDescription)
+    ClientTableDescriptions.updateTableDescription(tableDescription)
     GuiMain.updateUI()
 end
 

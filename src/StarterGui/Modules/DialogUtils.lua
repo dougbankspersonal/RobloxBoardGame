@@ -51,7 +51,8 @@ DialogUtils.makeDialog = function(dialogConfig: DialogConfig): Frame?
 
     -- Make it a text button so it soaks up input.
     local dialogBackground = Instance.new("TextButton")
-    dialogBackground.Size = UDim2.fromScale(1, 1)
+    dialogBackground.Position = UDim2.fromOffset(0, GuiConstants.robloxTopBarBottomPadding)
+    dialogBackground.Size = UDim2.new(1, 0, 1, -GuiConstants.robloxTopBarBottomPadding)
     dialogBackground.BackgroundColor3 = Color3.new(0, 0, 0)
     dialogBackground.BackgroundTransparency = 0.5
     dialogBackground.Parent = mainScreenGui
@@ -78,7 +79,7 @@ DialogUtils.makeDialog = function(dialogConfig: DialogConfig): Frame?
     dialog.Name = GuiConstants.dialogName
     dialog.BorderSizePixel = 0
     dialog.ZIndex = GuiConstants.dialogZIndex
-    GuiUtils.addUIGradient(dialog, GuiConstants.whiteToBlueColorSequence)
+    GuiUtils.addUIGradient(dialog, GuiConstants.standardMainScreenColorSequence)
     GuiUtils.addCorner(dialog)
 
     -- A separate frame for content since the cancel button ignores UIListLayout.
@@ -93,7 +94,7 @@ DialogUtils.makeDialog = function(dialogConfig: DialogConfig): Frame?
     dialogContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     dialogContentFrame.CanvasSize = UDim2.fromScale(0, 0)
 
-    GuiUtils.addPadding(dialogContentFrame, {
+    GuiUtils.addUIPadding(dialogContentFrame, {
         PaddingLeft = UDim.new(0, GuiConstants.dialogToContentPadding),
         PaddingRight = UDim.new(0, GuiConstants.dialogToContentPadding),
         PaddingTop = UDim.new(0, GuiConstants.dialogToContentPadding),

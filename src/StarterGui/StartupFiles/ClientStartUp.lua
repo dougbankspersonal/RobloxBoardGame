@@ -12,8 +12,9 @@ local RobloxBoardGameStarterGui = script.Parent.Parent
 local GuiMain = require(RobloxBoardGameStarterGui.Modules.GuiMain)
 local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
 local GameUIs = require(RobloxBoardGameStarterGui.Globals.GameUIs)
-local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
+local ClientTableDescriptions = require(RobloxBoardGameStarterGui.Modules.ClientTableDescriptions)
 local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
+local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 
 -- 3d avatar is irrelevant for this game.
 local function turnOffPlayerControls()
@@ -56,13 +57,20 @@ ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId
     GameDetails.setAllGameDetails(gameDetailsByGameId)
     GameUIs.setAllGameUIs(gameUIsByGameId)
 
-    screenGui.IgnoreGuiInset = true
+
+    -- make a background screenGui to hide the 3d world.
+    GuiMain.makeUberBackground(screenGui.Parent)
+
+    screenGui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
+    screenGui.DisplayOrder = 1
+
     configureForBoardGames()
 
     GuiUtils.setMainScreenGui(screenGui)
 
     GuiMain.addMocksButton(screenGui)
-    GuiMain.makeContaintingScrollingFrame()
+
+    GuiMain.makeContainingScrollingFrame()
     GuiMain.makeMainFrame()
 
     -- Show a loading screen while we fetch data from backend.
@@ -81,7 +89,7 @@ ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId
 
     task.spawn(function()
         local tableDescriptionsByTableId = ClientEventManagement.fetchTableDescriptionsByTableIdAsync()
-        TableDescriptions.setTableDescriptions(tableDescriptionsByTableId)
+        ClientTableDescriptions.setTableDescriptions(tableDescriptionsByTableId)
         GuiMain.updateUI()
     end)
 end

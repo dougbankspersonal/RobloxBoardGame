@@ -9,6 +9,7 @@ local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
+local TableDescription = require(RobloxBoardGameShared.Modules.TableDescription)
 
 local Cryo = require(ReplicatedStorage.Cryo)
 
@@ -94,6 +95,20 @@ local function makeFetchTableDescriptionsByTableIdRemoteFunction()
     end
 end
 
+
+local mockInviteAndPossiblyAddUser = function(gameTable:GameTable, userId: UserId, shouldJoin: boolean)
+    -- If not public, invite the player who sent the mock.
+    if not gameTable.tableDescription.isPublic then
+        local success = gameTable:inviteToTable(gameTable.tableDescription.hostUserId, userId)
+        assert(success, "Should have been able to invite")
+    end
+
+    if shouldJoin then
+        local success = gameTable:joinTable(userId)
+        assert(success, "Should have been able to join")
+    end
+end
+
 local function addMockEventHandlers()
     assert(RunService:IsStudio(), "Should only be run in Studio")
 
@@ -150,32 +165,44 @@ local function addMockEventHandlers()
     end)
 
     -- Make a mock table.
-    createRemoteEvent("TableEvents", "MockTable", function(player, isPublic, joined)
+    createRemoteEvent("TableEvents", "MockTable", function(player: Player, isPublic: boolean, shouldJoin: boolean, isHost: boolean)
         Utils.debugPrint("Mocks", "Doug; Mocking Table")
         -- Make a random table.
         -- Get a random game id.
         local gameDetailsByGameId = GameDetails.getAllGameDetails()
         local gameId = Utils.getRandomKey(gameDetailsByGameId)
 
-        local mockUserId = getNextMockUserId()
-        local gameTable = GameTable.createNewTable(mockUserId, gameId, isPublic)
+        local hostUserId
+        if isHost then
+            hostUserId = player.UserId
+        else
+            hostUserId = getNextMockUserId()
+        end
+        local gameTable = GameTable.createNewTable(hostUserId, gameId, isPublic)
         if not gameTable then
             Utils.debugPrint("Mocks", "Doug; Mocking Table: no table")
             return
         end
 
-        -- If not public, invite the player who sent the mock.
-        if not isPublic then
-            gameTable:inviteToTable(mockUserId, player.UserId)
-        end
-
-        if joined then
-            gameTable:joinTable(player.UserId)
+        if not isHost then
+            mockInviteAndPossiblyAddUser(gameTable, player.UserId, shouldJoin)
         end
 
         gameTable.isMock = true
 
         local tableDescription = gameTable:getTableDescription()
+
+        -- Add random people up to seating limit.
+        local gameDetails = GameDetails.getGameDetails(gameTable.tableDescription.gameId)
+        local openSlots = gameDetails.maxPlayers - TableDescription.getNumberOfPlayersAtTable(tableDescription)
+        -- If the party in question has not joined, leave an extra seat.
+        if not shouldJoin then
+            openSlots = openSlots - 1
+        end
+
+        for i = 1, openSlots do
+            mockInviteAndPossiblyAddUser(gameTable, getNextMockUserId(), true)
+        end
 
         Utils.debugPrint("Mocks", "Doug; Mocking Table: broadcasting TableCreated tableDescription = ", tableDescription)
 

@@ -37,7 +37,7 @@ local _makeCustomDialogContent = function(parent: Frame, gameDetails: CommonType
 
         local rowContent = GuiUtils.addRowAndReturnRowContent(parent, gameOption.gameOptionId, rowOptions)
 
-        GuiUtils.addPadding(rowContent.Parent, {
+        GuiUtils.addUIPadding(rowContent.Parent, {
             PaddingTop = UDim.new(0, 10),
             PaddingBottom = UDim.new(0, 10),
         })

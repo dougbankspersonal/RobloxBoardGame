@@ -16,7 +16,7 @@ PlayerUtils.getNameAsync = function(userId: CommonTypes.UserId): string
     end
 
     local mappedId = Utils.debugMapUserId(userId)
-    local name = Players: GetNameFromUserIdAsync(mappedId)
+    local name = Players:GetNameFromUserIdAsync(mappedId)
     userIdToName[userId] = name
     return name
 end

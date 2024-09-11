@@ -19,7 +19,7 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
-local TableDescriptions = require(RobloxBoardGameStarterGui.Modules.TableDescriptions)
+local ClientTableDescriptions = require(RobloxBoardGameStarterGui.Modules.ClientTableDescriptions)
 local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
 local TableConfigDialog = require(RobloxBoardGameStarterGui.Modules.TableConfigDialog)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
@@ -36,14 +36,12 @@ end
 local function addInviteTableNullStaticWidget(parent: Frame)
     return GuiUtils.addNullStaticWidget(parent, GuiUtils.italicize("No table invites"), {
         Size = GuiConstants.tableWidgetSize,
-        BackgroundColor3 = GuiConstants.tableLabelBackgroundColor,
     })
 end
 
 local function addPublicTableNullStaticWidget(parent: Frame)
     return GuiUtils.addNullStaticWidget(parent, GuiUtils.italicize("No public tables"), {
         Size = GuiConstants.tableWidgetSize,
-        BackgroundColor3 = GuiConstants.tableLabelBackgroundColor,
     })
 end
 
@@ -53,7 +51,7 @@ local function updateInvitedTables(mainFrame: GuiObject)
 
     local invitedRowContent = GuiUtils.getRowContent(mainFrame, "Row_InvitedTables")
     assert(invitedRowContent, "Should have an invitedRowContent")
-    local tableIdsForInvitedWaitingTables = TableDescriptions.getTableIdsForInvitedWaitingTables(localUserId)
+    local tableIdsForInvitedWaitingTables = ClientTableDescriptions.getTableIdsForInvitedWaitingTables(localUserId)
 
     GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, makeWidgetContainerForTable, addInviteTableNullStaticWidget, GuiUtils.removeNullStaticWidget)
 end
@@ -64,7 +62,7 @@ local function updatePublicTables(mainFrame: GuiObject)
 
     local publicRowContent = GuiUtils.getRowContent(mainFrame, "Row_PublicTables")
     assert(publicRowContent, "Should have an publicRowContent")
-    local tableIdsForPublicWaitingTables = TableDescriptions.getTableIdsForPublicWaitingTables(localUserId)
+    local tableIdsForPublicWaitingTables = ClientTableDescriptions.getTableIdsForPublicWaitingTables(localUserId)
 
     GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, makeWidgetContainerForTable, addPublicTableNullStaticWidget, GuiUtils.removeNullStaticWidget)
 end
@@ -85,7 +83,9 @@ TableSelectionUI.build = function()
     local mainFrame = GuiUtils.getMainFrame()
     assert(mainFrame, "MainFrame not found")
 
-    GuiUtils.addUIGradient(mainFrame, GuiConstants.whiteToBlueColorSequence)
+    mainFrame.BackgroundColor3 = GuiConstants.tableSelectionBackgroundColor
+    GuiUtils.addUIGradient(mainFrame, GuiConstants.standardMainScreenColorSequence)
+
     GuiUtils.addStandardMainFramePadding(mainFrame)
     GuiUtils.addLayoutOrderGenerator(mainFrame)
 
@@ -108,7 +108,7 @@ TableSelectionUI.build = function()
         end)
     end)
 
-    GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_InvitedTables", "Open Invitations:", GuiConstants.tableWidgetHeight)
+    GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_InvitedTables", "Private Tables:", GuiConstants.tableWidgetHeight)
     GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_PublicTables", "Public Tables:", GuiConstants.tableWidgetHeight)
 end
 

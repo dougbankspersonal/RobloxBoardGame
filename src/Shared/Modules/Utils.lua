@@ -15,19 +15,20 @@ local Cryo = require(ReplicatedStorage.Cryo)
 local Utils = {}
 
 local debugPrintEnabledLabels = {
-    Buttons = false,
+    Buttons = true,
     Friends = false,
     GameConfig = false,
+    GameInstance = true,
     GameMetadata = false,
     InviteToTable = false,
     Layout = false,
     Mocks = false,
     RemoveInvite = false,
     Sound = false,
-    TableDescriptions = false,
+    ClientTableDescriptions = false,
     TablePlaying = false,
     TableUpdated = false,
-    UserLayout = true,
+    UserLayout = false,
 }
 
 -- String starts with given start.
@@ -62,16 +63,34 @@ Utils.tableSize = function(table: {[any]: any}): number
     return #keys
 end
 
-Utils.debugPrint = function(label, ...)
-    if RunService:IsStudio() then
-        -- should be a label I know.
-        local keys = Cryo.Dictionary.keys(debugPrintEnabledLabels)
-        local found = Cryo.List.find(keys, label) ~= nil
-        assert(found, "Unknown debugPrint label: " .. label)
+local debugPrintLabelCheck = function(label:string): boolean
+    -- should be a label I know.
+    local keys = Cryo.Dictionary.keys(debugPrintEnabledLabels)
+    local found = Cryo.List.find(keys, label) ~= nil
+    assert(found, "Unknown debugPrint label: " .. label)
+    return debugPrintEnabledLabels[label]
+end
 
-        if debugPrintEnabledLabels[label] then
-            print(...)
+Utils.debugPrint = function(label, ...)
+    if RunService:IsStudio() and debugPrintLabelCheck(label) then
+        print(...)
+    end
+end
+
+Utils.debugDumpChildren = function(label: string, instance: Instance)
+    local rdDummy
+    local function recursiveDump(_instance: Instance, depth: number)
+        local prefix = string.rep("  ", depth)
+        print(prefix .. _instance.Name .. "(" .. _instance.ClassName .. ")")
+        for _, child in ipairs(_instance:GetChildren()) do
+            rdDummy(child, depth + 1)
         end
+    end
+    rdDummy = recursiveDump
+
+    if RunService:IsStudio() and debugPrintLabelCheck(label) then
+        print("Dumping children of " .. instance.Name)
+        recursiveDump(instance, 0)
     end
 end
 

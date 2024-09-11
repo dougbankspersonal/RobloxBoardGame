@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- StarterGui
 local RobloxBoardGameStarterGui = script.Parent.Parent
@@ -32,11 +33,13 @@ GameGuiUtils.configureGameImage = function(imageLabel: ImageLabel, gameDetails: 
     assert(gameDetails, "Should have gameDetails")
     imageLabel.Size = UDim2.fromOffset(GuiConstants.gameImageWidth, GuiConstants.gameImageHeight)
     imageLabel.Image = gameDetails.gameImage
+
+    GuiUtils.addCorner(imageLabel)
 end
 
 GameGuiUtils.addGameButtonInContainer = function(parent: Instance, gameDetails: CommonTypes.GameDetails, onButtonClicked: () -> nil): (Frame, TextButton)
     local frame, textButton = GuiUtils.addStandardTextButtonInContainer(parent, GuiConstants.gameButtonName, {
-        BackgroundColor3 = GuiConstants.gameButtonBackgroundColor,
+        BackgroundTransparency = 1,
         Size = GuiConstants.gameWidgetSize,
     })
 
@@ -46,6 +49,11 @@ GameGuiUtils.addGameButtonInContainer = function(parent: Instance, gameDetails: 
     assert(frame, "Should have frame")
 
     local imageLabel, textLabel = GuiUtils.addImageOverTextLabel(textButton)
+
+     -- Twiddle the layout.
+    local buttonListLayout = textButton:FindFirstChildOfClass("UIListLayout")
+    assert(buttonListLayout, "Should have buttonListLayout")
+    buttonListLayout.VerticalAlignment = Enum.VerticalAlignment.Top
 
     GameGuiUtils.configureGameTextLabel(textLabel, gameDetails)
     GameGuiUtils.configureGameImage(imageLabel, gameDetails)

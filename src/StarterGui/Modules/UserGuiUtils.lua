@@ -40,6 +40,11 @@ local configureUserImage = function(imageLabel:ImageLabel, userId: CommonTypes.U
     assert(imageLabel, "Should have imageLabel")
     assert(userId, "Should have userId")
 
+    -- Make it round.
+    GuiUtils.addCorner(imageLabel, {
+        CornerRadius = UDim.new(0.5, 0),
+    })
+
     imageLabel.Size = UDim2.fromOffset(GuiConstants.userImageWidth, GuiConstants.userImageWidth)
     imageLabel.Image = ""
 
@@ -71,7 +76,10 @@ UserGuiUtils.configureUserTextLabel = function(textLabel:TextLabel, userId: Comm
         assert(playerName, "playerName should exist")
 
         local formatString = if opt_formatString then opt_formatString else "%s"
+        Utils.debugPrint("Buttons", "Doug formatString = ", formatString)
+        Utils.debugPrint("Buttons", "Doug playerName = ", playerName)
         local formattedString = string.format(formatString, playerName)
+        Utils.debugPrint("Buttons", "Doug formattedString = ", formattedString)
         textLabel.Text = formattedString
     end)
 end
@@ -92,8 +100,9 @@ UserGuiUtils.addUserButtonInContainer = function(parent: Instance, userId: Commo
     Utils.debugPrint("Layout", "Doug: addUserButtonInContainer 001")
 
     local container, textButton = GuiUtils.addStandardTextButtonInContainer(parent, GuiConstants.userButtonName, {
-        BackgroundColor3 = GuiConstants.userButtonBackgroundColor,
         Size = GuiConstants.userWidgetSize,
+        BackgroundColor3 = GuiConstants.userButtonBackgroundColor,
+        BackgroundTransparency = 0.5,
     })
 
     textButton.Activated:Connect(function()
@@ -108,34 +117,12 @@ UserGuiUtils.addUserButtonInContainer = function(parent: Instance, userId: Commo
     return container, textButton
 end
 
-UserGuiUtils.addUserButtonInContainer = function(parent: Instance, userId: CommonTypes.UserId, onButtonClicked: (CommonTypes.UserId) -> nil): (Frame, TextButton)
-    Utils.debugPrint("Layout", "Doug: addUserButtonInContainer 001")
-
-    local container, textButton = GuiUtils.addStandardTextButtonInContainer(parent, GuiConstants.userButtonName, {
-        BackgroundColor3 = GuiConstants.userButtonBackgroundColor,
+UserGuiUtils.addUserStaticInContainer = function(parent: Instance, userId: CommonTypes.UserId, opt_frameOptions: any?): (Frame, Frame)
+    local frameOptions = {
         Size = GuiConstants.userWidgetSize,
-    })
-
-    textButton.Activated:Connect(function()
-        if not textButton.Active then
-            return
-        end
-        onButtonClicked(userId)
-    end)
-
-    addUserImageOverTextLabel(textButton, userId)
-
-    return container, textButton
-end
-
-UserGuiUtils.addUserStaticInContainer = function(parent: Instance, userId: CommonTypes.UserId, opt_instanceOptions: any?): (Frame, Frame)
-    Utils.debugPrint("UserLayout", "Doug: addUserStaticInContainer GuiConstants.userWidgetSize = ", GuiConstants.userWidgetSize)
-    local instanceOptions = {
-        BackgroundColor3 = GuiConstants.userLabelBackgroundColor,
-        Size = GuiConstants.userWidgetSize,
+        BackgroundTransparency = 1,
     }
-    local finalOptions = Cryo.Dictionary.join(instanceOptions, opt_instanceOptions or {})
-    Utils.debugPrint("UserLayout", "Doug: addUserStaticInContainer finalOptions = ", finalOptions)
+    local finalOptions = Cryo.Dictionary.join(frameOptions, opt_frameOptions or {})
     local container, frame = GuiUtils.addFrameInContainer(parent, GuiConstants.userStaticName, finalOptions)
 
     addUserImageOverTextLabel(frame, userId)
@@ -152,9 +139,7 @@ UserGuiUtils.addUserStaticWidgetContainer = function(parent: Instance, userId: n
     -- When that resolves we remove loading message and add the real info.
     -- FIXME(dbanks)
     -- Make nicer: loading message could be a swirly or whatever.
-    local container, _  = UserGuiUtils.addUserStaticInContainer(userWidgetContainer, userId)
-
-    Utils.debugPrint("UserLayout", "Doug: addUserStaticWidgetContainer container.Size = ", container.Size)
+    UserGuiUtils.addUserStaticInContainer(userWidgetContainer, userId)
 
     return userWidgetContainer
 end

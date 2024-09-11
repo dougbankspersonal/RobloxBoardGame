@@ -55,9 +55,6 @@ local function applyInstanceOptions(instance: Instance, opt_defaultOptions: Inst
         -- Note: I could pcall this to make it not die if you use a bad property name but I'd rather things fail so
         -- you notice something is wrong.
         instance[key] = value
-        Utils.debugPrint("Buttons", "Doug instanceApplyOptions key = ", key)
-        Utils.debugPrint("Buttons", "Doug instanceApplyOptions value = ", value)
-        Utils.debugPrint("Buttons", "Doug instanceApplyOptions instance[key] = ", instance[key])
     end
 end
 
@@ -103,17 +100,14 @@ local function addInactiveOverlay(parent: Frame)
 end
 
 GuiUtils.addFrameInContainer = function(parent: Frame, name: string, opt_frameOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, Frame)
-    Utils.debugPrint("UserLayout", "Doug: addFrameInContainer opt_frameOptions = ", opt_frameOptions)
-    Utils.debugPrint("UserLayout", "Doug: addFrameInContainer opt_containerOptions = ", opt_containerOptions)
-
     local container = Instance.new("Frame")
     applyInstanceOptions(container, {
         Name = GuiConstants.frameContainerName,
         Parent = parent,
         AutomaticSize = Enum.AutomaticSize.XY,
         BorderSizePixel = 0,
-        BackgroundTransparency = 1,
         Size = UDim2.fromScale(0, 0),
+        BackgroundTransparency = 1,
     }, opt_containerOptions)
 
     local frame = Instance.new("Frame")
@@ -127,16 +121,19 @@ GuiUtils.addFrameInContainer = function(parent: Frame, name: string, opt_frameOp
 
     GuiUtils.addCorner(frame)
 
-    Utils.debugPrint("UserLayout", "Doug: addFrameInContainer container.Size = ", container.Size)
-
-
     return container, frame
 end
 
 GuiUtils.getMainScreenGui = function(): ScreenGui
     assert(mainScreenGui, "Should have a mainScreenGui")
     return mainScreenGui
+end
 
+GuiUtils.getUberBackground = function(): Frame
+    assert(mainScreenGui, "Should have a mainScreenGui")
+    local uberBackground = mainScreenGui:FindFirstChild(GuiConstants.uberBackgroundName, true)
+    assert(uberBackground, "Should have a uberBackground")
+    return uberBackground
 end
 
 GuiUtils.getMainFrame = function(): Frame?
@@ -148,7 +145,7 @@ end
 
 GuiUtils.getContainingScrollingFrame = function(): Frame?
     assert(mainScreenGui, "Should have a mainScreenGui")
-    local containingScrollingFrameName = mainScreenGui:FindFirstChild(GuiConstants.containingScrollingFrameName)
+    local containingScrollingFrameName = mainScreenGui:FindFirstChild(GuiConstants.containingScrollingFrameName, true)
     assert(containingScrollingFrameName, "Should have a containingScrollingFrameName")
     return containingScrollingFrameName
 end
@@ -167,7 +164,7 @@ GuiUtils.setMainScreenGui = function(msg: ScreenGui)
     mainScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 end
 
-GuiUtils.addPadding = function(guiObject: GuiObject, opt_instanceOptions: InstanceOptions?): UIPadding
+GuiUtils.addUIPadding = function(guiObject: GuiObject, opt_instanceOptions: InstanceOptions?): UIPadding
     local uiPadding = Instance.new("UIPadding")
     local defaultPadding = UDim.new(0, GuiConstants.standardPadding)
 
@@ -186,10 +183,10 @@ GuiUtils.addPadding = function(guiObject: GuiObject, opt_instanceOptions: Instan
 end
 
 GuiUtils.addStandardMainFramePadding = function(frame: Frame): UIPadding
-    return GuiUtils.addPadding(frame, {
+    return GuiUtils.addUIPadding(frame, {
         PaddingLeft = UDim.new(0, GuiConstants.mainFramePadding),
         PaddingRight = UDim.new(0, GuiConstants.mainFramePadding),
-        PaddingTop = UDim.new(0, GuiConstants.mainFrameTopPadding),
+        PaddingTop = UDim.new(0, GuiConstants.mainFramePadding),
         PaddingBottom = UDim.new(0, GuiConstants.mainFramePadding),
     })
 end
@@ -237,7 +234,7 @@ GuiUtils.addTextLabel = function(parent: Instance, text: string, opt_instanceOpt
         AutomaticSize = Enum.AutomaticSize.XY,
         Text = text,
         TextSize = GuiConstants.textLabelFontSize,
-        Font = Enum.Font.Merriweather,
+        Font = GuiConstants.defaultFont,
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -251,7 +248,7 @@ end
 GuiUtils.addTextBox = function(parent: Instance, opt_instanceOptions: InstanceOptions?): TextBox
     local textBox = Instance.new("TextBox")
 
-    GuiUtils.addPadding(textBox)
+    GuiUtils.addUIPadding(textBox)
     GuiUtils.addCorner(textBox)
 
     applyInstanceOptions(textBox, {
@@ -574,7 +571,7 @@ GuiUtils.addStandardTextButtonInContainer = function(parent: Frame, name: string
         Text = "",
         Name = name,
         Parent = container,
-        Font = Enum.Font.Merriweather,
+        Font = GuiConstants.defaultFont,
         TextColor3 = GuiConstants.buttonTextColor,
         BackgroundColor3 = GuiConstants.buttonBackgroundColor,
         BorderSizePixel = 1,
@@ -612,21 +609,12 @@ GuiUtils.addTextButtonInContainer = function(parent: Instance, text: string, cal
         callback()
     end)
 
-    GuiUtils.addPadding(textButton, {
+    GuiUtils.addUIPadding(textButton, {
         PaddingRight = UDim.new(0, GuiConstants.buttonInternalSidePadding),
         PaddingLeft = UDim.new(0, GuiConstants.buttonInternalSidePadding),
     })
 
     return container, textButton
-end
-
-GuiUtils.getPlayerName = function(playerId: CommonTypes.UserId): string?
-    local player = game.Players:GetPlayerByUserId(playerId)
-    if player then
-        return player.Name
-    else
-        return nil
-    end
 end
 
 GuiUtils.getGameName = function(gameId: CommonTypes.GameId): string?
@@ -647,12 +635,12 @@ GuiUtils.addItemImage = function(parent: GuiObject, opt_instanceOptions: Instanc
     applyInstanceOptions(imageLabel, {
         Name = GuiConstants.itemImageName,
         ScaleType = Enum.ScaleType.Fit,
-        BackgroundTransparency = 1,
+        BackgroundTransparency = 0,
+        BackgroundColor3 = GuiConstants.imageBackgroundColor,
         Parent = parent,
         ZIndex = GuiConstants.itemLabelImageZIndex,
     }, opt_instanceOptions)
 
-    GuiUtils.addCorner(imageLabel)
     return imageLabel
 end
 
@@ -663,9 +651,11 @@ GuiUtils.addItemTextLabel = function(parent:GuiObject, opt_instanceOptions: Inst
     local instanceOptions = {
         TextXAlignment = Enum.TextXAlignment.Center,
         TextTruncate = Enum.TextTruncate.AtEnd,
-        Name = "ItemText",
+        Name = GuiConstants.itemTextName,
         ZIndex = GuiConstants.itemLabelTextZIndex,
-        TextColor3 = GuiConstants.buttonTextColor,
+        TextColor3 = GuiConstants.widgetTextColor,
+        AutomaticSize = Enum.AutomaticSize.None,
+        TextYAlignment = Enum.TextYAlignment.Center,
     }
     local finalInstanceOptions = Cryo.Dictionary.join(instanceOptions, incomingInstanceOptions)
 
@@ -681,7 +671,7 @@ GuiUtils.addImageOverTextLabel = function(frame: GuiObject): (ImageLabel, TextLa
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
         Padding = GuiConstants.noPadding,
     })
-    GuiUtils.addPadding(frame)
+    GuiUtils.addUIPadding(frame)
 
     local imageLabel = GuiUtils.addItemImage(frame, {
         LayoutOrder = 1,
@@ -950,16 +940,15 @@ GuiUtils.addNullStaticWidget = function(parent: Instance, message: string, opt_i
         TextYAlignment = Enum.TextYAlignment.Center,
         RichText = true,
         TextWrapped = true,
-        BackgroundTransparency = 0,
-        BackgroundColor3 = Color3.new(1, 1, 1),
+        BackgroundTransparency = 1,
         AutomaticSize = Enum.AutomaticSize.None,
-        TextColor3 = GuiConstants.buttonTextColor,
+        TextColor3 = GuiConstants.widgetTextColor,
         Name = GuiConstants.nullStaticWidgetName,
     },
     instanceOptions)
     local textLabel = GuiUtils.addTextLabel(parent, message, instanceOptions)
     GuiUtils.addCorner(textLabel)
-    GuiUtils.addPadding(textLabel)
+    GuiUtils.addUIPadding(textLabel)
 
     return textLabel
 end
@@ -1008,7 +997,7 @@ GuiUtils.updateTextLabel = function(textLabel: TextLabel, text: string): boolean
     return true
 end
 
-local function getOptionValue(gameOption: CommonTypes.GameOption, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions): string?
+GuiUtils.getOptionValue = function(gameOption: CommonTypes.GameOption, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions): string?
     -- Does this particular option have a non-default value?
     local opt_nonDefaultGameOption = nonDefaultGameOptions[gameOption.gameOptionId]
 
@@ -1056,7 +1045,7 @@ GuiUtils.getSelectedGameOptionsString = function(tableDescription: CommonTypes.T
     local nonDefaultGameOptions = tableDescription.opt_nonDefaultGameOptions or {}
 
     for _, gameOption in gameDetails.gameOptions do
-        local optionValue = getOptionValue(gameOption, nonDefaultGameOptions)
+        local optionValue = GuiUtils.getOptionValue(gameOption, nonDefaultGameOptions)
         assert(optionValue, "Should have an optionValue")
 
         local optionName = gameOption.name
@@ -1087,10 +1076,10 @@ GuiUtils.addRowOfUniformItemsAndReturnRowContent = function(frame: Frame, name: 
     local instanceOptions = {
         AutomaticSize = Enum.AutomaticSize.None,
         Size = UDim2.new(1, -GuiConstants.rowLabelWidth - GuiConstants.standardPadding, 0, itemHeight + 2 * GuiConstants.standardPadding),
-        BorderSizePixel = 0,
-        BorderColor3 = Color3.new(0.5, 0.5, 0.5),
+        BorderSizePixel = 1,
+        BorderColor3 = GuiConstants.rowOfItemsBorderColor,
         BorderMode = Enum.BorderMode.Outline,
-        BackgroundColor3 = Color3.new(0.9, 0.9, 0.9),
+        BackgroundColor3 = GuiConstants.rowOfItemsBackgroundColor,
         BackgroundTransparency = 0,
         ScrollingDirection = Enum.ScrollingDirection.X,
     }
@@ -1103,7 +1092,7 @@ GuiUtils.addRowOfUniformItemsAndReturnRowContent = function(frame: Frame, name: 
     }
 
     local rowContent = GuiUtils.addRowAndReturnRowContent(frame, name, rowOptions, instanceOptions)
-    GuiUtils.addPadding(rowContent, {
+    GuiUtils.addUIPadding(rowContent, {
         PaddingTop = UDim.new(0, 0),
         PaddingBottom = UDim.new(0, 0),
     })
@@ -1125,12 +1114,12 @@ GuiUtils.addRowWithItemGridAndReturnRowContent = function(parent:GuiObject, rowN
         BorderSizePixel = 0,
         BorderColor3 = Color3.new(0.5, 0.5, 0.5),
         BorderMode = Enum.BorderMode.Outline,
-        BackgroundColor3 = Color3.new(0.9, 0.9, 0.9),
+        BackgroundColor3 = GuiConstants.scrollBackgroundColor,
         BackgroundTransparency = 0,
     })
 
     GuiUtils.addUIGradient(rowContent, GuiConstants.scrollBackgroundGradient)
-    GuiUtils.addPadding(rowContent, {
+    GuiUtils.addUIPadding(rowContent, {
         PaddingLeft = UDim.new(0, 0),
         PaddingRight = UDim.new(0, 0),
     })
