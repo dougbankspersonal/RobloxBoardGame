@@ -20,6 +20,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 local GameInstanceFunctions = {}
 
@@ -30,12 +31,8 @@ GameInstanceFunctions.setAllGameInstanceFunctions = function(_gameInstanceFuncti
 end
 
 GameInstanceFunctions.getGameInstanceFunctions = function(gameId: CommonTypes.GameId): CommonTypes.GameInstanceFunctions?
-    for gId, gameInstanceFunctions in ipairs(gameInstanceFunctionsByGameId) do
-        if gId == gameId then
-            return gameInstanceFunctions
-        end
-    end
-    return nil
+  Utils.debugPrint("GameInstance", "Doug: gameInstanceFunctuonsByGameId = ", gameInstanceFunctionsByGameId)
+  return gameInstanceFunctionsByGameId[gameId]
 end
 
 return GameInstanceFunctions

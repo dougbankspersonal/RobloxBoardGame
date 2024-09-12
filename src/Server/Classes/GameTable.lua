@@ -46,6 +46,7 @@ export type GameTable = {
     getTableId: (self: GameTable) -> CommonTypes.TableId,
     getGameId: (self: GameTable) -> CommonTypes.GameId,
     -- non-const functions.  Each returns true iff something changed.
+    goToWaiting: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
     destroyTable: (self: GameTable, userIds: {CommonTypes.UserId}) -> boolean,
     joinTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
     inviteToTable: (self: GameTable, userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId) -> boolean,
@@ -58,7 +59,6 @@ export type GameTable = {
     startGame: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
     endGame: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
     endGameEarly: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    transitionFromEndToReplay: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
 }
 
 local gameTables = {} :: { [CommonTypes.TableId]: GameTable }
@@ -417,7 +417,7 @@ function GameTable:endGame(userId: CommonTypes.UserId): boolean
         return false
     end
 
-    self.tableDescription.gameTableState = GameTableStates.Finished
+    self.tableDescription.gameTableState = GameTableStates.WaitingForPlayers
     self.gameInstance:endGame()
     self.gameInstance = nil
 
@@ -436,26 +436,13 @@ function GameTable:endGameEarly(userId: CommonTypes.UserId): boolean
         return false
     end
 
-    self.tableDescription.gameTableState = GameTableStates.Finished
+    self.tableDescription.gameTableState = GameTableStates.WaitingForPlayers
+
+    Utils.debugPrint("GameInstance", "Doug: self.gameInstance = ", self.gameInstance)
+
     self.gameInstance:endGame()
     self.gameInstance = nil
 
-    return true
-end
-
-
-function GameTable:transitionFromEndToReplay(userId: CommonTypes.UserId): CommonTypes.TableDescription
-    -- Must be the host.
-    if not self:isHost(userId) then
-        return false
-    end
-
-    --We are not in "game finished" state, no.
-    if self.tableDescription.gameTableState ~= GameTableStates.Finished then
-        return false
-    end
-
-    self.tableDescription.gameTableState = GameTableStates.WaitingForPlayers
     return true
 end
 

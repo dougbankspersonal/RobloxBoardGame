@@ -15,11 +15,12 @@ local Cryo = require(ReplicatedStorage.Cryo)
 local Utils = {}
 
 local debugPrintEnabledLabels = {
-    Buttons = true,
+    Buttons = false,
     Friends = false,
     GameConfig = false,
-    GameInstance = true,
+    GameInstance = false,
     GameMetadata = false,
+    GuiUtils = true,
     InviteToTable = false,
     Layout = false,
     Mocks = false,

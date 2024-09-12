@@ -96,7 +96,7 @@ local function makeFetchTableDescriptionsByTableIdRemoteFunction()
 end
 
 
-local mockInviteAndPossiblyAddUser = function(gameTable:GameTable, userId: UserId, shouldJoin: boolean)
+local mockInviteAndPossiblyAddUser = function(gameTable:GameTable.GameTable, userId: CommonTypes.UserId, shouldJoin: boolean)
     -- If not public, invite the player who sent the mock.
     if not gameTable.tableDescription.isPublic then
         local success = gameTable:inviteToTable(gameTable.tableDescription.hostUserId, userId)
@@ -200,7 +200,7 @@ local function addMockEventHandlers()
             openSlots = openSlots - 1
         end
 
-        for i = 1, openSlots do
+        for _ = 1, openSlots do
             mockInviteAndPossiblyAddUser(gameTable, getNextMockUserId(), true)
         end
 
@@ -233,6 +233,12 @@ ServerEventManagement.createClientToServerEvents = function()
 
         -- Broadcast the new table to all players
         sendToAllPlayers("TableCreated", tableDescription)
+    end)
+
+    createGameTableRemoteEvent("GoToWaiting", function(player, gameTable)
+        if gameTable:goToWaiting(player.UserId) then
+            sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
+        end
     end)
 
     -- Event to destroy a table.
@@ -304,13 +310,6 @@ ServerEventManagement.createClientToServerEvents = function()
         Utils.debugPrint("TablePlaying", "Doug: ServerEventManager StartGame tableId = ", gameTable:getTableDescription().tableId)
         if gameTable:startGame(player.UserId) then
             Utils.debugPrint("TablePlaying", "Doug: ServerEventManager StartGame startGame worked")
-            sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
-        end
-    end)
-
-    -- Transition from "all done" back to "waiting for players".
-    createGameTableRemoteEvent("ReplayGame", function(player, gameTable)
-        if gameTable:transitionFromEndToReplay(player.UserId) then
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end
     end)

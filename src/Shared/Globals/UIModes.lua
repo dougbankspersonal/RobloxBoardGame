@@ -9,8 +9,6 @@ The game is always in one of these states.
   * TablePlaying: local user is part of a table that is playing a game.  Most of the UI is custom to the
     game, but there's outer chrome with controls to end the game or remove players (host only) or to
     leave the table (guest only).
-  * TableFinished: local user is part of a table that has finished playing a game.  UI
-    to go back to "waiting" state (host only) or to leave the game (guest only).
   ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -24,7 +22,6 @@ local UIModes: CommonTypes.UIModes = {
     TableSelection = 1,
     TableWaitingForPlayers = 2,
     TablePlaying = 3,
-    TableFinished = 4,
     None = 5,
 } :: CommonTypes.UIModes
 

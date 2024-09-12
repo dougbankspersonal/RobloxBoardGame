@@ -23,19 +23,18 @@ local RobloxBoardGameStarterGui = script.Parent.Parent
 local ClientTableDescriptions = require(RobloxBoardGameStarterGui.Modules.ClientTableDescriptions)
 local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
-local GameUIs = require(RobloxBoardGameStarterGui.Globals.GameUIs)
 local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
 
 local metadataLayoutOrder = 0
 
-local addMetadataElement = function(parent: GuiObject, text: string, fontSize: nubmer): TextLabel
+local addMetadataElement = function(parent: GuiObject, text: string, fontSize: number): TextLabel
     local label = Instance.new("TextLabel")
     label.Name = "SidebarElement"
     label.Parent = parent
     label.Text = text
     label.TextSize = fontSize
     label.TextWrapped = true
-    label.Size = UDim2.new(1, 0, 0, 0)
+    label.Size = UDim2.new(1, -2 * GuiConstants.standardPadding, 0, 0)
     label.LayoutOrder = metadataLayoutOrder
     label.AutomaticSize = Enum.AutomaticSize.Y
     label.RichText = true
@@ -77,13 +76,14 @@ local fillInMetadataAsync = function(tableMetadataFrame: Frame, tableDescription
     addMetadataElement(tableMetadataFrame, "Players", GuiConstants.gamePlayingSidebarH2FontSize)
 
     local hostName = PlayerUtils.getNameAsync(tableDescription.hostUserId)
-    local hostString = GuiConstants.bulletString .. " " .. hostName .. " " .. GuiUtils.italicize("(host)")
+    local hostString = hostName .. " " .. "(host)"
+    hostString = GuiUtils.italicize(hostString)
     addMetadataElement(tableMetadataFrame, hostString, GuiConstants.gamePlayingSidebarNormalFontSize)
 
     for userId, _ in pairs(tableDescription.memberUserIds) do
         if userId ~= tableDescription.hostUserId then
             local playerName = PlayerUtils.getNameAsync(userId)
-            addMetadataElement(tableMetadataFrame, GuiConstants.bulletString .. playerName, GuiConstants.gamePlayingSidebarNormalFontSize)
+            addMetadataElement(tableMetadataFrame, GuiUtils.italicize(playerName), GuiConstants.gamePlayingSidebarNormalFontSize)
         end
     end
 
@@ -101,7 +101,7 @@ local fillInMetadataAsync = function(tableMetadataFrame: Frame, tableDescription
             assert(optionName, "Should have an optionName")
 
             addMetadataElement(tableMetadataFrame, optionName, GuiConstants.gamePlayingSidebarH3FontSize)
-            addMetadataElement(tableMetadataFrame, optionValue, GuiConstants.gamePlayingSidebarNormalFontSize)
+            addMetadataElement(tableMetadataFrame, GuiUtils.italicize(optionValue), GuiConstants.gamePlayingSidebarNormalFontSize)
         end
     end
 end
@@ -121,6 +121,7 @@ local addSidebar = function(mainFrame: GuiObject, tableDescription: CommonTypes.
 
     -- top section with metadata.
     local tableMetadataFrame = Instance.new("ScrollingFrame")
+    GuiUtils.setScrollingFrameColors(tableMetadataFrame)
     tableMetadataFrame.Name = GuiConstants.gamePlayingTableMetadataName
     tableMetadataFrame.Parent = sideBarFrame
     tableMetadataFrame.Position = UDim2.new(0, 0, 0, 0)
@@ -129,11 +130,15 @@ local addSidebar = function(mainFrame: GuiObject, tableDescription: CommonTypes.
     tableMetadataFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     tableMetadataFrame.CanvasSize = UDim2.new(1, 0, 0, 0)
     tableMetadataFrame.BackgroundColor3 = GuiConstants.scrollBackgroundColor
+    tableMetadataFrame.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
+--     GuiUtils.sanitizeScrollingFrame(tableMetadataFrame)
     GuiUtils.addUIGradient(tableMetadataFrame, GuiConstants.scrollBackgroundGradient)
     GuiUtils.addUIPadding(tableMetadataFrame)
-    GuiUtils.addUIListLayout(tableMetadataFrame, {
+    local listLayout = GuiUtils.addUIListLayout(tableMetadataFrame, {
         VerticalAlignment = Enum.VerticalAlignment.Top,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
     })
+    listLayout.Padding = UDim.new(0, 0)
 
     -- Use a task for async name grabbing.
     task.spawn(function()
@@ -166,7 +171,7 @@ local addSidebar = function(mainFrame: GuiObject, tableDescription: CommonTypes.
     return sideBarFrame
 end
 
-local addGameSpecificContainer = function(mainFrame: GuiObject, tableDescription: CommonTypes.TableDescription, gameDetails: CommonTypes.GameDetails): Frame
+local addGameSpecificContainer = function(mainFrame: GuiObject, _: CommonTypes.TableDescription, _: CommonTypes.GameDetails): Frame
     local content = Instance.new("Frame")
     content.Name = GuiConstants.gamePlayingContentName
     content.Parent = mainFrame

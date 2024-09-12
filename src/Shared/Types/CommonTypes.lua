@@ -5,7 +5,6 @@ export type GameTableState = number
 export type GameTableStates = {
     WaitingForPlayers: GameTableState,
     Playing: GameTableState,
-    Finished: GameTableState,
 }
 
 export type UIMode = number
@@ -14,7 +13,6 @@ export type UIModes = {
     TableSelection: UIMode,
     TableWaitingForPlayers: UIMode,
     TablePlaying: UIMode,
-    TableFinished: UIMode,
     None: UIMode,
 }
 

@@ -160,9 +160,9 @@ GuiMain.makeContainingScrollingFrame = function()
     containingScrollingFrame.CanvasSize = UDim2.fromScale(1, 0)
     containingScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     containingScrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-    containingScrollingFrame.ScrollBarImageColor3 = Color3.fromRGB(0.5, 0.5, 0.5)
     containingScrollingFrame.Position = UDim2.fromOffset(0, GuiConstants.robloxTopBarBottomPadding)
     containingScrollingFrame.Size = UDim2.new(1, 0, 1, -GuiConstants.robloxTopBarBottomPadding)
+    GuiUtils.setScrollingFrameColors(containingScrollingFrame)
 
     return containingScrollingFrame
 end
@@ -199,8 +199,6 @@ local function setCurrentTableAndUIMode()
         uiModeBasedOnTableDescriptions = UIModes.TableWaitingForPlayers
     elseif currentTableDescription.gameTableState == GameTableStates.Playing then
         uiModeBasedOnTableDescriptions = UIModes.TablePlaying
-    elseif currentTableDescription.gameTableState == GameTableStates.Finished then
-        uiModeBasedOnTableDescriptions = UIModes.TableFinished
     else
         assert(false, "we have a table description in an unknown state")
     end

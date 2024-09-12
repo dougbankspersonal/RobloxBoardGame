@@ -71,10 +71,10 @@ GuiConstants.gameTextLabelFontSize = 14
 GuiConstants.userTextLabelFontSize = 14
 GuiConstants.rowHeaderFontSize = 18
 
-GuiConstants.gamePlayingSidebarH1FontSize = 16
-GuiConstants.gamePlayingSidebarH2FontSize = 14
-GuiConstants.gamePlayingSidebarH3FontSize = 12
-GuiConstants.gamePlayingSidebarNormalFontSize = 11
+GuiConstants.gamePlayingSidebarH1FontSize = 12
+GuiConstants.gamePlayingSidebarH2FontSize = 11
+GuiConstants.gamePlayingSidebarH3FontSize = 10
+GuiConstants.gamePlayingSidebarNormalFontSize = 9
 
 --[[
 Measurements in Pixels.
@@ -117,7 +117,7 @@ local gameInTableWidth = math.max(GuiConstants.gameLabelWidth, GuiConstants.game
 GuiConstants.tableWidgetWidth = math.max(userInTableWidth, gameInTableWidth) + 2 * GuiConstants.standardPadding
 GuiConstants.tableWidgetHeight = GuiConstants.gameImageHeight + GuiConstants.gameLabelHeight + GuiConstants.userLabelHeight + 4 * GuiConstants.standardPadding
 
-GuiConstants.gamePlayingSidebarWidth = 150
+GuiConstants.gamePlayingSidebarWidth = 250
 GuiConstants.gamePlayingSidebarMetadataValueIndent = 10
 GuiConstants.gamePlayingSidebarH2Separation = 10
 GuiConstants.gamePlayingSidebarH3Separation = 5
@@ -180,11 +180,15 @@ GuiConstants.imageBackgroundColor = adjustColorBrightness(GuiConstants.rowOfItem
 
 GuiConstants.greenFelt = Color3.new(0.4, 0.7, 0.5)
 
+GuiConstants.scrollBarColor = Color3.new(0, 0, 0)
+GuiConstants.scrollBarTransparency = 0.3
+
 GuiConstants.uberBackgroundColor = adjustColorBrightness(GuiConstants.greenFelt, 0.3)
 
 GuiConstants.tableSelectionBackgroundColor = GuiConstants.greenFelt
 GuiConstants.tableWaitingBackgroundColor = GuiConstants.greenFelt
 GuiConstants.gamePlayingBackgroundColor = GuiConstants.greenFelt
+GuiConstants.gameFinishedBackgroundColor = GuiConstants.greenFelt
 
 GuiConstants.gamePlayingSidebarColor = adjustColorBrightness(GuiConstants.gamePlayingBackgroundColor, 0.8)
 GuiConstants.gamePlayingSidebarBorderColor = adjustColorBrightness(GuiConstants.gamePlayingSidebarColor, 0.4)

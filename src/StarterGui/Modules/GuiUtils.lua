@@ -49,6 +49,9 @@ local function applyInstanceOptions(instance: Instance, opt_defaultOptions: Inst
     local defaultOptions = opt_defaultOptions or {}
     local instanceOptions = opt_instanceOptions or {}
 
+    Utils.debugPrint("GuiUtils", "Doug: applyInstanceOptions: defaultOptions = ", defaultOptions)
+    Utils.debugPrint("GuiUtils", "Doug: applyInstanceOptions: instanceOptions = ", instanceOptions)
+
     local finalOptions = Cryo.Dictionary.join(defaultOptions, instanceOptions)
 
     for key, value in pairs(finalOptions) do
@@ -475,6 +478,7 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
     local rowContent
     if rowOptions.isScrolling then
         rowContent = Instance.new("ScrollingFrame")
+        GuiUtils.setScrollingFrameColors(rowContent)
         if rowOptions.scrollingDirection == Enum.ScrollingDirection.X then
             rowContent.AutomaticCanvasSize = Enum.AutomaticSize.XY
             rowContent.CanvasSize = UDim2.fromScale(0, 0)
@@ -486,7 +490,6 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
             rowContent.ScrollingDirection = Enum.ScrollingDirection.Y
         end
         rowContent.ScrollingDirection = Enum.ScrollingDirection.Y
-        rowContent.ScrollBarImageColor3 = Color3.new(0.5, 0.5, 0.5)
     else
         rowContent = Instance.new("Frame")
     end
@@ -1133,5 +1136,34 @@ GuiUtils.addRowWithItemGridAndReturnRowContent = function(parent:GuiObject, rowN
     return rowContent
 end
 
+--[[
+
+local didVerticalScrollToggle = function()
+GuiUtils.sanitizeScrollingFrame = function(scrollingFrame: ScrollingFrame)
+
+    if scrollingFrame.ScrollBarThickness == 0 then
+        return
+    end
+
+    local canvasSize = scrollingFrame.CanvasSize
+    if scrollingFrame.ScrollingDirection == Enum.ScrollingDirection.Y then
+        if canvasSize.X.Offset == 0 and canvasSize.X.Scale == 1 then
+            scrollingFrame.AttrubuteChanged:Connect(function(attributeName)
+                if attributeName == ""
+            end)
+        end
+    end
+    if scrollingFrame.ScrollingDirection == Enum.ScrollingDirection.X then
+        if canvasSize.Y.Offset == 0 and canvasSize.Y.Scale == 1 then
+            scrollingFrame.AttrubuteChanged:Connect(didHorizontalScrollToggle)
+        end
+    end
+end
+]]
+
+GuiUtils.setScrollingFrameColors = function(scrollingFrame: ScrollingFrame)
+    scrollingFrame.ScrollBarImageColor3 = GuiConstants.scrollBarColor
+    scrollingFrame.ScrollBarImageTransparency = GuiConstants.scrollBarTransparency
+end
 
 return GuiUtils

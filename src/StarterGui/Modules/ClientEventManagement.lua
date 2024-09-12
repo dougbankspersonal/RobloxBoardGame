@@ -113,6 +113,12 @@ ClientEventManagement.createTable = function(gameId: CommonTypes.GameId, isPubli
     event:FireServer(gameId, isPublic)
 end
 
+ClientEventManagement.goToWaiting = function(tableId: CommonTypes.TableId)
+    local event = ReplicatedStorage.TableEvents:WaitForChild("GoToWaiting")
+    assert(event, "GoToWaiting event missing")
+    event:FireServer(tableId)
+end
+
 ClientEventManagement.destroyTable = function(tableId: CommonTypes.TableId)
     local event = ReplicatedStorage.TableEvents:WaitForChild("DestroyTable")
     assert(event, "DestroyTable event missing")

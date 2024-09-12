@@ -38,6 +38,8 @@ GameInstance.new = function (tableId: CommonTypes.TableId, gameId: CommonTypes.G
     self.tableId = tableId
     self.gameId = gameId
 
+    Utils.debugPrint("GameInstance", "Doug: GameInstance.new: gameId = ", self.gameId)
+
     return self
 end
 
@@ -51,9 +53,11 @@ function GameInstance:playGame()
 end
 
 function GameInstance:endGame()
+    Utils.debugPrint("GameInstance", "Doug: self.gameId = ", self.gameId)
+
     local gameInstanceFunctions = GameInstanceFunctions.getGameInstanceFunctions(self.gameId)
     Utils.debugPrint("GameInstance", "Doug: endGame: gameId = ", self.gameId)
-    Utils.debugPrint("GameInstance", "Doug: endGame: gameId = ", self.gameInstanceFunctions)
+    Utils.debugPrint("GameInstance", "Doug: endGame: gameInstanceFunctions = ", gameInstanceFunctions)
     assert(gameInstanceFunctions, "endGame: GameInstanceFunctions not found for gameId: " .. self.gameId)
     assert(gameInstanceFunctions.onEnd, "onEnd is required")
     return gameInstanceFunctions.onEnd()

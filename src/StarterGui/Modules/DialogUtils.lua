@@ -84,6 +84,7 @@ DialogUtils.makeDialog = function(dialogConfig: DialogConfig): Frame?
 
     -- A separate frame for content since the cancel button ignores UIListLayout.
     local dialogContentFrame = Instance.new("ScrollingFrame")
+    GuiUtils.setScrollingFrameColors(dialogContentFrame)
     dialogContentFrame.Name = GuiConstants.dialogContentFrameName
     dialogContentFrame.Parent = dialog
     dialogContentFrame.Size = UDim2.fromScale(1, 1)
