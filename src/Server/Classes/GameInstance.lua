@@ -4,6 +4,7 @@
     will pass in functions to call on startup and teardown of game.
 ]]
 
+local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Shared
@@ -14,6 +15,7 @@ local Utils = require(RobloxBoardGameShared.Modules.Utils)
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
 local GameInstanceFunctions = require(RobloxBoardGameServer.Globals.GameInstanceFunctions)
+local GameTable = require(RobloxBoardGameServer.Classes.GameTable)
 
 local GameInstance = {}
 
@@ -22,6 +24,7 @@ GameInstance.__index = GameInstance
 export type GameInstance = {
     tableId: CommonTypes.TableId,
     gameId: CommonTypes.GameId,
+    gameInstanceGUID: CommonTypes.GameInstanceGUID,
 
     new: (tableId: CommonTypes.TableId, gameId: CommonTypes.GameId) -> GameInstance,
 
@@ -38,6 +41,8 @@ GameInstance.new = function (tableId: CommonTypes.TableId, gameId: CommonTypes.G
     self.tableId = tableId
     self.gameId = gameId
 
+    self.gameInstanceGUID = HttpService:GenerateGUID(false)
+
     Utils.debugPrint("GameInstance", "Doug: GameInstance.new: gameId = ", self.gameId)
 
     return self
@@ -49,7 +54,10 @@ function GameInstance:playGame()
     Utils.debugPrint("GameInstance", "Doug: playGame: gameId = ", self.gameInstanceFunctions)
     assert(gameInstanceFunctions, "playGame: GameInstanceFunctions not found for gameId: " .. self.gameId)
     assert(gameInstanceFunctions.onPlay, "onPlay is required")
-    return gameInstanceFunctions.onPlay()
+    local gameTable = GameTable.getGameTable(self.tableId)
+    assert(gameTable, "playGame: GameTable not found for tableId: " .. self.tableId)
+
+    return gameInstanceFunctions.onPlay(self.gameInstanceGUID, gameTable.tableDescription)
 end
 
 function GameInstance:endGame()

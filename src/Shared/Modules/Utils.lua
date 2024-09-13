@@ -32,6 +32,14 @@ local debugPrintEnabledLabels = {
     UserLayout = false,
 }
 
+Utils.splitString = function(str: string, delimiter: string): {string}
+    local result = {}
+    for match in (str .. delimiter):gmatch("(.-)" .. delimiter) do
+        table.insert(result, match)
+    end
+    return result
+end
+
 -- String starts with given start.
 Utils.stringStartsWith = function(str: string, start: string): boolean
     return str:sub(1, #start) == start

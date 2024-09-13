@@ -24,6 +24,7 @@ local ClientTableDescriptions = require(RobloxBoardGameStarterGui.Modules.Client
 local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
 local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
+local GameUIs = require(RobloxBoardGameStarterGui.Globals.GameUIs)
 
 local metadataLayoutOrder = 0
 
@@ -171,15 +172,21 @@ local addSidebar = function(mainFrame: GuiObject, tableDescription: CommonTypes.
     return sideBarFrame
 end
 
-local addGameSpecificContainer = function(mainFrame: GuiObject, _: CommonTypes.TableDescription, _: CommonTypes.GameDetails): Frame
-    local content = Instance.new("Frame")
-    content.Name = GuiConstants.gamePlayingContentName
-    content.Parent = mainFrame
-    content.Position = UDim2.new(0, GuiConstants.gamePlayingSidebarWidth, 0, 0)
-    content.Size = UDim2.new(1, -GuiConstants.gamePlayingSidebarWidth, 1, 0)
-    content.BackgroundTransparency = 1
+local addGameSpecificContainer = function(mainFrame: GuiObject, tableDescription: CommonTypes.TableDescription, _: CommonTypes.GameDetails): Frame
+    local contentFrame = Instance.new("Frame")
+    contentFrame.Name = GuiConstants.gamePlayingContentName
+    contentFrame.Parent = mainFrame
+    contentFrame.Position = UDim2.new(0, GuiConstants.gamePlayingSidebarWidth, 0, 0)
+    contentFrame.Size = UDim2.new(1, -GuiConstants.gamePlayingSidebarWidth, 1, 0)
+    contentFrame.BackgroundTransparency = 1
 
-    return content
+    -- Let game build its UI in here.
+    local gameUIs = GameUIs.getGameUIs(tableDescription.gameId)
+    assert(gameUIs, "Should have gameUIs")
+    assert(gameUIs.build, "Should have gameUIs.build")
+    gameUIs.build(contentFrame, tableDescription)
+
+    return contentFrame
 end
 
 -- Create barebones structure for this UI,

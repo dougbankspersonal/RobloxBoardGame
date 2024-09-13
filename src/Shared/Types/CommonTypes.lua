@@ -27,6 +27,9 @@ export type TableId = number
 -- This id uniquely identifies a game within the experience.
 export type GameId = number
 
+-- Each  game *instance* has a globally unique id.
+export type GameInstanceGUID = string
+
 -- Standard Roblox user id.
 export type UserId = number
 
@@ -136,7 +139,7 @@ export type GameDetailsByGameId = {
 }
 
 export type GameInstanceFunctions = {
-    onPlay: () -> nil,
+    onPlay: (GameInstanceGUID, TableDescription) -> nil,
     onEnd: () -> nil,
     onPlayerLeft: (playerId: UserId) -> nil,
 }
@@ -146,7 +149,7 @@ export type GameInstanceFunctionsByGameId = {
 }
 
 export type GameUIs = {
-    build: () -> nil,
+    build: (parent: Frame, tableDescription: TableDescription) -> nil,
     destroy: () -> nil,
     handlePlayerLeftGame: (userId:UserId) -> nil,
 }

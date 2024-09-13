@@ -14,7 +14,6 @@ local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEv
 local GameUIs = require(RobloxBoardGameStarterGui.Globals.GameUIs)
 local ClientTableDescriptions = require(RobloxBoardGameStarterGui.Modules.ClientTableDescriptions)
 local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
-local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
 
 -- 3d avatar is irrelevant for this game.
 local function turnOffPlayerControls()
