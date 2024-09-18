@@ -66,6 +66,11 @@ export type TableDescription = {
 
     -- Any game-specific tweaks that have been set.
     opt_nonDefaultGameOptions: NonDefaultGameOptions?,
+
+    -- These are "mock" players, not real people.
+    mockUserIds: {
+        [UserId]: boolean,
+    },
 }
 
 -- We tend to keep these in a table indexed on tableId so it's easy

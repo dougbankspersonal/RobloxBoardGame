@@ -149,4 +149,13 @@ Utils.sanityCheckGameInstanceFunctionsByGameId = function(gameInstanceFunctionsB
     end
 end
 
+Utils.randomizeArray = function(array: {any}): {any}
+    local result = Cryo.List.shallowCopy(array)
+    for i = #result, 2, -1 do
+        local j = math.random(i)
+        result[i], result[j] = result[j], result[i]
+    end
+    return result
+end
+
 return Utils

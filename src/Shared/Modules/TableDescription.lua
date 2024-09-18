@@ -8,7 +8,6 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
 local Cryo = require(ReplicatedStorage.Cryo)
-local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 local TableDescription = {}
 
@@ -25,7 +24,7 @@ TableDescription.tableHasRoom = function(tableDescription: CommonTypes.TableDesc
     return gameDetails.maxPlayers > TableDescription.getNumberOfPlayersAtTable(tableDescription)
 end
 
-TableDescription.playerCanJoinInvitedTable = function(userId: CommonTypes.UserId, tableDescription: CommonTypes.TableDescription): boolean
+TableDescription.playerCanJoinInvitedTable = function(tableDescription: CommonTypes.TableDescription, userId: CommonTypes.UserId): boolean
     assert(userId, "userId must be provided")
     assert(tableDescription, "tableDescription must be provided")
 
@@ -48,7 +47,7 @@ TableDescription.playerCanJoinInvitedTable = function(userId: CommonTypes.UserId
     return tableDescription.gameTableState == GameTableStates.WaitingForPlayers
 end
 
-TableDescription.playerCanJoinPublicTable = function(userId: CommonTypes.UserId, tableDescription: CommonTypes.TableDescription): boolean
+TableDescription.playerCanJoinPublicTable = function(tableDescription: CommonTypes.TableDescription, userId: CommonTypes.UserId): boolean
     assert(tableDescription, "tableDescription must be provided")
 
     if not tableDescription.isPublic then
@@ -64,6 +63,12 @@ TableDescription.playerCanJoinPublicTable = function(userId: CommonTypes.UserId,
     end
 
     return tableDescription.gameTableState == GameTableStates.WaitingForPlayers
+end
+
+TableDescription.isMockUserId = function(tableDescription: CommonTypes.TableDescription, userId: CommonTypes.UserId): boolean
+    assert(tableDescription, "tableDescription must be provided")
+    assert(userId, "userId must be provided")
+    return tableDescription.mockUserIds[userId] or false
 end
 
 return TableDescription

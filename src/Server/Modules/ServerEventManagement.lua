@@ -16,6 +16,7 @@ local Cryo = require(ReplicatedStorage.Cryo)
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
 local GameTable = require(RobloxBoardGameServer.Classes.GameTable)
+local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
 
 local ServerEventManagement = {}
 
@@ -96,7 +97,7 @@ local function makeFetchTableDescriptionsByTableIdRemoteFunction()
 end
 
 
-local mockInviteAndPossiblyAddUser = function(gameTable:GameTable.GameTable, userId: CommonTypes.UserId, shouldJoin: boolean)
+local mockInviteAndPossiblyAddUser = function(gameTable:ServerTypes.GameTable, userId: CommonTypes.UserId, shouldJoin: boolean)
     -- If not public, invite the player who sent the mock.
     if not gameTable.tableDescription.isPublic then
         local success = gameTable:inviteToTable(gameTable.tableDescription.hostUserId, userId)
@@ -116,7 +117,7 @@ local function addMockEventHandlers()
         if not gameTable.tableDescription.isPublic then
             return
         end
-        if not gameTable:joinTable(getNextMockUserId()) then
+        if not gameTable:joinTable(getNextMockUserId(), true) then
             return
         end
         sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
@@ -126,7 +127,7 @@ local function addMockEventHandlers()
         if gameTable.tableDescription.isPublic then
             return
         end
-        if not gameTable:inviteToTable(player.UserId, getNextMockUserId()) then
+        if not gameTable:inviteToTable(player.UserId, getNextMockUserId(), true) then
             return
         end
         sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
@@ -141,7 +142,7 @@ local function addMockEventHandlers()
             return
         end
         local accepteeId = keys[1]
-        if gameTable:joinTable(accepteeId) then
+        if gameTable:joinTable(accepteeId, true) then
             sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
         end
     end)
@@ -310,7 +311,7 @@ ServerEventManagement.createClientToServerEvents = function()
         Utils.debugPrint("TablePlaying", "Doug: ServerEventManager StartGame tableId = ", gameTable:getTableDescription().tableId)
         if gameTable:startGame(player.UserId) then
             Utils.debugPrint("TablePlaying", "Doug: ServerEventManager StartGame startGame worked")
-            sendToAllPlayers("TableUpdated", gameTable:getTableDescription())
+            sendToAllPlayers("TableUpdated", gameTable:getTableDescription(), gameTable:getGameInstanceGUID())
         end
     end)
 

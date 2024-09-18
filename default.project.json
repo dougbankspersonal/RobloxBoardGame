@@ -15,9 +15,6 @@
 
           "ServerScriptService": {
               "$className": "ServerScriptService",
-              "SRBGCServer": {
-                  "$path": "src/SRBGCServer"
-              },
               "RobloxBoardGameServer": {
                   "$path": "src/Server/default.project.json"
               }
@@ -27,9 +24,6 @@
               "$className": "StarterGui",
               "MainScreenGui": {
                   "$className": "ScreenGui",
-          "SRBGCClient": {
-            "$path": "src/SRBGCClient"
-          },
           "RobloxBoardGameStarterGui": {
             "$path": "src/StarterGui/default.project.json"
           }

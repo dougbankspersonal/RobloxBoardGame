@@ -8,9 +8,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
-local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
-local Utils = require(RobloxBoardGameShared.Modules.Utils)
-local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local TableDescription = require(RobloxBoardGameShared.Modules.TableDescription)
 
 local Cryo = require(ReplicatedStorage.Cryo)
@@ -68,7 +65,7 @@ ClientTableDescriptions.getTableIdsForInvitedWaitingTables = function(userId: Co
     assert(userId, "userId must be provided")
     local tableIds = {}
     for _, tableDescription in pairs(ClientTableDescriptions.tableDescriptionsByTableId) do
-        if TableDescription.playerCanJoinInvitedTable(userId, tableDescription) then
+        if TableDescription.playerCanJoinInvitedTable(tableDescription, userId) then
             table.insert(tableIds, tableDescription.tableId)
         end
     end
@@ -86,7 +83,7 @@ ClientTableDescriptions.getTableIdsForPublicWaitingTables = function(userId: Com
     assert(userId, "userId must be provided")
     local tableIds = {}
     for _, tableDescription in pairs(ClientTableDescriptions.tableDescriptionsByTableId) do
-        if TableDescription.playerCanJoinPublicTable(userId, tableDescription) then
+        if TableDescription.playerCanJoinPublicTable(tableDescription, userId) then
             table.insert(tableIds, tableDescription.tableId)
         end
     end

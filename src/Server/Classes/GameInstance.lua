@@ -16,25 +16,13 @@ local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local RobloxBoardGameServer = script.Parent.Parent
 local GameInstanceFunctions = require(RobloxBoardGameServer.Globals.GameInstanceFunctions)
 local GameTable = require(RobloxBoardGameServer.Classes.GameTable)
+local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
 
 local GameInstance = {}
 
 GameInstance.__index = GameInstance
 
-export type GameInstance = {
-    tableId: CommonTypes.TableId,
-    gameId: CommonTypes.GameId,
-    gameInstanceGUID: CommonTypes.GameInstanceGUID,
-
-    new: (tableId: CommonTypes.TableId, gameId: CommonTypes.GameId) -> GameInstance,
-
-    playGame: (self:GameInstance) -> nil,
-    endGame: (self:GameInstance) -> nil,
-    playerLeft: (self:GameInstance, userId: CommonTypes.UserId) -> nil,
-    destroy: (self:GameInstance) -> nil,
-}
-
-GameInstance.new = function (tableId: CommonTypes.TableId, gameId: CommonTypes.GameId): GameInstance
+GameInstance.new = function (tableId: CommonTypes.TableId, gameId: CommonTypes.GameId): ServerTypes.GameInstance
     local self = {}
     setmetatable(self, GameInstance)
 

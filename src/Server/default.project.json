@@ -2,6 +2,9 @@
   "name": "RobloxBoardGameServer",
   "tree": {
     "$className": "Folder",
+    "Analytics": {
+      "$path": "Analytics"
+    },
     "Classes": {
       "$path": "Classes"
     },
@@ -13,6 +16,9 @@
     },
     "StartupFiles": {
       "$path": "StartupFiles"
+    },
+    "Types": {
+      "$path": "Types"
     }
   }
 }

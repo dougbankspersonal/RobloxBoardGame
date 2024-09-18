@@ -18,57 +18,21 @@ local Utils = require(RobloxBoardGameShared.Modules.Utils)
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
 local GameInstance = require(RobloxBoardGameServer.Classes.GameInstance)
+local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
 
 local GameTable = {}
 GameTable.__index = GameTable
 
 local nextGameTableId: CommonTypes.TableId = 10000
 
-export type GameTable = {
-    -- members
-    gameDetails: CommonTypes.GameDetails,
-    gameInstance: GameInstance.GameInstance?,
-    tableDescription: CommonTypes.TableDescription,
-    isMock: boolean,
-
-    -- static functions.
-    new: (hostUserId: CommonTypes.UserId, gameDetails: CommonTypes.GameDetails, isPublic: boolean) -> GameTable,
-    getGameTable: (tableId: CommonTypes.TableId) -> GameTable,
-    createNewTable: (hostUserId: CommonTypes.UserId, isPublic: boolean) -> GameTable?,
-    getAllGameTables: () -> { [CommonTypes.TableId]: GameTable },
-
-    -- const member  functions.
-    -- Shortcuts to ask questions about table.
-    isMember: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    isInvitedToTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    isHost: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    getTableDescription: (self: GameTable) -> CommonTypes.TableDescription,
-    getTableId: (self: GameTable) -> CommonTypes.TableId,
-    getGameId: (self: GameTable) -> CommonTypes.GameId,
-    -- non-const functions.  Each returns true iff something changed.
-    goToWaiting: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    destroyTable: (self: GameTable, userIds: {CommonTypes.UserId}) -> boolean,
-    joinTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    inviteToTable: (self: GameTable, userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId) -> boolean,
-    setInvites: (self: GameTable, userId: CommonTypes.UserId, inviteeIds: {CommonTypes.UserId}) -> boolean,
-    removeGuestFromTable: (self: GameTable, userId: CommonTypes.UserId, guestId: CommonTypes.UserId) -> boolean,
-    removeInviteForTable: (self: GameTable, userId: CommonTypes.UserId, inviteId: CommonTypes.UserId) -> boolean,
-    leaveTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    updateGameOptions: (self: GameTable, userId: CommonTypes.UserId, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions) -> boolean,
-
-    startGame: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    endGame: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    endGameEarly: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-}
-
-local gameTables = {} :: { [CommonTypes.TableId]: GameTable }
+local gameTables = {} :: { [CommonTypes.TableId]: ServerTypes.GameTable }
 
 
-GameTable.getAllGameTables = function(): { [CommonTypes.TableId]: GameTable }
+GameTable.getAllGameTables = function(): { [CommonTypes.TableId]: ServerTypes.GameTable }
     return gameTables
 end
 
-GameTable.new = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): GameTable
+GameTable.new = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): ServerTypes.GameTable
     local self = {}
     setmetatable(self, GameTable)
 
@@ -98,12 +62,12 @@ GameTable.new = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.Gam
     return self
 end
 
-GameTable.getGameTable = function(tableId): GameTable
+GameTable.getGameTable = function(tableId): ServerTypes.GameTable
     return gameTables[tableId]
 end
 
 -- Return the table iff the table can be created.
-GameTable.createNewTable = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): GameTable?
+GameTable.createNewTable = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): ServerTypes.GameTable?
     -- You cannot create a new table while you are joined to a table.
     for _, gameTable in pairs(gameTables) do
         if gameTable.tableDescription.memberUserIds[hostUserId] then
@@ -127,6 +91,13 @@ end
 
 function GameTable:getGameId(): CommonTypes.GameId
     return self.tableDescription.gameId
+end
+
+function GameTable:getGameInstanceGUID(): CommonTypes.GameInstanceGUID?
+    if self.gameInstance then
+        return self.gameInstance:getGUID()
+    end
+    return nil
 end
 
 function GameTable:isMember(userId: CommonTypes.UserId): boolean
@@ -164,7 +135,7 @@ end
 
 -- Try to add user as member of table.
 -- Return true iff successful.
-function GameTable:joinTable(userId: CommonTypes.UserId): boolean
+function GameTable:joinTable(userId: CommonTypes.UserId, opt_isMock:boolean?): boolean
     assert(userId, "Should have a userId")
 
     -- Host can't join his own table.
@@ -196,6 +167,11 @@ function GameTable:joinTable(userId: CommonTypes.UserId): boolean
 
     -- Once a player is a Member they are no longer invited.
     self.tableDescription.invitedUserIds[userId] = nil
+
+    -- If this is a mock player, make a note of that.
+    if opt_isMock then
+        self.tableDescriptions.mockUserIds[userId] = true
+    end
 
     return true
 end
@@ -372,36 +348,28 @@ function GameTable:updateGameOptions(userId: CommonTypes.UserId, nonDefaultGameO
 end
 
 function GameTable:startGame(userId: CommonTypes.UserId): boolean
-    Utils.debugPrint("TablePlaying", "Doug: GameTable:startGame 001 userId = ", userId)
     -- Only host can start.
     if not self:isHost(userId) then
-        Utils.debugPrint("TablePlaying", "Doug: GameTable:startGame 002")
         return false
     end
 
     -- Game already started, no.
     if self.tableDescription.gameTableState == GameTableStates.Playing then
-        Utils.debugPrint("TablePlaying", "Doug: GameTable:startGame 003")
         return false
     end
 
     -- Right number of players?
     local numPlayers = Utils.tableSize(self.tableDescription.memberUserIds)
     if numPlayers < self.gameDetails.minPlayers then
-        Utils.debugPrint("TablePlaying", "Doug: GameTable:startGame 004")
         return false
     end
     if numPlayers > self.gameDetails.maxPlayers then
-        Utils.debugPrint("TablePlaying", "Doug: GameTable:startGame 005")
         return false
     end
 
-    Utils.debugPrint("TablePlaying", "Doug: GameTable:startGame 006")
     assert(self.gameInstance == nil, "Game instance already exists"	)
     self.tableDescription.gameTableState = GameTableStates.Playing
-    self.gameInstance = GameInstance.new(self:getTableId(), self:getGameId())
-
-    Utils.debugPrint("TablePlaying", "Doug: GameTable:startGame 007")
+    self.gameInstance = GameInstance.new(self)
 
     return true
 end
