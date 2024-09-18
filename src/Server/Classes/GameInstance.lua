@@ -15,19 +15,17 @@ local Utils = require(RobloxBoardGameShared.Modules.Utils)
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
 local GameInstanceFunctions = require(RobloxBoardGameServer.Globals.GameInstanceFunctions)
-local GameTable = require(RobloxBoardGameServer.Classes.GameTable)
 local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
-
 local GameInstance = {}
 
 GameInstance.__index = GameInstance
 
-GameInstance.new = function (tableId: CommonTypes.TableId, gameId: CommonTypes.GameId): ServerTypes.GameInstance
+GameInstance.new = function (gameId: CommonTypes.GameId, tableDescription: CommonTypes.TableDescription): ServerTypes.GameInstance
     local self = {}
     setmetatable(self, GameInstance)
 
-    self.tableId = tableId
     self.gameId = gameId
+    self.tableDescription = tableDescription
 
     self.gameInstanceGUID = HttpService:GenerateGUID(false)
 
@@ -42,10 +40,7 @@ function GameInstance:playGame()
     Utils.debugPrint("GameInstance", "Doug: playGame: gameId = ", self.gameInstanceFunctions)
     assert(gameInstanceFunctions, "playGame: GameInstanceFunctions not found for gameId: " .. self.gameId)
     assert(gameInstanceFunctions.onPlay, "onPlay is required")
-    local gameTable = GameTable.getGameTable(self.tableId)
-    assert(gameTable, "playGame: GameTable not found for tableId: " .. self.tableId)
-
-    return gameInstanceFunctions.onPlay(self.gameInstanceGUID, gameTable.tableDescription)
+    return gameInstanceFunctions.onPlay(self.gameInstanceGUID, self.tableDescription)
 end
 
 function GameInstance:endGame()

@@ -11,16 +11,16 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local ServerTypes = {}
 
 export type GameInstance = {
-    tableId: CommonTypes.TableId,
     gameId: CommonTypes.GameId,
     gameInstanceGUID: CommonTypes.GameInstanceGUID,
+    tableDescription: CommonTypes.TableDescription,
 
-    new: (tableId: CommonTypes.TableId, gameId: CommonTypes.GameId) -> GameInstance,
+    new: (CommonTypes.GameId, CommonTypes.TableDescription) -> GameInstance,
 
-    playGame: (self:GameInstance) -> nil,
-    endGame: (self:GameInstance) -> nil,
-    playerLeft: (self:GameInstance, userId: CommonTypes.UserId) -> nil,
-    destroy: (self:GameInstance) -> nil,
+    playGame: (GameInstance) -> nil,
+    endGame: (GameInstance) -> nil,
+    playerLeft: (GameInstance, userId: CommonTypes.UserId) -> nil,
+    destroy: (GameInstance) -> nil,
 }
 
 export type GameTable = {
@@ -31,35 +31,35 @@ export type GameTable = {
     isMock: boolean,
 
     -- static functions.
-    new: (hostUserId: CommonTypes.UserId, gameDetails: CommonTypes.GameDetails, isPublic: boolean) -> GameTable,
-    getGameTable: (tableId: CommonTypes.TableId) -> GameTable,
-    createNewTable: (hostUserId: CommonTypes.UserId, isPublic: boolean) -> GameTable?,
+    new: (CommonTypes.UserId, CommonTypes.GameDetails, boolean) -> GameTable,
+    getGameTable: (CommonTypes.TableId) -> GameTable,
+    createNewTable: (CommonTypes.UserId, boolean) -> GameTable?,
     getAllGameTables: () -> { [CommonTypes.TableId]: GameTable },
 
     -- const member  functions.
     -- Shortcuts to ask questions about table.
-    isMember: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    isInvitedToTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    isHost: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    getTableDescription: (self: GameTable) -> CommonTypes.TableDescription,
-    getTableId: (self: GameTable) -> CommonTypes.TableId,
-    getGameId: (self: GameTable) -> CommonTypes.GameId,
-    getGameInstanceGUID: (self:GameTable) -> CommonTypes.GameInstanceGUID,
+    isMember: (GameTable, CommonTypes.UserId) -> boolean,
+    isInvitedToTable: (GameTable, CommonTypes.UserId) -> boolean,
+    isHost: (GameTable, CommonTypes.UserId) -> boolean,
+    getTableDescription: (GameTable) -> CommonTypes.TableDescription,
+    getTableId: (GameTable) -> CommonTypes.TableId,
+    getGameId: (GameTable) -> CommonTypes.GameId,
+    getGameInstanceGUID: (GameTable) -> CommonTypes.GameInstanceGUID,
 
     -- non-const functions.  Each returns true iff something changed.
-    goToWaiting: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    destroyTable: (self: GameTable, userIds: {CommonTypes.UserId}) -> boolean,
-    joinTable: (self: GameTable, userId: CommonTypes.UserId, opt_isMock: boolean?) -> boolean,
-    inviteToTable: (self: GameTable, userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId) -> boolean,
-    setInvites: (self: GameTable, userId: CommonTypes.UserId, inviteeIds: {CommonTypes.UserId}) -> boolean,
-    removeGuestFromTable: (self: GameTable, userId: CommonTypes.UserId, guestId: CommonTypes.UserId) -> boolean,
-    removeInviteForTable: (self: GameTable, userId: CommonTypes.UserId, inviteId: CommonTypes.UserId) -> boolean,
-    leaveTable: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    updateGameOptions: (self: GameTable, userId: CommonTypes.UserId, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions) -> boolean,
+    goToWaiting: (GameTable, CommonTypes.UserId) -> boolean,
+    destroyTable: (GameTable, {CommonTypes.UserId}) -> boolean,
+    joinTable: (GameTable, CommonTypes.UserId, boolean?) -> boolean,
+    inviteToTable: (GameTable, CommonTypes.UserId, CommonTypes.UserId) -> boolean,
+    setInvites: (GameTable, CommonTypes.UserId, {CommonTypes.UserId}) -> boolean,
+    removeGuestFromTable: (GameTable, CommonTypes.UserId, CommonTypes.UserId) -> boolean,
+    removeInviteForTable: (GameTable, CommonTypes.UserId, CommonTypes.UserId) -> boolean,
+    leaveTable: (GameTable, CommonTypes.UserId) -> boolean,
+    updateGameOptions: (GameTable, CommonTypes.UserId, CommonTypes.NonDefaultGameOptions) -> boolean,
 
-    startGame: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    endGame: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
-    endGameEarly: (self: GameTable, userId: CommonTypes.UserId) -> boolean,
+    startGame: (GameTable, CommonTypes.UserId) -> boolean,
+    endGame: (GameTable, CommonTypes.UserId) -> boolean,
+    endGameEarly: (GameTable, CommonTypes.UserId) -> boolean,
 }
 
 return ServerTypes
