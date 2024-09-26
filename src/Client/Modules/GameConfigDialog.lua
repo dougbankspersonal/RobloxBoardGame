@@ -11,10 +11,10 @@ local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 
 local Cryo = require(ReplicatedStorage.Cryo)
 
--- StarterGui
-local RobloxBoardGameStarterGui = script.Parent.Parent
-local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
-local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
+-- Client
+local RobloxBoardGameClient = script.Parent.Parent
+local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
+local DialogUtils = require(RobloxBoardGameClient.Modules.DialogUtils)
 
 local GameConfigDialog = {}
 

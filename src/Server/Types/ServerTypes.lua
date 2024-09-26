@@ -1,7 +1,3 @@
---[[
-    Server-concept only.
-    Types for server classes.
-]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Shared
@@ -10,31 +6,15 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 
 local ServerTypes = {}
 
-export type GameInstance = {
-    gameId: CommonTypes.GameId,
-    gameInstanceGUID: CommonTypes.GameInstanceGUID,
-    tableDescription: CommonTypes.TableDescription,
-
-    new: (CommonTypes.GameId, CommonTypes.TableDescription) -> GameInstance,
-
-    playGame: (GameInstance) -> nil,
-    endGame: (GameInstance) -> nil,
-    playerLeft: (GameInstance, userId: CommonTypes.UserId) -> nil,
-    destroy: (GameInstance) -> nil,
-}
-
 export type GameTable = {
     -- members
     gameDetails: CommonTypes.GameDetails,
-    gameInstance: GameInstance?,
     tableDescription: CommonTypes.TableDescription,
     isMock: boolean,
 
     -- static functions.
     new: (CommonTypes.UserId, CommonTypes.GameDetails, boolean) -> GameTable,
-    getGameTable: (CommonTypes.TableId) -> GameTable,
     createNewTable: (CommonTypes.UserId, boolean) -> GameTable?,
-    getAllGameTables: () -> { [CommonTypes.TableId]: GameTable },
 
     -- const member  functions.
     -- Shortcuts to ask questions about table.
@@ -59,7 +39,6 @@ export type GameTable = {
 
     startGame: (GameTable, CommonTypes.UserId) -> boolean,
     endGame: (GameTable, CommonTypes.UserId) -> boolean,
-    endGameEarly: (GameTable, CommonTypes.UserId) -> boolean,
 }
 
 return ServerTypes

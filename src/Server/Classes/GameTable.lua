@@ -4,9 +4,10 @@
     Any instance of game table is stored in a global array: this file also
     provides static functions to fetch created tables based on table Id.
 ]]
-
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
+
+local Cryo = require(ReplicatedStorage.Cryo)
 
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
@@ -14,23 +15,20 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
+local TableDescription = require(RobloxBoardGameShared.Modules.TableDescription)
 
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
-local GameInstance = require(RobloxBoardGameServer.Classes.GameInstance)
+local ServerGameInstanceConstructors = require(RobloxBoardGameServer.Globals.ServerGameInstanceConstructors)
+local ServerGameInstances = require(RobloxBoardGameServer.Modules.ServerGameInstances)
 local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
+local GameTablesStorage = require(RobloxBoardGameServer.Modules.GameTablesStorage)
+local ServerEventManagement = require(RobloxBoardGameServer.Modules.ServerEventManagement)
 
 local GameTable = {}
 GameTable.__index = GameTable
 
 local nextGameTableId: CommonTypes.TableId = 10000
-
-local gameTables = {} :: { [CommonTypes.TableId]: ServerTypes.GameTable }
-
-
-GameTable.getAllGameTables = function(): { [CommonTypes.TableId]: ServerTypes.GameTable }
-    return gameTables
-end
 
 GameTable.new = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): ServerTypes.GameTable
     local self = {}
@@ -42,37 +40,21 @@ GameTable.new = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.Gam
     self.isMock = false
 
     -- Fill in table description.
-    self.tableDescription = {
-        tableId = tableId,
-        memberUserIds = {
-            [hostUserId] = true,
-        },
-        isPublic = isPublic,
-        hostUserId = hostUserId,
-        invitedUserIds = {},
-        gameId = gameId,
-        gameTableState = GameTableStates.WaitingForPlayers,
-    } :: CommonTypes.TableDescription
+    self.tableDescription = TableDescription.createTableDescription(tableId, hostUserId, gameId, isPublic)
 
     self.gameDetails = GameDetails.getGameDetails(gameId)
-    self.gameInstance = nil
 
-    gameTables[tableId] = self
+    GameTablesStorage.addTable(self)
 
     return self
-end
-
-GameTable.getGameTable = function(tableId): ServerTypes.GameTable
-    return gameTables[tableId]
 end
 
 -- Return the table iff the table can be created.
 GameTable.createNewTable = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): ServerTypes.GameTable?
     -- You cannot create a new table while you are joined to a table.
-    for _, gameTable in pairs(gameTables) do
-        if gameTable.tableDescription.memberUserIds[hostUserId] then
-            return nil
-        end
+    local firstTableWithMember = GameTablesStorage.getFirstTableWithMember(hostUserId)
+    if firstTableWithMember then
+        return nil
     end
 
     -- Game must exist.
@@ -94,10 +76,7 @@ function GameTable:getGameId(): CommonTypes.GameId
 end
 
 function GameTable:getGameInstanceGUID(): CommonTypes.GameInstanceGUID?
-    if self.gameInstance then
-        return self.gameInstance:getGUID()
-    end
-    return nil
+    return self.tableDescription.gameInstanceGUID
 end
 
 function GameTable:isMember(userId: CommonTypes.UserId): boolean
@@ -123,12 +102,11 @@ function GameTable:destroyTable(userId: CommonTypes.UserId): boolean
     end
 
     -- Kill any ongoing game.
-    if self.gameInstance then
-        self.gameInstance:destroy()
-        self.gameInstance = nil
+    if self.tableDescription.gameTableState == GameTableStates.Playing then
+        self:endGame(userId)
     end
 
-    gameTables[self:getTableId()] = nil
+    GameTablesStorage.removeTable(self)
 
     return true
 end
@@ -170,7 +148,7 @@ function GameTable:joinTable(userId: CommonTypes.UserId, opt_isMock:boolean?): b
 
     -- If this is a mock player, make a note of that.
     if opt_isMock then
-        self.tableDescriptions.mockUserIds[userId] = true
+        self.tableDescription.mockUserIds[userId] = true
     end
 
     return true
@@ -287,25 +265,44 @@ function GameTable:removeInviteForTable(userId: CommonTypes.UserId, inviteeId: C
     return true
 end
 
-function GameTable:leaveTable(userId): boolean
+function GameTable:leaveTable(userId: CommonTypes.UserId): boolean
+    assert(userId, "userId must be provided")
+    Utils.debugPrint("Mocks", "leaveTable userId = ", userId)
+    Utils.debugPrint("Mocks", "leaveTable self.tableDescription.hostUserId = ", self.tableDescription.hostUserId)
+    Utils.debugPrint("Mocks", "leaveTable self.tableDescription.memberUserIds = ", self.tableDescription.memberUserIds)
+
     -- Host can't leave.
     if self:isHost(userId) then
+        Utils.debugPrint("Mocks", "leaveTable 001")
         return false
     end
 
     -- Can't leave if not a member.
     if not self:isMember(userId) then
+        Utils.debugPrint("Mocks", "leaveTable 002")
         return false
     end
 
     -- Remove the user.
     self.tableDescription.memberUserIds[userId] = nil
+    self.tableDescription.invitedUserIds[userId] = nil
+    self.tableDescription.mockUserIds[userId] = nil
+
+    Utils.debugPrint("Mocks", "leaveTable 003")
 
     -- Let the game deal with any fallout from the player leaving.
-    if self.gameInstance then
-        self.gameInstance:playerLeft(userId)
+    if self.tableDescription.gameTableState == GameTableStates.Playing then
+        Utils.debugPrint("Mocks", "leaveTable 04")
+        local serverGameInstance = ServerGameInstances.getGameInstance(self.tableDescription.gameInstanceGUID)
+        assert(serverGameInstance, "gameInstance should exist if gameTableState is Playing")
+        -- sanity check: this is the same table description as in our game instance, right?
+        -- Like having modfified it above, we have modified the copy used in game instance?
+        assert(Cryo.Dictionary.equals(self.tableDescription, serverGameInstance.tableDescription), "tableDescription should be the same as in game instance")
+
+        serverGameInstance:playerLeftGame(userId)
     end
 
+    Utils.debugPrint("Mocks", "leaveTable 005")
     return true
 end
 
@@ -367,11 +364,29 @@ function GameTable:startGame(userId: CommonTypes.UserId): boolean
         return false
     end
 
-    assert(self.gameInstance == nil, "Game instance already exists"	)
+    assert(self.tableDescription.gameTableState ~= GameTableStates.Playing, "gameTableState already Playing")
+    assert(self.tableDescription.gameInstanceGUID == nil, "gameInstanceGUID already exists")
     self.tableDescription.gameTableState = GameTableStates.Playing
-    self.gameInstance = GameInstance.new(self)
+    self.tableDescription.gameInstanceGUID = HttpService:GenerateGUID(false)
+
+    -- Create communication channels for game-specific messages.
+    ServerEventManagement.setupRemoteCommunicationsForGame(self.tableDescription.gameInstanceGUID)
+    -- Make the instance and start the game playing.
+    local serverGameInstanceConstructor = self:getServerGameInstanceConstructor()
+    -- _After this an instance for the game exists on the server, game is playing.
+    local serverGameInstance = serverGameInstanceConstructor(self.tableDescription)
+    ServerGameInstances.addServerGameInstance(serverGameInstance)
 
     return true
+end
+
+function GameTable:getServerGameInstanceConstructor(): CommonTypes.ServerGameInstanceConstructor
+    assert(self.tableDescription.gameId, "getServerGameInstanceConstructor: gameId is required")
+   local giCtor = ServerGameInstanceConstructors.getServerGameInstanceConstructor(self.tableDescription.gameId)
+
+    assert(giCtor, "getServerGameInstanceConstructor: giCtor not found for gameId: " .. self.tableDescription.gameId)
+
+    return giCtor
 end
 
 function GameTable:endGame(userId: CommonTypes.UserId): boolean
@@ -385,34 +400,21 @@ function GameTable:endGame(userId: CommonTypes.UserId): boolean
         return false
     end
 
+    -- Stop listening for game-specific messages.
+    ServerEventManagement.removeServerToClientEventsForGame(self.tableDescription.gameInstanceGUID)
+
+    local serverGameInstance = ServerGameInstances.getGameInstance(self.tableDescription.gameInstanceGUID)
+    ServerGameInstances.removeServerGameInstance(self.tableDescription.gameInstanceGUID)
+    assert(serverGameInstance, "should have gameInstance")
+    serverGameInstance:destroy()
+
     self.tableDescription.gameTableState = GameTableStates.WaitingForPlayers
-    self.gameInstance:endGame()
-    self.gameInstance = nil
+    self.tableDescription.gameInstanceGUID = nil
+
 
     return true
 end
 
-
-function GameTable:endGameEarly(userId: CommonTypes.UserId): boolean
-    -- Must be the host.
-    if not self:isHost(userId) then
-        return false
-    end
-
-    -- Game isn't playing, no.
-    if self.tableDescription.gameTableState ~= GameTableStates.Playing then
-        return false
-    end
-
-    self.tableDescription.gameTableState = GameTableStates.WaitingForPlayers
-
-    Utils.debugPrint("GameInstance", "Doug: self.gameInstance = ", self.gameInstance)
-
-    self.gameInstance:endGame()
-    self.gameInstance = nil
-
-    return true
-end
 
 function GameTable:getTableDescription(): CommonTypes.TableDescription
     return self.tableDescription

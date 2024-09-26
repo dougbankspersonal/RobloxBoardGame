@@ -19,10 +19,10 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
--- StarterGui
-local RobloxBoardGameStarterGui = script.Parent.Parent
-local TweenHandling = require(RobloxBoardGameStarterGui.Modules.TweenHandling)
-local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
+-- Client
+local RobloxBoardGameClient = script.Parent.Parent
+local TweenHandling = require(RobloxBoardGameClient.Modules.TweenHandling)
+local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
 
 local Cryo = require(ReplicatedStorage.Cryo)
 
@@ -440,7 +440,7 @@ end
 --  |   of row      |  | widget | widget
 --  |               |  +--------+--------
 --  +--------------------------------------------
-GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, opt_rowOptions: RowOptions?, opt_instanceOptions: InstanceOptions?): GuiObject
+GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, opt_rowOptions: RowOptions?, opt_contentOptions: InstanceOptions?): GuiObject
     assert(parent, "Should have a parent")
     assert(rowName, "Should have a rowName")
 
@@ -503,7 +503,7 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
         LayoutOrder = 2,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-    }, opt_instanceOptions)
+    }, opt_contentOptions)
 
 
     -- Rows usually contain ordered list of widgets, add a layout order generator.
@@ -557,7 +557,7 @@ GuiUtils.getRowContent = function(parent: GuiObject, rowName: string): Frame
     return rowContent
 end
 
-GuiUtils.addStandardTextButtonInContainer = function(parent: Frame, name: string, opt_buttonOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, TextButton)
+GuiUtils.addTextButtonInContainer = function(parent: Frame, name: string, opt_buttonOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, TextButton)
     local container = Instance.new("Frame")
     applyInstanceOptions(container, {
         Parent = parent,
@@ -592,8 +592,8 @@ GuiUtils.addStandardTextButtonInContainer = function(parent: Frame, name: string
 end
 
 -- Make a button with common look & feel.
-GuiUtils.addTextButtonInContainer = function(parent: Instance, text: string, callback: () -> (), opt_instanceOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, Instance)
-    local container, textButton = GuiUtils.addStandardTextButtonInContainer(parent, GuiConstants.textButtonName, {
+GuiUtils.addStandardTextButtonInContainer = function(parent: Instance, text: string, callback: () -> (), opt_buttonOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, Instance)
+    local container, textButton = GuiUtils.addTextButtonInContainer(parent, GuiConstants.textButtonName, {
         Text = text,
     }, opt_containerOptions)
 
@@ -603,7 +603,7 @@ GuiUtils.addTextButtonInContainer = function(parent: Instance, text: string, cal
         TextSize = 14,
         AutoButtonColor = true,
         Active = true,
-    }, opt_instanceOptions)
+    }, opt_buttonOptions)
 
     textButton.Activated:Connect(function()
         if not textButton.Active then

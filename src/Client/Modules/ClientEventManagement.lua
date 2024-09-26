@@ -8,15 +8,18 @@ local RunService = game:GetService("RunService")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
+local EventUtils = require(RobloxBoardGameShared.Modules.EventUtils)
+local TableDescription = require(RobloxBoardGameShared.Modules.TableDescription)
 
 local ClientEventManagement = {}
 
-local tableEvents = ReplicatedStorage:WaitForChild("TableEvents")
+local tableEvents = ReplicatedStorage:WaitForChild(EventUtils.TableEventsFolderName)
 if not tableEvents then
     assert(false, "TableEvents missing")
     return
 end
-local tableFunctions = ReplicatedStorage:WaitForChild("TableFunctions")
+
+local tableFunctions = ReplicatedStorage:WaitForChild(EventUtils.TableFunctionsFolderName)
 if not tableFunctions then
     assert(false, "TableFunctions missing")
     return
@@ -29,8 +32,10 @@ ClientEventManagement.fetchTableDescriptionsByTableIdAsync = function(): CommonT
         assert(false, "fetchTableDescriptionsByTableIdRemoteFunction remote function missing")
         return {} :: CommonTypes.TableDescriptionsByTableId
     end
-    local tableDescriptionsByTableId = fetchTableDescriptionsByTableIdRemoteFunction:InvokeServer()
-    return tableDescriptionsByTableId
+    local raw_tableDescriptionsByTableId = fetchTableDescriptionsByTableIdRemoteFunction:InvokeServer()
+    -- Sanitize right away.
+    local clean_raw_tableDescriptionsByTableId = TableDescription.sanitizeTableDescriptionsByTableId(raw_tableDescriptionsByTableId)
+    return clean_raw_tableDescriptionsByTableId
 end
 
 local setupMockEventFunctions = function()
@@ -54,6 +59,13 @@ local setupMockEventFunctions = function()
         event:FireServer(tableId)
     end
 
+    ClientEventManagement.mockMemberLeaves = function(tableId: CommonTypes.TableId)
+        local event = ReplicatedStorage.TableEvents:WaitForChild("MockMemberLeaves")
+        assert(event, "MockMemberLeaves event missing")
+        Utils.debugPrint("Mocks", "firing mockMemberLeaves event")
+        event:FireServer(tableId)
+    end
+
     ClientEventManagement.addMockInvite = function(tableId: CommonTypes.TableId)
         local event = ReplicatedStorage.TableEvents:WaitForChild("AddMockInvite")
         assert(event, "AddMockInvite event missing")
@@ -74,10 +86,11 @@ local setupMockEventFunctions = function()
 end
 
 ClientEventManagement.listenToServerEvents = function(onTableCreated: (tableDescription: CommonTypes.TableDescription) -> nil,
+    -- FIXME(dbanks)
+    -- Change all these to signals.
     onTableDestroyed: (tableId: CommonTypes.TableId) -> nil,
     onTableUpdated: (tableDescription: CommonTypes.TableDescription) -> nil,
-    onHostAbortedGame: (tableId: CommonTypes.TableId) -> nil,
-    onPlayerLeftTable: (tableId: CommonTypes.TableId, userId: CommonTypes.UserId) -> nil)
+    onHostAbortedGame: (tableId: CommonTypes.TableId) -> nil)
 
     assert(onTableCreated, "tableCreated must be provided")
     assert(onTableDestroyed, "tableDestroyed must be provided")
@@ -96,15 +109,45 @@ ClientEventManagement.listenToServerEvents = function(onTableCreated: (tableDesc
 
     event = tableEvents:WaitForChild("TableUpdated")
     assert(event, "TableUpdated event missing")
-    event.OnClientEvent:Connect(onTableUpdated)
+    event.OnClientEvent:Connect(function(raw_tableDescription: CommonTypes.TableDescription)
+        local tableDescription = TableDescription.sanitizeTableDescription(raw_tableDescription)
+        onTableUpdated(tableDescription)
+    end)
 
     event = tableEvents:WaitForChild("HostAbortedGame")
     assert(event, "HostAbortedGame event missing")
     event.OnClientEvent:Connect(onHostAbortedGame)
+end
 
-    event = tableEvents:WaitForChild("PlayerLeftTable")
+local clientEventConnectionsByGameInstanceGUID = {} :: {[CommonTypes.GameInstanceGUID]: {RBXScriptConnection}}
+
+ClientEventManagement.listenToServerEventsForActiveGame = function(gameInstanceGUID: CommonTypes.GameInstanceGUID,
+    onPlayerLeftTable: (CommonTypes.UserId) -> nil)
+
+    assert(gameInstanceGUID, "gameInstanceGUID must be provided")
+    assert(onPlayerLeftTable, "onPlayerLeftTable must be provided")
+
+    local event = EventUtils.getRemoteEventForGame(gameInstanceGUID, "PlayerLeftTable")
     assert(event, "PlayerLeftTable event missing")
-    event.OnClientEvent:Connect(onPlayerLeftTable)
+    local connection = event.OnClientEvent:Connect(function(...)
+        onPlayerLeftTable(...)
+    end)
+    clientEventConnectionsByGameInstanceGUID[gameInstanceGUID] = {
+        connection,
+    }
+end
+
+ClientEventManagement.cancelServerEventsForActiveGame = function(gameInstanceGUID: CommonTypes.GameInstanceGUID)
+    assert(gameInstanceGUID, "gameInstanceGUID must be provided")
+
+    local connections = clientEventConnectionsByGameInstanceGUID[gameInstanceGUID]
+    if not connections then
+        return
+    end
+    for _, connection in ipairs(connections) do
+        connection:Disconnect()
+    end
+    clientEventConnectionsByGameInstanceGUID[gameInstanceGUID] = nil
 end
 
 ClientEventManagement.createTable = function(gameId: CommonTypes.GameId, isPublic: boolean)
@@ -132,6 +175,7 @@ ClientEventManagement.joinTable = function(tableId: CommonTypes.TableId)
 end
 
 ClientEventManagement.leaveTable = function(tableId: CommonTypes.TableId)
+    Utils.debugPrint("Mocks", "firing leaveTable event")
     local event = ReplicatedStorage.TableEvents:WaitForChild("LeaveTable")
     assert(event, "LeaveTable event missing")
     event:FireServer(tableId)
@@ -174,9 +218,9 @@ ClientEventManagement.setTableGameOptions = function(tableId: CommonTypes.TableI
     event:FireServer(tableId, nonDefaultGameOptions)
 end
 
-ClientEventManagement.endGameEarly = function(tableId: CommonTypes.TableId)
-    local event = ReplicatedStorage.TableEvents:WaitForChild("EndGameEarly")
-    assert(event, "EndGameEarly event missing")
+ClientEventManagement.endGame = function(tableId: CommonTypes.TableId)
+    local event = ReplicatedStorage.TableEvents:WaitForChild("EndGame")
+    assert(event, "EndGame event missing")
     event:FireServer(tableId)
 end
 

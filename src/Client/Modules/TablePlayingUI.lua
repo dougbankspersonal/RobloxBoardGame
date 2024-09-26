@@ -18,13 +18,13 @@ local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local PlayerUtils = require(RobloxBoardGameShared.Modules.PlayerUtils)
 
--- StarterGui
-local RobloxBoardGameStarterGui = script.Parent.Parent
-local ClientTableDescriptions = require(RobloxBoardGameStarterGui.Modules.ClientTableDescriptions)
-local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
-local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
-local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
-local GameUIs = require(RobloxBoardGameStarterGui.Globals.GameUIs)
+-- Client
+local RobloxBoardGameClient = script.Parent.Parent
+local ClientTableDescriptions = require(RobloxBoardGameClient.Modules.ClientTableDescriptions)
+local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
+local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local ClientEventManagement = require(RobloxBoardGameClient.Modules.ClientEventManagement)
+local ClientGameInstanceFunctions = require(RobloxBoardGameClient.Globals.ClientGameInstanceFunctions)
 
 local metadataLayoutOrder = 0
 
@@ -69,9 +69,10 @@ local addMetadataElement = function(parent: GuiObject, text: string, fontSize: n
     return label
 end
 
-local fillInMetadataAsync = function(tableMetadataFrame: Frame, tableDescription: CommonTypes.TableDescription, gameDetails: CommonTypes.GameDetails)
+local fillInMetadataAsync = function(tableMetadataFrame: Frame, tableDescription: CommonTypes.TableDescription)
     metadataLayoutOrder = 0
 
+    local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
     addMetadataElement(tableMetadataFrame, gameDetails.name, GuiConstants.gamePlayingSidebarH1FontSize)
 
     addMetadataElement(tableMetadataFrame, "Players", GuiConstants.gamePlayingSidebarH2FontSize)
@@ -107,7 +108,7 @@ local fillInMetadataAsync = function(tableMetadataFrame: Frame, tableDescription
     end
 end
 
-local addSidebar = function(mainFrame: GuiObject, tableDescription: CommonTypes.TableDescription, gameDetails: CommonTypes.GameDetails): Frame
+local addSidebar = function(mainFrame: GuiObject, tableDescription: CommonTypes.TableDescription): Frame
     local sideBarFrame = Instance.new("Frame")
     sideBarFrame.Name = GuiConstants.gamePlayingSideBarName
     sideBarFrame.BorderSizePixel = 1
@@ -143,7 +144,7 @@ local addSidebar = function(mainFrame: GuiObject, tableDescription: CommonTypes.
 
     -- Use a task for async name grabbing.
     task.spawn(function()
-        fillInMetadataAsync(tableMetadataFrame, tableDescription, gameDetails)
+        fillInMetadataAsync(tableMetadataFrame, tableDescription)
     end)
 
     -- Bottom section with controls.
@@ -159,12 +160,12 @@ local addSidebar = function(mainFrame: GuiObject, tableDescription: CommonTypes.
 
     if tableDescription.hostUserId == game.Players.LocalPlayer.UserId then
         -- Host controls.
-        GuiUtils.addTextButtonInContainer(controlsFrame, "End Game", function()
-            ClientEventManagement.endGameEarly(tableDescription.tableId)
+        GuiUtils.addStandardTextButtonInContainer(controlsFrame, "End Game", function()
+            ClientEventManagement.endGame(tableDescription.tableId)
         end)
     else
         -- Guest controls.
-        GuiUtils.addButton(controlsFrame, "Leave Table", function()
+        GuiUtils.addStandardTextButtonInContainer(controlsFrame, "Leave Table", function()
             ClientEventManagement.leaveTable(tableDescription.tableId)
         end)
     end
@@ -172,21 +173,22 @@ local addSidebar = function(mainFrame: GuiObject, tableDescription: CommonTypes.
     return sideBarFrame
 end
 
-local addGameSpecificContainer = function(mainFrame: GuiObject, tableDescription: CommonTypes.TableDescription, _: CommonTypes.GameDetails): Frame
+local makeClientGameFrame = function(mainFrame: GuiObject)
     local contentFrame = Instance.new("Frame")
     contentFrame.Name = GuiConstants.gamePlayingContentName
     contentFrame.Parent = mainFrame
     contentFrame.Position = UDim2.new(0, GuiConstants.gamePlayingSidebarWidth, 0, 0)
     contentFrame.Size = UDim2.new(1, -GuiConstants.gamePlayingSidebarWidth, 1, 0)
     contentFrame.BackgroundTransparency = 1
-
-    -- Let game build its UI in here.
-    local gameUIs = GameUIs.getGameUIs(tableDescription.gameId)
-    assert(gameUIs, "Should have gameUIs")
-    assert(gameUIs.build, "Should have gameUIs.build")
-    gameUIs.build(contentFrame, tableDescription)
-
     return contentFrame
+end
+
+local makeClientGameInstance = function(tableDescription: CommonTypes.TableDescription, frame: Frame): CommonTypes.ClientGameInstance
+    -- Let game build its UI in here.
+    local clientGameInstanceFunctions = ClientGameInstanceFunctions.getClientGameInstanceFunctions(tableDescription.gameId)
+    assert(clientGameInstanceFunctions, "Should have gameInstanceFunctions")
+    assert(clientGameInstanceFunctions.makeClientGameInstance, "Should have gameInstanceFunctions.makeClientGameInstance")
+    return clientGameInstanceFunctions.makeClientGameInstance(tableDescription, frame)
 end
 
 -- Create barebones structure for this UI,
@@ -210,8 +212,9 @@ TablePlayingUI.build = function(tableId: CommonTypes.TableId)
     mainFrame.BackgroundColor3 = GuiConstants.gamePlayingBackgroundColor
     GuiUtils.addUIGradient(mainFrame, GuiConstants.standardMainScreenColorSequence)
 
-    addSidebar(mainFrame, tableDescription, gameDetails)
-    addGameSpecificContainer(mainFrame, tableDescription, gameDetails)
+    addSidebar(mainFrame, tableDescription)
+    local gameFrame = makeClientGameFrame(mainFrame)
+    makeClientGameInstance(tableDescription, gameFrame)
 end
 
 TablePlayingUI.update = function()

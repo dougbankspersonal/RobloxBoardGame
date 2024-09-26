@@ -17,12 +17,12 @@ local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 local Cryo = require(ReplicatedStorage.Cryo)
 
--- StarterGui
-local RobloxBoardGameStarterGui = script.Parent.Parent
-local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
-local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
-local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
-local GameGuiUtils = require(RobloxBoardGameStarterGui.Modules.GameGuiUtils)
+-- Client
+local RobloxBoardGameClient = script.Parent.Parent
+local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
+local DialogUtils = require(RobloxBoardGameClient.Modules.DialogUtils)
+local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local GameGuiUtils = require(RobloxBoardGameClient.Modules.GameGuiUtils)
 
 local makePublicOrPrivateDialog = function(gameId: CommonTypes.GameId, onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
     -- Put up a UI to get public or private.

@@ -50,6 +50,16 @@ export type TableDescription = {
     tableId: TableId,
     hostUserId: UserId,
     isPublic: boolean,
+    gameId: GameId,
+    -- Game is waiting, playing, etc.  An enum.
+    gameTableState: GameTableState,
+
+    -- Any game-specific tweaks that have been set.
+    opt_nonDefaultGameOptions: NonDefaultGameOptions?,
+
+    -- Iff the gameTableState is Playing, there should be non-nil gameInstanceGUID in there.
+    gameInstanceGUID: GameInstanceGUID?,
+
     -- Maps from user Id to true.  Basically a set.
     -- For all the functions we are dealing with when checking/modifying, set works better than array.
     -- Note: the host is in this set.
@@ -60,13 +70,6 @@ export type TableDescription = {
     invitedUserIds: {
         [UserId]: boolean,
     },
-    gameId: GameId,
-    -- Game is waiting, playing, etc.  An enum.
-    gameTableState: GameTableState,
-
-    -- Any game-specific tweaks that have been set.
-    opt_nonDefaultGameOptions: NonDefaultGameOptions?,
-
     -- These are "mock" players, not real people.
     mockUserIds: {
         [UserId]: boolean,
@@ -94,12 +97,10 @@ Instead of one monolithic table for each game, we've split it into multiple bloc
 GameDetails:
     Metadata about the game (name, images, description, min/max players, etc).
     Available on both client and server.
-GameInstanceFunctions:
-    Functions used to start, stop, remove players from the game.
-    Available only on server.
-GameUIs
-    Functions to build/destroy the UI for the game.
-    Available only on Client.
+ServerGameInstanceConstructors:
+    For each game, a function to create a server-side game instance.
+ClientGameInstanceFunctions:
+    For each game, a function to create a client-side game instance.
 
 These are all keyed by GameId, so you can look up the data for a game by its id.
 
@@ -143,25 +144,39 @@ export type GameDetailsByGameId = {
     [GameId]: GameDetails,
 }
 
-export type GameInstanceFunctions = {
-    onPlay: (GameInstanceGUID, TableDescription) -> nil,
-    onEnd: () -> nil,
-    onPlayerLeft: (playerId: UserId) -> nil,
+export type ServerGameInstance = {
+    tableDescription: TableDescription,
+
+    -- Making the game instance starts play.
+    -- Destroying the instance ends the game.
+    -- Other than that we just need a system notification when a player leaves.
+    destroy: (ServerGameInstance) -> nil,
+    playerLeftGame: (ServerGameInstance, userId: UserId) -> nil,
 }
 
-export type GameInstanceFunctionsByGameId = {
-    [GameId]: GameInstanceFunctions,
+export type ServerGameInstanceConstructor = (TableDescription) -> ServerGameInstance
+
+export type ServerGameInstanceConstructorsByGameId = {
+    [GameId]: ServerGameInstanceConstructor,
 }
 
-export type GameUIs = {
-    build: (parent: Frame, tableDescription: TableDescription) -> nil,
-    destroy: () -> nil,
-    handlePlayerLeftGame: (userId:UserId) -> nil,
+
+export type ClientGameInstance = {
+    tableDescription: TableDescription,
+
+    destroy: (ClientGameInstance) -> nil,
+    onPlayerLeftTable: (ClientGameInstance, userId: UserId) -> boolean,
 }
 
-export type GameUIsByGameId = {
-    [GameId]: GameUIs,
+export type ClientGameInstanceFunctions = {
+    makeClientGameInstance: (TableDescription, Frame) -> ClientGameInstance,
+    getClientGameInstance: () -> ClientGameInstance?,
 }
+
+export type ClientGameInstanceFunctionsByGameId = {
+    [GameId]: ClientGameInstanceFunctions,
+}
+
 
 local CommonTypes = {
 }

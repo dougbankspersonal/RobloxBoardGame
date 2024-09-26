@@ -23,16 +23,16 @@ local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local Cryo = require(ReplicatedStorage.Cryo)
 local PlayerUtils = require(RobloxBoardGameShared.Modules.PlayerUtils)
 
--- StarterGui
-local RobloxBoardGameStarterGui = script.Parent.Parent
-local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
-local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
-local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
-local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
-local ClientTableDescriptions = require(RobloxBoardGameStarterGui.Modules.ClientTableDescriptions)
-local FriendSelectionDialog = require(RobloxBoardGameStarterGui.Modules.FriendSelectionDialog)
-local GameConfigDialog = require(RobloxBoardGameStarterGui.Modules.GameConfigDialog)
-local UserGuiUtils = require(RobloxBoardGameStarterGui.Modules.UserGuiUtils)
+-- Client
+local RobloxBoardGameClient = script.Parent.Parent
+local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
+local ClientEventManagement = require(RobloxBoardGameClient.Modules.ClientEventManagement)
+local DialogUtils = require(RobloxBoardGameClient.Modules.DialogUtils)
+local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local ClientTableDescriptions = require(RobloxBoardGameClient.Modules.ClientTableDescriptions)
+local FriendSelectionDialog = require(RobloxBoardGameClient.Modules.FriendSelectionDialog)
+local GameConfigDialog = require(RobloxBoardGameClient.Modules.GameConfigDialog)
+local UserGuiUtils = require(RobloxBoardGameClient.Modules.UserGuiUtils)
 
 local TableWaitingUI = {}
 
@@ -153,7 +153,7 @@ local addTableControls = function (frame: Frame, tableDescription: CommonTypes.T
         -- * configure game (for game with gameOptions).
         --
         -- Keep track of the id for the start game button: we need to update it later.
-        local _, _startButton = GuiUtils.addTextButtonInContainer(controlsRowContent, "Start Game", function()
+        local _, _startButton = GuiUtils.addStandardTextButtonInContainer(controlsRowContent, "Start Game", function()
             Utils.debugPrint("TablePlaying", "Doug: Start Game clicked")
             ClientEventManagement.startGame(tableId)
         end)
@@ -161,14 +161,14 @@ local addTableControls = function (frame: Frame, tableDescription: CommonTypes.T
         assert(startButton, "Should have startButton")
         startButtonWidgetContainerName = startButton.Name
 
-        GuiUtils.addTextButtonInContainer(controlsRowContent, "Destroy Table", function()
+        GuiUtils.addStandardTextButtonInContainer(controlsRowContent, "Destroy Table", function()
             DialogUtils.showConfirmationDialog("Destroy Table?", "Please confirm you want to destroy this table.", function()
                 ClientEventManagement.destroyTable(tableId)
             end)
         end)
 
         if not tableDescription.isPublic then
-            GuiUtils.addTextButtonInContainer(controlsRowContent, "Manage Invites", function()
+            GuiUtils.addStandardTextButtonInContainer(controlsRowContent, "Manage Invites", function()
                 Utils.debugPrint("Friends", "Doug: Manage Invites clicked")
                 onManageInvitesClicked(tableId)
             end)
@@ -177,13 +177,13 @@ local addTableControls = function (frame: Frame, tableDescription: CommonTypes.T
         local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
         assert(gameDetails, "Should have gameDetails")
         if gameDetails.gameOptions and #gameDetails.gameOptions > 0 then
-            GuiUtils.addTextButtonInContainer(controlsRowContent, "Configure Game", function()
+            GuiUtils.addStandardTextButtonInContainer(controlsRowContent, "Configure Game", function()
                 onConfigureGameClicked(tableId)
             end)
         end
     else
         -- Guests can leave table.
-        GuiUtils.addTextButtonInContainer(controlsRowContent, "Leave Table", function()
+        GuiUtils.addStandardTextButtonInContainer(controlsRowContent, "Leave Table", function()
             ClientEventManagement.leaveTable(tableId)
         end)
     end

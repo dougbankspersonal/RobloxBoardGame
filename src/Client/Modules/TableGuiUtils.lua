@@ -9,13 +9,13 @@ local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 
--- StarterGui
-local RobloxBoardGameStarterGui = script.Parent.Parent
-local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
-local ClientTableDescriptions = require(RobloxBoardGameStarterGui.Modules.ClientTableDescriptions)
-local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
-local GameGuiUtils = require(RobloxBoardGameStarterGui.Modules.GameGuiUtils)
-local UserGuiUtils = require(RobloxBoardGameStarterGui.Modules.UserGuiUtils)
+-- Client
+local RobloxBoardGameClient = script.Parent.Parent
+local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
+local ClientTableDescriptions = require(RobloxBoardGameClient.Modules.ClientTableDescriptions)
+local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local GameGuiUtils = require(RobloxBoardGameClient.Modules.GameGuiUtils)
+local UserGuiUtils = require(RobloxBoardGameClient.Modules.UserGuiUtils)
 
 local TableGuiUtils = {}
 
@@ -23,7 +23,7 @@ local TableGuiUtils = {}
     Make a clickable button representing a game table.
 ]]
 TableGuiUtils.addTableButtonInContainer = function(parent: Instance, tableDescription: CommonTypes.TableDescription, onButtonCiicked: () -> nil): (Frame, TextButton)
-    local frame, textButton = GuiUtils.addStandardTextButtonInContainer(parent, GuiConstants.tableButtonName, {
+    local frame, textButton = GuiUtils.addTextButtonInContainer(parent, GuiConstants.tableButtonName, {
         BackgroundColor3 = GuiConstants.userButtonBackgroundColor,
         BackgroundTransparency = 0.5,
         Size = GuiConstants.tableWidgetSize,

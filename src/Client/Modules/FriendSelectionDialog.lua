@@ -19,12 +19,12 @@ local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 local Cryo = require(ReplicatedStorage.Cryo)
 
--- StarterGui
-local RobloxBoardGameStarterGui = script.Parent.Parent
-local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
-local DialogUtils = require(RobloxBoardGameStarterGui.Modules.DialogUtils)
-local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
-local UserGuiUtils = require(RobloxBoardGameStarterGui.Modules.UserGuiUtils)
+-- Client
+local RobloxBoardGameClient = script.Parent.Parent
+local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
+local DialogUtils = require(RobloxBoardGameClient.Modules.DialogUtils)
+local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local UserGuiUtils = require(RobloxBoardGameClient.Modules.UserGuiUtils)
 
 local FriendSelectionDialog = {}
 

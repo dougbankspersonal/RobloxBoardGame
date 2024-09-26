@@ -4,10 +4,10 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
--- StarterGui
-local RobloxBoardGameStarterGui = script.Parent.Parent
-local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
-local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
+-- Client
+local RobloxBoardGameClient = script.Parent.Parent
+local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
+local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
 
 local DialogUtils = {}
 
@@ -129,27 +129,64 @@ DialogUtils.makeDialog = function(dialogConfig: DialogConfig): Frame?
     end
 
     if hasDialogButtonConfigs then
-        local rowOptions : GuiUtils.RowOptions = {
-            horizontalAlignment = Enum.HorizontalAlignment.Center,
-            wraps = true,
-            uiListLayoutPadding = UDim.new(0, GuiConstants.buttonsUIListLayoutPadding),
-        }
-
-        local controlsContent = GuiUtils.addRowAndReturnRowContent(dialogContentFrame, "Row_DialogControls", rowOptions)
-
-        Utils.debugPrint("Layout", "Doug: dialogConfig.dialogButtonConfigs = ", dialogConfig.dialogButtonConfigs)
+        local configsByHeading = {} :: {[string]: {DialogButtonConfig}}
         for _, dialogButtonConfig in ipairs(dialogConfig.dialogButtonConfigs) do
-            -- Should be properly configured.
-            assert(dialogButtonConfig.text, "Should have text")
+            local heading = dialogButtonConfig.heading or ""
+            if not configsByHeading[heading] then
+                configsByHeading[heading] = {}
+            end
+            table.insert(configsByHeading[heading], dialogButtonConfig)
+        end
 
-            GuiUtils.addTextButtonInContainer(controlsContent, dialogButtonConfig.text, function()
-                -- Destroy the dialog.
-                DialogUtils.cleanupDialog()
-                -- Hit callback if provided.
-                if dialogButtonConfig.callback then
-                    dialogButtonConfig.callback()
+        local first = true
+        for heading, configsForHeading in pairs(configsByHeading) do
+            local rowOptions : GuiUtils.RowOptions = {
+                horizontalAlignment = Enum.HorizontalAlignment.Center,
+                wraps = true,
+                uiListLayoutPadding = UDim.new(0, GuiConstants.buttonsUIListLayoutPadding),
+                labelText = if heading == "" then nil else heading,
+                useGridLayout = true,
+                gridCellSize = UDim2.fromOffset(GuiConstants.dialogButtonWidth, GuiConstants.dialogButtonHeight),
+            }
+
+            local controlsContent = GuiUtils.addRowAndReturnRowContent(dialogContentFrame, "Row_DialogControls", rowOptions)
+            local gridLayout = controlsContent:FindFirstChildOfClass("UIGridLayout")
+            assert(gridLayout, "Should have gridLayout")
+            if heading == "" then
+                gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+            end
+
+            Utils.debugPrint("Layout", "Doug: configsForHeading = ", configsForHeading)
+            for _, dialogButtonConfig in ipairs(configsForHeading) do
+                -- Should be properly configured.
+                assert(dialogButtonConfig.text, "Should have text")
+
+                local _, button = GuiUtils.addStandardTextButtonInContainer(controlsContent, dialogButtonConfig.text, function()
+                    Utils.debugPrint("Mocks", "Doug: button clicked")
+                    -- Destroy the dialog.
+                    DialogUtils.cleanupDialog()
+                    -- Hit callback if provided.
+                    Utils.debugPrint("Mocks", "Doug: dialogButtonConfig.callback = ", dialogButtonConfig.callback)
+                    if dialogButtonConfig.callback then
+                        dialogButtonConfig.callback()
+                    end
+                end, {
+                    AutomaticSize = Enum.AutomaticSize.None,
+                    Size = UDim2.fromOffset(GuiConstants.dialogButtonWidth, GuiConstants.dialogButtonHeight),
+                })
+
+                if not button.TextFits then
+                    button.TextScaled = true
                 end
-            end)
+            end
+
+            if not first then
+                GuiUtils.addUIPadding(controlsContent, {
+                    PaddingTop = UDim.new(0, GuiConstants.paddingBetweenRows),
+                })
+            end
+
+            first = false
         end
     end
 
@@ -168,13 +205,13 @@ DialogUtils.makeDialog = function(dialogConfig: DialogConfig): Frame?
     return dialog
 end
 
-DialogUtils.showConfirmationDialog = function(title: string, description: string, onConfirm: () -> nil): Frame?
+DialogUtils.showConfirmationDialog = function(title: string, description: string, onConfirm: () -> nil, opt_proceedButtonName: string?, opt_cancelButtonName: string?): Frame?
     local dialogButtonConfigs = {} :: {DialogButtonConfig}
     table.insert(dialogButtonConfigs, {
-        text = "Cancel",
+        text = opt_cancelButtonName or "Cancel",
     })
     table.insert(dialogButtonConfigs, {
-        text = "OK",
+        text = opt_proceedButtonName or "OK",
         callback = onConfirm,
     })
 
@@ -186,6 +223,7 @@ DialogUtils.showConfirmationDialog = function(title: string, description: string
 
     return DialogUtils.makeDialog(dialogConfig)
 end
+
 DialogUtils.showAckDialog = function(title: string, description: string): Frame?
     local dialogButtonConfigs = {} :: {DialogButtonConfig}
     table.insert(dialogButtonConfigs, {

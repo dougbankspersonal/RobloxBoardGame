@@ -10,8 +10,6 @@ local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local TableDescription = require(RobloxBoardGameShared.Modules.TableDescription)
 
-local Cryo = require(ReplicatedStorage.Cryo)
-
 local ClientTableDescriptions = {
 }
 
@@ -89,30 +87,6 @@ ClientTableDescriptions.getTableIdsForPublicWaitingTables = function(userId: Com
     end
 
     return tableIds
-end
-
-ClientTableDescriptions.cleanUpTypes = function(tableDescription: CommonTypes.TableDescription): CommonTypes.TableDescription
-    local retVal = Cryo.Dictionary.join(tableDescription, {})
-
-    retVal.memberUserIds = {}
-    for userId, v in tableDescription.memberUserIds do
-        local userIdAsNumber = tonumber(userId)
-        retVal.memberUserIds[userIdAsNumber] = v
-    end
-
-    retVal.invitedUserIds = {}
-    for userId, v in tableDescription.invitedUserIds do
-        retVal.invitedUserIds[tonumber(userId)] = v
-    end
-
-    if tableDescription.nonDefaultGameOptions then
-        retVal.nonDefaultGameOptions = {}
-        for gameOptionId, v in tableDescription.nonDefaultGameOptions do
-            retVal.nonDefaultGameOptions[tonumber(gameOptionId)] = v
-        end
-    end
-
-    return retVal
 end
 
 ClientTableDescriptions.localPlayerIsAtTable = function(tableId: CommonTypes.TableId): boolean

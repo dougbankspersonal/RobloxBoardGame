@@ -24,8 +24,8 @@
               "$className": "StarterGui",
               "MainScreenGui": {
                   "$className": "ScreenGui",
-          "RobloxBoardGameStarterGui": {
-            "$path": "src/StarterGui/default.project.json"
+          "RobloxBoardGameClient": {
+            "$path": "src/Client/default.project.json"
           }
         }
       },

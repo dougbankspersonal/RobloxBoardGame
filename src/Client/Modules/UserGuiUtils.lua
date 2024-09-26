@@ -18,10 +18,10 @@ local PlayerUtils = require(RobloxBoardGameShared.Modules.PlayerUtils)
 
 local Cryo = require(ReplicatedStorage.Cryo)
 
--- StarterGui
-local RobloxBoardGameStarterGui = script.Parent.Parent
-local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
-local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
+-- Client
+local RobloxBoardGameClient = script.Parent.Parent
+local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
+local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
 
 local addRedX = function(widgetContainer: Frame)
     -- Add a little x indicator on the button.
@@ -99,7 +99,7 @@ end
 UserGuiUtils.addUserButtonInContainer = function(parent: Instance, userId: CommonTypes.UserId, onButtonClicked: (CommonTypes.UserId) -> nil): (Frame, TextButton)
     Utils.debugPrint("Layout", "Doug: addUserButtonInContainer 001")
 
-    local container, textButton = GuiUtils.addStandardTextButtonInContainer(parent, GuiConstants.userButtonName, {
+    local container, textButton = GuiUtils.addTextButtonInContainer(parent, GuiConstants.userButtonName, {
         Size = GuiConstants.userWidgetSize,
         BackgroundColor3 = GuiConstants.userButtonBackgroundColor,
         BackgroundTransparency = 0.5,

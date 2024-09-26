@@ -18,12 +18,11 @@ local debugPrintEnabledLabels = {
     Buttons = false,
     Friends = false,
     GameConfig = false,
-    GameInstance = false,
     GameMetadata = false,
-    GuiUtils = true,
+    GuiUtils = false,
     InviteToTable = false,
     Layout = false,
-    Mocks = false,
+    Mocks = true,
     RemoveInvite = false,
     Sound = false,
     ClientTableDescriptions = false,
@@ -32,7 +31,7 @@ local debugPrintEnabledLabels = {
     UserLayout = false,
 }
 
-Utils.splitString = function(str: string, delimiter: string): {string}
+function Utils.splitString(str: string, delimiter: string): {string}
     local result = {}
     for match in (str .. delimiter):gmatch("(.-)" .. delimiter) do
         table.insert(result, match)
@@ -41,12 +40,12 @@ Utils.splitString = function(str: string, delimiter: string): {string}
 end
 
 -- String starts with given start.
-Utils.stringStartsWith = function(str: string, start: string): boolean
+function Utils.stringStartsWith(str: string, start: string): boolean
     return str:sub(1, #start) == start
 end
 
 -- verify two tables have the same set of keys.
-Utils.tablesHaveSameKeys = function(table1: {[any]: any}, table2: {[any]: any}): boolean
+function Utils.tablesHaveSameKeys(table1: {[any]: any}, table2: {[any]: any}): boolean
     for key, _ in table1 do
         if table2[key] == nil then
             return false
@@ -61,12 +60,12 @@ Utils.tablesHaveSameKeys = function(table1: {[any]: any}, table2: {[any]: any}):
 end
 
 -- is a value in a number-indexed array?
-Utils.arrayHasValue = function(array: {any}, value: any): boolean
+function Utils.arrayHasValue(array: {any}, value: any): boolean
     local index = Cryo.List.find(array, value)
     return index ~= nil
 end
 
-Utils.tableSize = function(table: {[any]: any}): number
+function Utils.tableSize(table: {[any]: any}): number
     assert(table ~= nil, "tableSize: table is nil")
     local keys = Cryo.Dictionary.keys(table)
     return #keys
@@ -80,13 +79,13 @@ local debugPrintLabelCheck = function(label:string): boolean
     return debugPrintEnabledLabels[label]
 end
 
-Utils.debugPrint = function(label, ...)
+function Utils.debugPrint(label, ...)
     if RunService:IsStudio() and debugPrintLabelCheck(label) then
         print(...)
     end
 end
 
-Utils.debugDumpChildren = function(label: string, instance: Instance)
+function Utils.debugDumpChildren(label: string, instance: Instance)
     local rdDummy
     local function recursiveDump(_instance: Instance, depth: number)
         local prefix = string.rep("  ", depth)
@@ -103,7 +102,7 @@ Utils.debugDumpChildren = function(label: string, instance: Instance)
     end
 end
 
-Utils.debugMapUserId = function(userId: CommonTypes.UserId): CommonTypes.UserId
+function Utils.debugMapUserId(userId: CommonTypes.UserId): CommonTypes.UserId
     -- In studio we use mock userIds. When we try to get name or picture of that user things break.
     if RunService:IsStudio() then
         if userId < 0 then
@@ -113,44 +112,46 @@ Utils.debugMapUserId = function(userId: CommonTypes.UserId): CommonTypes.UserId
     return userId
 end
 
-Utils.getRandomKey = function(table: {[any]: any}): any
+function Utils.getRandomKey(table: {[any]: any}): any
     local keys = Cryo.Dictionary.keys(table)
     local randomIndex = math.random(1, #keys)
     return keys[randomIndex]
 end
 
-Utils.sanityCheckGameDetailsByGameId = function(gameDetailsByGameId: CommonTypes.GameDetailsByGameId)
+function Utils.sanityCheckGameDetails(gameId: CommonTypes.GameId, gameDetails: CommonTypes.GameDetails)
+    assert(gameDetails.gameId == gameId, "gameId should match key")
+    assert(gameDetails.gameImage ~= nil, "Should have non-nil gameImage")
+    assert(gameDetails.name ~= nil, "Should have non-nil name")
+    assert(gameDetails.description ~= nil, "Should have non-nil description")
+    assert(gameDetails.maxPlayers ~= nil, "Should have non-nil maxPlayers")
+    assert(gameDetails.minPlayers ~= nil, "Should have non-nil minPlayers")
+end
+
+function Utils.sanityCheckGameDetailsByGameId(gameDetailsByGameId: CommonTypes.GameDetailsByGameId)
     assert(gameDetailsByGameId ~= nil, "Should have non-nil gameDetailsByGameId")
     for gameId, gameDetails in pairs(gameDetailsByGameId) do
-        assert(gameDetails.gameId == gameId, "gameId should match key")
-        assert(gameDetails.gameImage ~= nil, "Should have non-nil gameImage")
-        assert(gameDetails.name ~= nil, "Should have non-nil name")
-        assert(gameDetails.description ~= nil, "Should have non-nil description")
-        assert(gameDetails.maxPlayers ~= nil, "Should have non-nil maxPlayers")
-        assert(gameDetails.minPlayers ~= nil, "Should have non-nil minPlayers")
+        Utils.sanityCheckGameDetails(gameId, gameDetails)
     end
 end
 
-Utils.sanityCheckGameUIsByGameId = function(gameUIsByGameId: CommonTypes.GameUIsByGameId)
-    assert(gameUIsByGameId ~= nil, "Should have non-nil gameUIsByGameId")
-    for _, gameUIs in pairs(gameUIsByGameId) do
-        assert(gameUIs.build ~= nil, "Should have non-nil build")
-        assert(gameUIs.destroy ~= nil, "Should have non-nil destroy")
-        assert(gameUIs.handlePlayerLeftGame ~= nil, "Should have non-nil handlePlayerLeftGame")
+function Utils.sanityCheckClientGameInstanceFunctionsByGameId(clientGameInstanceFunctionsByGameId: CommonTypes.ClientGameInstanceFunctionsByGameId)
+    assert(clientGameInstanceFunctionsByGameId ~= nil, "Should have non-nil clientGameInstanceFunctionsByGameId")
+    assert(Cryo.Dictionary.keys(clientGameInstanceFunctionsByGameId) ~= nil, "Should have non-nil keys")
+    assert(#Cryo.Dictionary.keys(clientGameInstanceFunctionsByGameId) > 0, "Should have at least one game")
+    for _, clientGameInstanceFunctions in pairs(clientGameInstanceFunctionsByGameId) do
+        assert(clientGameInstanceFunctions.makeClientGameInstance ~= nil, "Should have non-nil makeClientGameInstance")
+        assert(clientGameInstanceFunctions.getClientGameInstance ~= nil, "Should have non-nil getClientGameInstance")
     end
 end
 
-Utils.sanityCheckGameInstanceFunctionsByGameId = function(gameInstanceFunctionsByGameId: CommonTypes.GameInstanceFunctionsByGameId)
-    assert(gameInstanceFunctionsByGameId ~= nil, "Should have non-nil gameUIsByGameId")
-    for _, gameInstanceFunctions in pairs(gameInstanceFunctionsByGameId) do
-        assert(gameInstanceFunctions.onPlay ~= nil, "Should have non-nil onPlay")
-        assert(gameInstanceFunctions.onEnd ~= nil, "Should have non-nil onPlay")
-        assert(gameInstanceFunctions.onPlayerLeft ~= nil, "Should have non-nil onPlay")
-    end
+function Utils.sanityCheckServerGameInstanceConstructorsByGameId(serverGameInstanceConstructorsByGameId: CommonTypes.ServerGameInstanceConstructorsByGameId)
+    assert(serverGameInstanceConstructorsByGameId ~= nil, "Should have non-nil serverGameInstanceConstructorsByGameId")
+    assert(Cryo.Dictionary.keys(serverGameInstanceConstructorsByGameId) ~= nil, "Should have non-nil keys")
+    assert(#Cryo.Dictionary.keys(serverGameInstanceConstructorsByGameId) > 0, "Should have at least one game")
 end
 
-Utils.randomizeArray = function(array: {any}): {any}
-    local result = Cryo.List.shallowCopy(array)
+function Utils.randomizeArray(array: {any}): {any}
+    local result = Cryo.List.join(array, {})
     for i = #result, 2, -1 do
         local j = math.random(i)
         result[i], result[j] = result[j], result[i]

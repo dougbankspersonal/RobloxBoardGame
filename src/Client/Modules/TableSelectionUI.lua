@@ -16,14 +16,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 
--- StarterGui
-local RobloxBoardGameStarterGui = script.Parent.Parent
-local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
-local ClientTableDescriptions = require(RobloxBoardGameStarterGui.Modules.ClientTableDescriptions)
-local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
-local TableConfigDialog = require(RobloxBoardGameStarterGui.Modules.TableConfigDialog)
-local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
-local TableGuiUtils= require(RobloxBoardGameStarterGui.Modules.TableGuiUtils)
+-- Client
+local RobloxBoardGameClient = script.Parent.Parent
+local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
+local ClientTableDescriptions = require(RobloxBoardGameClient.Modules.ClientTableDescriptions)
+local ClientEventManagement = require(RobloxBoardGameClient.Modules.ClientEventManagement)
+local TableConfigDialog = require(RobloxBoardGameClient.Modules.TableConfigDialog)
+local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local TableGuiUtils= require(RobloxBoardGameClient.Modules.TableGuiUtils)
 
 local TableSelectionUI = {}
 
@@ -100,7 +100,7 @@ TableSelectionUI.build = function()
         uiListLayoutPadding = UDim.new(0, GuiConstants.buttonsUIListLayoutPadding),
     }
     local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_TableSelectionControls", rowOptions)
-    GuiUtils.addTextButtonInContainer(rowContent, "Host a new Table", function()
+    GuiUtils.addStandardTextButtonInContainer(rowContent, "Host a new Table", function()
         -- user must select a game and whether it is public or invite-only.
         TableConfigDialog.makeGameSelectionDialog(function(gameId, isPublic)
             -- Send all this along to the server.

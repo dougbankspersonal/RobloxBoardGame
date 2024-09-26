@@ -1,5 +1,3 @@
-local ClientStartUp = {}
-
 -- Shared
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
@@ -7,13 +5,14 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
--- StarterGui
-local RobloxBoardGameStarterGui = script.Parent.Parent
-local GuiMain = require(RobloxBoardGameStarterGui.Modules.GuiMain)
-local ClientEventManagement = require(RobloxBoardGameStarterGui.Modules.ClientEventManagement)
-local GameUIs = require(RobloxBoardGameStarterGui.Globals.GameUIs)
-local ClientTableDescriptions = require(RobloxBoardGameStarterGui.Modules.ClientTableDescriptions)
-local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
+-- Client
+local RobloxBoardGameClient = script.Parent.Parent
+local GuiMain = require(RobloxBoardGameClient.Modules.GuiMain)
+local ClientEventManagement = require(RobloxBoardGameClient.Modules.ClientEventManagement)
+local ClientGameInstanceFunctions = require(RobloxBoardGameClient.Globals.ClientGameInstanceFunctions)
+local ClientTableDescriptions = require(RobloxBoardGameClient.Modules.ClientTableDescriptions)
+local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
+local Mocks = require(RobloxBoardGameClient.Modules.Mocks)
 
 -- 3d avatar is irrelevant for this game.
 local function turnOffPlayerControls()
@@ -39,22 +38,24 @@ local function configureForBoardGames()
 
 end
 
-ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, gameUIsByGameId: CommonTypes.GameUIsByGameId)
+local ClientStartUp = {}
+
+ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, clientGameInstanceFunctionsByGameId: CommonTypes.ClientGameInstanceFunctionsByGameId)
     -- Sanity checks.
     assert(gameDetailsByGameId ~= nil, "Should have non=nil gameDetailsByGameIds")
-    assert(gameUIsByGameId ~= nil, "Should have non=nil gameUIsByGameId")
+    assert(clientGameInstanceFunctionsByGameId ~= nil, "Should have non=nil clientGameInstanceFunctionsByGameId")
     -- must be at least one.
     local numGames = Utils.tableSize(gameDetailsByGameId)
     assert(numGames > 0, "Should have at least one game")
-    assert(Utils.tablesHaveSameKeys(gameDetailsByGameId, gameUIsByGameId), "tables should have same keys")
+    assert(Utils.tablesHaveSameKeys(gameDetailsByGameId, clientGameInstanceFunctionsByGameId), "tables should have same keys")
 
     -- Sanity check on tables coming in from client of RobloxBoardGame library.
     Utils.sanityCheckGameDetailsByGameId(gameDetailsByGameId)
-    Utils.sanityCheckGameUIsByGameId(gameUIsByGameId)
+    Utils.sanityCheckClientGameInstanceFunctionsByGameId(clientGameInstanceFunctionsByGameId)
 
     -- Set up globals.
     GameDetails.setAllGameDetails(gameDetailsByGameId)
-    GameUIs.setAllGameUIs(gameUIsByGameId)
+    ClientGameInstanceFunctions.setAllClientGameInstanceFunctions(clientGameInstanceFunctionsByGameId)
 
 
     -- make a background screenGui to hide the 3d world.
@@ -67,7 +68,7 @@ ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId
 
     GuiUtils.setMainScreenGui(screenGui)
 
-    GuiMain.addMocksButton(screenGui)
+    Mocks.addMocksButton(screenGui)
 
     GuiMain.makeContainingScrollingFrame()
     GuiMain.makeMainFrame()
@@ -81,10 +82,9 @@ ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId
     -- c) server updates tables and broadcasts updates
     -- d) we get the updates
     ClientEventManagement.listenToServerEvents(GuiMain.onTableCreated,
-    GuiMain.onTableDestroyed,
-    GuiMain.onTableUpdated,
-    GuiMain.onHostAbortedGame,
-    GuiMain.onPlayerLeftTable)
+        GuiMain.onTableDestroyed,
+        GuiMain.onTableUpdated,
+        GuiMain.onHostAbortedGame)
 
     task.spawn(function()
         local tableDescriptionsByTableId = ClientEventManagement.fetchTableDescriptionsByTableIdAsync()

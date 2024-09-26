@@ -5,10 +5,10 @@ Functions to build the UI we show whilw waiting for initial download of tables f
 local LoadingUI = {}
 local TweenService = game:GetService("TweenService")
 
--- StarterGui
-local RobloxBoardGameStarterGui = script.Parent.Parent
-local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
-local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
+-- Client
+local RobloxBoardGameClient = script.Parent.Parent
+local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
+local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
 --[[
 Build ui elements for an inital "loading" screen while we fetch stuff from the server.
 

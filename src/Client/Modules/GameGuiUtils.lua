@@ -9,10 +9,10 @@ local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
--- StarterGui
-local RobloxBoardGameStarterGui = script.Parent.Parent
-local GuiUtils = require(RobloxBoardGameStarterGui.Modules.GuiUtils)
-local GuiConstants = require(RobloxBoardGameStarterGui.Modules.GuiConstants)
+-- Client
+local RobloxBoardGameClient = script.Parent.Parent
+local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
+local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
 
 local GameGuiUtils = {}
 
@@ -38,7 +38,7 @@ GameGuiUtils.configureGameImage = function(imageLabel: ImageLabel, gameDetails: 
 end
 
 GameGuiUtils.addGameButtonInContainer = function(parent: Instance, gameDetails: CommonTypes.GameDetails, onButtonClicked: () -> nil): (Frame, TextButton)
-    local frame, textButton = GuiUtils.addStandardTextButtonInContainer(parent, GuiConstants.gameButtonName, {
+    local frame, textButton = GuiUtils.addTextButtonInContainer(parent, GuiConstants.gameButtonName, {
         BackgroundTransparency = 1,
         Size = GuiConstants.gameWidgetSize,
     })
