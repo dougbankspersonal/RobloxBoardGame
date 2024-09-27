@@ -59,13 +59,11 @@ local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameD
         TextSize = GuiConstants.largeTextLabelFontSize,
     })
 
-    task.spawn(function()
-        local gameNameString =  GuiUtils.bold(gameDetails.name)
-        local gameHostString = GuiUtils.bold(PlayerUtils.getNameAsync(tableDescription.hostUserId))
-        local metadataString1 = string.format("%s, hosted by %s", gameNameString, gameHostString)
-        assert(topTextLabel, "Should have topTextLabel")
-        topTextLabel.Text = metadataString1
-    end)
+    local gameNameString =  GuiUtils.bold(gameDetails.name)
+    local gameHostString = GuiUtils.bold(PlayerUtils.getName(tableDescription.hostUserId))
+    local metadataString1 = string.format("%s, hosted by %s", gameNameString, gameHostString)
+    assert(topTextLabel, "Should have topTextLabel")
+    topTextLabel.Text = metadataString1
 
     rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_Metadata1")
     local tableSizeString = GuiUtils.getTableSizeString(gameDetails)
@@ -282,14 +280,12 @@ local updateMembers = function(isHost: boolean, localUserId: CommonTypes.UserId,
 
     local function removeGuestCallback(userId: CommonTypes.UserId)
         assert(userId, "Should have a userId")
-        task.spawn(function()
-            local playerName = PlayerUtils.getNameAsync(userId)
-            local title = string.format("Remove %s?", playerName)
-            local desc = string.format("Please confirm you want to remove %s from the table.", playerName)
-            DialogUtils.showConfirmationDialog(title, desc, function()
-                    ClientEventManagement.removeGuestFromTable(tableId, userId)
-                end)
-        end )
+        local playerName = PlayerUtils.getName(userId)
+        local title = string.format("Remove %s?", playerName)
+        local desc = string.format("Please confirm you want to remove %s from the table.", playerName)
+        DialogUtils.showConfirmationDialog(title, desc, function()
+                ClientEventManagement.removeGuestFromTable(tableId, userId)
+            end)
     end
 
     -- We don't want to display the host as a member, remove him.
@@ -326,7 +322,7 @@ local updateInvites = function(isHost: boolean, tableDescription: CommonTypes.Ta
     end
 
     local function removeInviteCallback(userId: CommonTypes.UserId)
-        local playerName = PlayerUtils.getNameAsync(userId)
+        local playerName = PlayerUtils.getName(userId)
         local title = string.format("Disinvite %s?", playerName)
         local desc = string.format("Please confirm you want to remove %s's invitation to the table.", playerName)
 
@@ -334,8 +330,9 @@ local updateInvites = function(isHost: boolean, tableDescription: CommonTypes.Ta
                 ClientEventManagement.removeInviteForTable(tableId, userId)
             end)
     end
-        UserGuiUtils.updateUserRowContent(invitesRowContent, TableWaitingUI.justBuilt, Cryo.Dictionary.keys(tableDescription.invitedUserIds),
-          canRemoveInvite, removeInviteCallback, addInvitedUserNullStaticWidget, GuiUtils.removeNullStaticWidget)
+
+    UserGuiUtils.updateUserRowContent(invitesRowContent, TableWaitingUI.justBuilt, Cryo.Dictionary.keys(tableDescription.invitedUserIds),
+        canRemoveInvite, removeInviteCallback, addInvitedUserNullStaticWidget, GuiUtils.removeNullStaticWidget)
 end
 
 local updateTableControls = function(tableDescription: CommonTypes.TableDescription, isHost: boolean)

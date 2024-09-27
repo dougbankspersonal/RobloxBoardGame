@@ -220,9 +220,10 @@ end
 GuiMain.onTableCreated = function(tableDescription: CommonTypes.TableDescription)
     assert(tableDescription, "tableDescription must be provided")
     assert(typeof(tableDescription) == "table", "tableDescription must be a table")
-
-    ClientTableDescriptions.addTableDescription(tableDescription)
-    GuiMain.updateUI()
+    task.spawn(function()
+        ClientTableDescriptions.addTableDescriptionAsync(tableDescription)
+        GuiMain.updateUI()
+    end)
 end
 
 GuiMain.onTableDestroyed = function(tableId: CommonTypes.TableId)
@@ -256,10 +257,7 @@ GuiMain.onHostAbortedGame = function(tableId: CommonTypes.TableId)
 end
 
 GuiMain.onTableUpdated = function(tableDescription: CommonTypes.TableDescription)
-    -- Sending table description from server to client messes with some types. Fix it.
-    tableDescription = ClientTableDescriptions.sanitizeTableDescription(tableDescription)
-
-    ClientTableDescriptions.updateTableDescription(tableDescription)
+    ClientTableDescriptions.updateTableDescriptionAsync(tableDescription)
     GuiMain.updateUI()
 end
 

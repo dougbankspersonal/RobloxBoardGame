@@ -69,7 +69,7 @@ local addMetadataElement = function(parent: GuiObject, text: string, fontSize: n
     return label
 end
 
-local fillInMetadataAsync = function(tableMetadataFrame: Frame, tableDescription: CommonTypes.TableDescription)
+local fillInMetadata = function(tableMetadataFrame: Frame, tableDescription: CommonTypes.TableDescription)
     metadataLayoutOrder = 0
 
     local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
@@ -77,14 +77,14 @@ local fillInMetadataAsync = function(tableMetadataFrame: Frame, tableDescription
 
     addMetadataElement(tableMetadataFrame, "Players", GuiConstants.gamePlayingSidebarH2FontSize)
 
-    local hostName = PlayerUtils.getNameAsync(tableDescription.hostUserId)
+    local hostName = PlayerUtils.getName(tableDescription.hostUserId)
     local hostString = hostName .. " " .. "(host)"
     hostString = GuiUtils.italicize(hostString)
     addMetadataElement(tableMetadataFrame, hostString, GuiConstants.gamePlayingSidebarNormalFontSize)
 
     for userId, _ in pairs(tableDescription.memberUserIds) do
         if userId ~= tableDescription.hostUserId then
-            local playerName = PlayerUtils.getNameAsync(userId)
+            local playerName = PlayerUtils.getName(userId)
             addMetadataElement(tableMetadataFrame, GuiUtils.italicize(playerName), GuiConstants.gamePlayingSidebarNormalFontSize)
         end
     end
@@ -142,10 +142,7 @@ local addSidebar = function(mainFrame: GuiObject, tableDescription: CommonTypes.
     })
     listLayout.Padding = UDim.new(0, 0)
 
-    -- Use a task for async name grabbing.
-    task.spawn(function()
-        fillInMetadataAsync(tableMetadataFrame, tableDescription)
-    end)
+    fillInMetadata(tableMetadataFrame, tableDescription)
 
     -- Bottom section with controls.
     local controlsFrame = Instance.new("Frame")

@@ -22,13 +22,6 @@ local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
 
 local ServerEventManagement = {}
 
-local _mockUserId = 2000000
-
-local function getNextMockUserId()
-    _mockUserId = _mockUserId + 1
-    return _mockUserId
-end
-
 -- Notify every player of an event.
 local function sendToAllPlayersInExperience(eventName, ...)
     local tableEvents = ReplicatedStorage:FindFirstChild(EventUtils.TableEventsFolderName)
@@ -108,7 +101,7 @@ local function addMockEventHandlers(tableEventsFolder: Folder, createTableHandle
         if not gameTable.tableDescription.isPublic then
             return
         end
-        if not gameTable:joinTable(getNextMockUserId(), true) then
+        if not gameTable:joinTable(ServerEventUtils.generateMockUserId(), true) then
             return
         end
         sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription())
@@ -135,7 +128,7 @@ local function addMockEventHandlers(tableEventsFolder: Folder, createTableHandle
         if gameTable.tableDescription.isPublic then
             return
         end
-        if not gameTable:inviteToTable(player.UserId, getNextMockUserId(), true) then
+        if not gameTable:inviteToTable(player.UserId, ServerEventUtils.generateMockUserId(), true) then
             return
         end
         sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription())
@@ -186,7 +179,7 @@ local function addMockEventHandlers(tableEventsFolder: Folder, createTableHandle
         if isHost then
             hostUserId = player.UserId
         else
-            hostUserId = getNextMockUserId()
+            hostUserId = ServerEventUtils.generateMockUserId()
         end
         local gameTable = createTableHandler(hostUserId, gameId, isPublic)
         if not gameTable then
@@ -211,7 +204,7 @@ local function addMockEventHandlers(tableEventsFolder: Folder, createTableHandle
         end
 
         for _ = 1, openSlots do
-            mockInviteAndPossiblyAddUser(gameTable, getNextMockUserId(), true)
+            mockInviteAndPossiblyAddUser(gameTable, ServerEventUtils.generateMockUserId(), true)
         end
 
         Utils.debugPrint("Mocks", "Doug; Mocking Table: broadcasting TableCreated tableDescription = ", tableDescription)

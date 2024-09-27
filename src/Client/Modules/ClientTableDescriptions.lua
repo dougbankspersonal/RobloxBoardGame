@@ -15,24 +15,35 @@ local ClientTableDescriptions = {
 
 ClientTableDescriptions.tableDescriptionsByTableId = {} :: CommonTypes.TableDescriptionsByTableId
 
-ClientTableDescriptions.setTableDescriptions = function(tableDescriptionsByTableId: CommonTypes.TableDescriptionsByTableId)
+
+-- Async because we do some work fetching per-user data.
+ClientTableDescriptions.setTableDescriptionsAsync = function(tableDescriptionsByTableId: CommonTypes.TableDescriptionsByTableId)
     ClientTableDescriptions.tableDescriptionsByTableId = tableDescriptionsByTableId
+    for _, tableDescription in pairs(tableDescriptionsByTableId) do
+        TableDescription.sanityCheck(tableDescription)
+        TableDescription.fetchUserDataAsync(tableDescription)
+    end
+end
+
+-- Async because we do some work fetching per-user data.
+ClientTableDescriptions.addTableDescriptionAsync = function(tableDescription: CommonTypes.TableDescription)
+    TableDescription.sanityCheck(tableDescription)
+    TableDescription.fetchUserDataAsync(tableDescription)
+    ClientTableDescriptions.tableDescriptionsByTableId[tableDescription.tableId] = tableDescription
+end
+
+ClientTableDescriptions.updateTableDescriptionAsync = function(tableDescription: CommonTypes.TableDescription)
+    TableDescription.sanityCheck(tableDescription)
+    TableDescription.fetchUserDataAsync(tableDescription)
+    ClientTableDescriptions.tableDescriptionsByTableId[tableDescription.tableId] = tableDescription
 end
 
 ClientTableDescriptions.getTableDescription = function(tableId: CommonTypes.TableId): CommonTypes.TableDescription?
     return ClientTableDescriptions.tableDescriptionsByTableId[tableId]
 end
 
-ClientTableDescriptions.addTableDescription = function(tableDescription: CommonTypes.TableDescription)
-    ClientTableDescriptions.tableDescriptionsByTableId[tableDescription.tableId] = tableDescription
-end
-
 ClientTableDescriptions.removeTableDescription = function(tableId: CommonTypes.TableId)
     ClientTableDescriptions.tableDescriptionsByTableId[tableId] = nil
-end
-
-ClientTableDescriptions.updateTableDescription = function(tableDescription: CommonTypes.TableDescription)
-    ClientTableDescriptions.tableDescriptionsByTableId[tableDescription.tableId] = tableDescription
 end
 
 -- Find the table this user belongs to.

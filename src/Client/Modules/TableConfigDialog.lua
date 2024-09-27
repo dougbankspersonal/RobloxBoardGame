@@ -51,7 +51,7 @@ local makePublicOrPrivateDialog = function(gameId: CommonTypes.GameId, onTableCo
 end
 
 -- Helper for non-standard controls in the dialog.
-local function _makeCustomDialogContent(parent: Frame, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
+local function makeCustomDialogContent(parent: Frame, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, onTableConfigSelected: (gameId: CommonTypes.GameId, isPublic: boolean) -> nil)
     local rowContent = GuiUtils.addRowWithItemGridAndReturnRowContent(parent, "Row_GameSelectionControls", GuiConstants.gameWidgetSize)
 
     local gameDetailsArray = Cryo.Dictionary.values(gameDetailsByGameId)
@@ -88,7 +88,7 @@ TableConfigDialog.makeGameSelectionDialog = function(onTableConfigSelected: (gam
             title = "Select a game",
             description = "Click the game you want to play",
             makeCustomDialogContent = function(parent: Frame)
-                _makeCustomDialogContent(parent, gameDetailsByGameId, onTableConfigSelected)
+                makeCustomDialogContent(parent, gameDetailsByGameId, onTableConfigSelected)
             end
         }
 

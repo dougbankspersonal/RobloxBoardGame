@@ -14,7 +14,6 @@ export type GameTable = {
 
     -- static functions.
     new: (CommonTypes.UserId, CommonTypes.GameDetails, boolean) -> GameTable,
-    createNewTable: (CommonTypes.UserId, boolean) -> GameTable?,
 
     -- const member  functions.
     -- Shortcuts to ask questions about table.

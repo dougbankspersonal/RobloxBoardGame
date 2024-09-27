@@ -16,6 +16,7 @@ local RunService = game:GetService("RunService")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
+local PlayerUtils = require(RobloxBoardGameShared.Modules.PlayerUtils)
 
 local Cryo = require(ReplicatedStorage.Cryo)
 
@@ -54,6 +55,12 @@ export type FriendFromFriendPages = {
     Username: string,
 }
 
+local setChildButtonActive = function(widgetContainer: Frame, active: boolean)
+    local button = widgetContainer:FindFirstChild(GuiConstants.userButtonName, true)
+    assert(button, "Should have a button")
+    button.Active = active
+end
+
 local updateSelectedFriendsRowContent
 updateSelectedFriendsRowContent = function(justBuilt: boolean?)
     assert(selectedFriendsRowContent, "Should have a rowContent")
@@ -69,7 +76,7 @@ updateSelectedFriendsRowContent = function(justBuilt: boolean?)
     end
 
     local function addNullUserStaticWidget(_parent: Frame)
-        GuiUtils.addStaticWidget(_parent, GuiUtils.italicize("No friends selected."), {
+        GuiUtils.addNullStaticWidget(_parent, GuiUtils.italicize("No friends selected."), {
             Size = GuiConstants.userWidgetSize,
         })
     end
@@ -84,47 +91,44 @@ updateSelectedFriendsRowContent = function(justBuilt: boolean?)
         widgetCotainerNamesForSelectedUsers[widgetContainerName] = true
     end
 
+    Utils.debugPrint("InviteToTable", "Doug: gridRowContent = ", gridRowContent)
     local childWidgetContainers = gridRowContent:GetChildren()
+    Utils.debugPrint("InviteToTable", "Doug: childWidgetContainers = ", childWidgetContainers)
     for _, childWidgetContainer in childWidgetContainers do
+        Utils.debugPrint("InviteToTable", "Doug: childWidgetContainer = ", childWidgetContainer)
         if GuiUtils.isAWidgetContainer(childWidgetContainer) then
-            local button = childWidgetContainer:FindFirstChild(GuiConstants.userButtonName)
-            assert(button, "Should have a button")
-            if widgetCotainerNamesForSelectedUsers[childWidgetContainer.Name] then
-                button.Active = false
-            else
-                button.Active = true
-            end
+            setChildButtonActive(childWidgetContainer, not widgetCotainerNamesForSelectedUsers[childWidgetContainer.Name])
         end
     end
 end
 
 local function appendFriendsToGrid(friendsFromFriendPages: {FriendFromFriendPages}, config: FriendSelectionDialogConfig)
     for _, friendFromFriendPages in friendsFromFriendPages do
-        local userId = friendFromFriendPages.Id
+        task.spawn(function()
+            local userId = friendFromFriendPages.Id
 
-        local onFriendSelected = function()
-            if config.isMultiSelect then
-                -- Just some sanity checks: if already selected this is a no op.
-                if Cryo.List.find(selectedUserIds, userId) then
-                    return
+            PlayerUtils.asyncFetchPlayerInfo({userId})
+
+            local onFriendSelected = function()
+                if config.isMultiSelect then
+                    -- Just some sanity checks: if already selected this is a no op.
+                    if Cryo.List.find(selectedUserIds, userId) then
+                        return
+                    end
+                    table.insert(selectedUserIds, userId)
+                    updateSelectedFriendsRowContent(false)
+                else
+                    config.callback({userId})
                 end
-                table.insert(selectedUserIds, userId)
-                updateSelectedFriendsRowContent(false)
-            else
-                config.callback({userId})
             end
-        end
 
-        local userWidgetContainer = UserGuiUtils.addUserButtonWidgetContainer(gridRowContent, userId, onFriendSelected)
+            local userWidgetContainer = UserGuiUtils.addUserButtonWidgetContainer(gridRowContent, userId, onFriendSelected)
 
-        if config.isMultiSelect then
-            -- If this is multi-select, we want to disable the button if it's already selected.
-            if Cryo.List.find(selectedUserIds, userId) then
-                local button = userWidgetContainer:FindFirstChild("Button")
-                assert(button, "Should have a button")
-                button.Active = false
+            if config.isMultiSelect then
+                -- If this is multi-select, we want to disable the button if it's already selected.
+                setChildButtonActive(userWidgetContainer, not Cryo.List.find(selectedUserIds, userId))
             end
-        end
+        end)
     end
 end
 
@@ -134,6 +138,8 @@ local function asyncFetchAllFriends(userId: number, callback: ({FriendFromFriend
         local finalFriendsFromFriendPages: {FriendFromFriendPages} = {}
         while true do
             local friendsFromFriendPagesHandful = friendPages:GetCurrentPage()
+            -- Prime the pump for all these guys' player info.
+            -- Warning: trying to do these all in one handful creates a huge lag.  Just do them one at a time later as we try to create the buttons.
             finalFriendsFromFriendPages = Cryo.List.join(finalFriendsFromFriendPages, friendsFromFriendPagesHandful)
             if friendPages.IsFinished then
                 break
@@ -194,10 +200,13 @@ local addFilterTextBox = function(rowContent:Frame): Frame
 end
 
 
-local function _makeCustomDialogContent(parent:Frame, config: FriendSelectionDialogConfig): GuiObject
+local function makeCustomDialogContent(parent:Frame, config: FriendSelectionDialogConfig): GuiObject
     -- If this is multi-select, we want a row to show all currently selected friends.
     if config.isMultiSelect then
-        selectedFriendsRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(parent, "Row_SelectedFriends", "Selected Friends: ", GuiConstants.userLabelHeight)
+        selectedFriendsRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(parent,
+        "Row_SelectedFriends",
+        "Selected Friends: ",
+        GuiConstants.userWidgetHeight)
     end
 
     -- Add the filter widget.
@@ -205,7 +214,7 @@ local function _makeCustomDialogContent(parent:Frame, config: FriendSelectionDia
     addFilterTextBox(filterWidgetContent)
 
     -- Grid of friends.
-    Utils.debugPrint("User", "Doug: _makeCustomDialogContent 001 GuiConstants.userWidgetSize = ", GuiConstants.userWidgetSize)
+    Utils.debugPrint("User", "Doug: makeCustomDialogContent 001 GuiConstants.userWidgetSize = ", GuiConstants.userWidgetSize)
     gridRowContent = GuiUtils.addRowWithItemGridAndReturnRowContent(parent, "Row_AvailableFriends", GuiConstants.userWidgetSize)
     fillGridInRowContentWithFriends(config)
 
@@ -237,7 +246,7 @@ FriendSelectionDialog.selectFriends = function(config: FriendSelectionDialogConf
             } :: DialogUtils.DialogButtonConfig,
         } :: {DialogUtils.DialogConfig},
         makeCustomDialogContent = function(parent: Frame)
-            _makeCustomDialogContent(parent, config)
+            makeCustomDialogContent(parent, config)
         end,
     }
 

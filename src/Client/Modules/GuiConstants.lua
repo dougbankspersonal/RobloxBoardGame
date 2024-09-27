@@ -79,6 +79,9 @@ GuiConstants.gamePlayingSidebarNormalFontSize = 9
 --[[
 Measurements in Pixels.
 ]]
+GuiConstants.messageLogHeight = 200
+
+
 GuiConstants.dialogButtonWidth = 150
 GuiConstants.dialogButtonHeight = 40
 

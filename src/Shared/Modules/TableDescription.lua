@@ -7,14 +7,29 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
+local Cryo = require(ReplicatedStorage.Cryo)
+
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
-local Cryo = require(ReplicatedStorage.Cryo)
+local PlayerUtils = require(RobloxBoardGameShared.Modules.PlayerUtils)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 local TableDescription = {}
+
+TableDescription.fetchUserDataAsync = function(tableDescription: CommonTypes.TableDescription)
+    -- For everyone I might care about, prefetch the user info.
+    local memberUserIds = Cryo.Dictionary.keys(tableDescription.memberUserIds)
+    local invitedUserIds = Cryo.Dictionary.keys(tableDescription.invitedUserIds)
+    local allUserIds = Cryo.List.join(memberUserIds, invitedUserIds)
+
+    Utils.debugPrint("Mocks", "Doug allUserIds = ", allUserIds)
+    Utils.debugPrint("Mocks", "Doug PlayerUtils = ", PlayerUtils)
+
+    PlayerUtils.asyncFetchPlayerInfo(allUserIds)
+end
 
 TableDescription.createTableDescription = function(tableId: CommonTypes.TableId, hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): CommonTypes.TableDescription
     return {
@@ -31,11 +46,21 @@ TableDescription.createTableDescription = function(tableId: CommonTypes.TableId,
     }
 end
 
-TableDescription.getNumberOfPlayersAtTable = function(tableDescription: CommonTypes.TableDescription): number
+TableDescription.sanityCheck = function(tableDescription: CommonTypes.TableDescription)
     assert(tableDescription, "tableDescription must be provided")
-    assert(tableDescription.memberUserIds, "tableDescription.memberUserIds must be provided")
-    assert(tableDescription.hostUserId, "tableDescription.hostUserId must be provided")
+    assert(tableDescription.tableId, "tableId must be provided")
+    assert(tableDescription.memberUserIds, "memberUserIds must be provided")
+    assert(tableDescription.hostUserId, "hostUserId must be provided")
+    assert(tableDescription.invitedUserIds, "invitedUserIds must be provided")
+    assert(tableDescription.gameId, "gameId must be provided")
+    assert(tableDescription.gameTableState, "gameTableState must be provided")
     assert(tableDescription.memberUserIds[tableDescription.hostUserId], "hostUserId must be in memberUserIds")
+    if RunService:IsStudio() then
+        assert(tableDescription.mockUserIds, "mockUserIds must be provided")
+    end
+end
+
+TableDescription.getNumberOfPlayersAtTable = function(tableDescription: CommonTypes.TableDescription): number
     return #(Cryo.Dictionary.keys(tableDescription.memberUserIds))
 end
 
@@ -110,7 +135,7 @@ When sent over a wire table descriptions are changed.
 Specifically, keys that are ints become strings.  Turn them back.
 ]]
 
-TableDescription.sanitizeTableDescriptionsByTableTableId = function(tableDescriptionsByTableId: CommonTypes.TableDescriptionsByTableId): CommonTypes.TableDescriptionsByTableId
+TableDescription.sanitizeTableDescriptionsByTableId = function(tableDescriptionsByTableId: CommonTypes.TableDescriptionsByTableId): CommonTypes.TableDescriptionsByTableId
     local retVal = {}
     for stringTableId, tableDescription in pairs(tableDescriptionsByTableId) do
         local tableId = tonumber(stringTableId)

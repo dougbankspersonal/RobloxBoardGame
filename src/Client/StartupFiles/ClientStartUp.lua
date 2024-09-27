@@ -88,8 +88,10 @@ ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId
 
     task.spawn(function()
         local tableDescriptionsByTableId = ClientEventManagement.fetchTableDescriptionsByTableIdAsync()
-        ClientTableDescriptions.setTableDescriptions(tableDescriptionsByTableId)
-        GuiMain.updateUI()
+        task.spawn(function()
+            ClientTableDescriptions.setTableDescriptionsAsync(tableDescriptionsByTableId)
+            GuiMain.updateUI()
+        end)
     end)
 end
 

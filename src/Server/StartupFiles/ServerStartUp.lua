@@ -2,6 +2,7 @@
 -- Call from a Server script ASAP.
 -- Creates events, listens for them.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
@@ -17,6 +18,7 @@ local ServerEventManagement = require(RobloxBoardGameServer.Modules.ServerEventM
 local GameTable = require(RobloxBoardGameServer.Classes.GameTable)
 local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
 local ServerEventUtils = require(RobloxBoardGameServer.Modules.ServerEventUtils)
+local DebugStateHandler = require(RobloxBoardGameServer.Modules.DebugStateHandler)
 
 local ServerStartUp = {}
 
@@ -47,6 +49,10 @@ ServerStartUp.ServerStartUp = function(gameDetailsByGameId: CommonTypes.GameDeta
     GameDetails.setAllGameDetails(gameDetailsByGameId)
     ServerGameInstanceConstructors.setAllServerGameInstanceConstructors(serverGameInstanceConstructorsByGameId)
     setUpRemoteEventsAndFunctions()
+
+    if RunService:IsStudio() then
+        DebugStateHandler.enterDebugState()
+    end
 end
 
 return ServerStartUp

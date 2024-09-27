@@ -205,7 +205,47 @@ GuiUtils.addUIGradient = function(frame:Frame, colorSequence: ColorSequence, opt
     applyInstanceOptions(uiGradient, instanceOptions, opt_instanceOptions)
 end
 
-GuiUtils.getLayoutOrder = function(parent:Instance): number
+GuiUtils.centerInParent = function(guiObject: GuiObject)
+    guiObject.Position = UDim2.fromScale(0.5, 0.5)
+    guiObject.AnchorPoint = Vector2.new(0.5, 0.5)
+end
+
+function GuiUtils.getCanvasPositionYToShowBottomOfVerticalScroll(scrollingFrame: ScrollingFrame): number
+    local canvasSize = scrollingFrame.AbsoluteCanvasSize
+    local frameSize = scrollingFrame.AbsoluteSize
+    local canvasHeight = canvasSize.Y
+    local frameHeight = frameSize.Y
+    -- "CanvasPosition" is the location in the canvas that appears at the top left of the
+    -- scrolling frame.
+    -- If canvasFrame height is less than absolute canvas size, we can't scroll: just return 0.
+    if canvasHeight <= frameHeight then
+        return 0
+    end
+    -- we want the canvas height, less the height of the frame.
+    return canvasHeight - frameHeight
+end
+
+function GuiUtils.scrollingFrameIsScrolledToBottom(scrollingFrame: ScrollingFrame): boolean
+    local canvasSize = scrollingFrame.AbsoluteCanvasSize
+    local frameSize = scrollingFrame.AbsoluteSize
+    local canvasHeight = canvasSize.Y
+    local frameHeight = frameSize.Y
+
+    -- if canvas is shorter than frame, we are at the bottom.
+    if canvasHeight <= frameHeight then
+        return true
+    end
+
+    local canvasPosition = scrollingFrame.CanvasPosition
+    local canvasY = canvasPosition.Y
+    -- if canvas position is s.t. position + frameHeigth = canvasHeight, we are at the bottom.
+    if canvasY + frameHeight == canvasHeight then
+        return true
+    end
+    return false
+end
+
+GuiUtils.getNextLayoutOrder = function(parent:Instance): number
     local layoutOrder
     local nextLayourOrder = parent:FindFirstChild(GuiConstants.layoutOrderGeneratorName)
     if nextLayourOrder then
@@ -452,7 +492,7 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
     row.Size = UDim2.new(1, -2 * GuiConstants.dialogToContentPadding, 0, 0)
     row.Position = UDim2.fromScale(0, 0)
     row.BorderSizePixel = 0
-    row.LayoutOrder = GuiUtils.getLayoutOrder(parent)
+    row.LayoutOrder = GuiUtils.getNextLayoutOrder(parent)
     row.AutomaticSize = Enum.AutomaticSize.Y
     row.BackgroundTransparency = 1.0
 
@@ -974,7 +1014,7 @@ GuiUtils.makeWidgetContainer = function(parent:GuiObject, widgetType: string, op
     widgetContainer.BackgroundColor3 = Color3.new(0.8, 0.8, 0.8)
     widgetContainer.BorderSizePixel = 0
     widgetContainer.Name = GuiUtils.constructWidgetContainerName(widgetType, itemId)
-    widgetContainer.LayoutOrder = GuiUtils.getLayoutOrder(parent)
+    widgetContainer.LayoutOrder = GuiUtils.getNextLayoutOrder(parent)
     widgetContainer.AutomaticSize = Enum.AutomaticSize.XY
     widgetContainer.BackgroundTransparency = 1
 

@@ -8,7 +8,6 @@ A collection of utils around creating widgets that represent users:
 local UserGuiUtils = {}
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
 
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
@@ -48,15 +47,11 @@ local configureUserImage = function(imageLabel:ImageLabel, userId: CommonTypes.U
     imageLabel.Size = UDim2.fromOffset(GuiConstants.userImageWidth, GuiConstants.userImageWidth)
     imageLabel.Image = ""
 
-    -- Async get and set the contents of image.
-    task.spawn(function()
-        local mappedId = Utils.debugMapUserId(userId)
+    -- Get and set the contents of image.
+    local playerThumbnail = PlayerUtils.getThumbnail(userId)
 
-        local playerThumbnail = Players:GetUserThumbnailAsync(mappedId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size60x60)
-
-        assert(playerThumbnail, "playerThumbnail should exist")
-        imageLabel.Image = playerThumbnail
-    end)
+    assert(playerThumbnail, "playerThumbnail should exist")
+    imageLabel.Image = playerThumbnail
 end
 
 -- Standard notion of displaying a user name in a label.
@@ -69,19 +64,16 @@ UserGuiUtils.configureUserTextLabel = function(textLabel:TextLabel, userId: Comm
     textLabel.TextSize = GuiConstants.userTextLabelFontSize
     textLabel.Text = ""
 
-    -- Async get and set the contents of name
-    task.spawn(function()
-        Utils.debugPrint("TablePlaying", "Doug: configureUserTextLabel userId = ", userId)
-        local playerName = PlayerUtils.getNameAsync(userId)
-        assert(playerName, "playerName should exist")
+    Utils.debugPrint("TablePlaying", "Doug: configureUserTextLabel userId = ", userId)
+    local playerName = PlayerUtils.getName(userId)
+    assert(playerName, "playerName should exist")
 
-        local formatString = if opt_formatString then opt_formatString else "%s"
-        Utils.debugPrint("Buttons", "Doug formatString = ", formatString)
-        Utils.debugPrint("Buttons", "Doug playerName = ", playerName)
-        local formattedString = string.format(formatString, playerName)
-        Utils.debugPrint("Buttons", "Doug formattedString = ", formattedString)
-        textLabel.Text = formattedString
-    end)
+    local formatString = if opt_formatString then opt_formatString else "%s"
+    Utils.debugPrint("Buttons", "Doug formatString = ", formatString)
+    Utils.debugPrint("Buttons", "Doug playerName = ", playerName)
+    local formattedString = string.format(formatString, playerName)
+    Utils.debugPrint("Buttons", "Doug formattedString = ", formattedString)
+    textLabel.Text = formattedString
 end
 
 local function addUserImageOverTextLabel(frame: GuiObject, userId: CommonTypes.UserId): (ImageLabel, TextLabel)

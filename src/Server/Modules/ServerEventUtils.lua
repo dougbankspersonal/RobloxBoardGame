@@ -15,6 +15,14 @@ local GameTablesStorage = require(RobloxBoardGameServer.Modules.GameTablesStorag
 
 local ServerEventUtils = {}
 
+local _mockUserId = 2000000
+
+function ServerEventUtils.generateMockUserId()
+    _mockUserId = _mockUserId + 1
+    return _mockUserId
+end
+
+
 function ServerEventUtils.createFolder(folderName: string): Folder
     local folder = EventUtils.getReplicatedStorageFolder(folderName)
     assert(folder == nil, "Folder already exists: " .. folderName)
@@ -67,12 +75,12 @@ Only parties in game should send messages to the event, and only parties in the 
 function ServerEventUtils.createGameRemoteEvent(gameInstanceGUID: CommonTypes.GameInstanceGUID, eventName: string, onServerEventForGame)
     local folder = EventUtils.getFolderForGameEvents(gameInstanceGUID)
     ServerEventUtils.createRemoteEvent(folder, eventName, function(player, ...)
-        -- parties not in the gamae have no business sending messages to this event.
+        -- parties not in the gama have no business sending messages to this event.
         local gameTable = GameTablesStorage.getGameTableByGameInstanceGUID(gameInstanceGUID)
         if not gameTable then
             return
         end
-        if not gameTable:isPlayerAtTable(player) then
+        if not gameTable:isMember(player.UserId) then
             return
         end
         onServerEventForGame(player, ...)
@@ -119,13 +127,12 @@ end
 Server is sending an event only to players in the game.
 ]]
 function ServerEventUtils.sendEventForPlayersInGame(tableDescription: CommonTypes.TableDescription, eventName: string, ...)
-    assert(tableDescription, "tableDescription not found")
+    TableDescription.sanityCheck(tableDescription)
     assert(eventName, "eventName not found")
-    assert(tableDescription.gameInstanceGUID, "gameInstanceGUID not found")
     local eventForGame = EventUtils.getRemoteEventForGame(tableDescription.gameInstanceGUID, eventName)
     assert(eventForGame, "Event not found")
     local players = TableDescription.getPlayers(tableDescription)
-    EventUtils.sendEventForPlayers(eventForGame, players, ...)
+    ServerEventUtils.sendEventForPlayers(eventForGame, players, ...)
 end
 
 return ServerEventUtils

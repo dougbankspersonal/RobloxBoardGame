@@ -7,7 +7,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
-local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 -- Client
 local RobloxBoardGameClient = script.Parent.Parent

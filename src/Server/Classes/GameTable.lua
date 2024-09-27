@@ -49,24 +49,6 @@ GameTable.new = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.Gam
     return self
 end
 
--- Return the table iff the table can be created.
-GameTable.createNewTable = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): ServerTypes.GameTable?
-    -- You cannot create a new table while you are joined to a table.
-    local firstTableWithMember = GameTablesStorage.getFirstTableWithMember(hostUserId)
-    if firstTableWithMember then
-        return nil
-    end
-
-    -- Game must exist.
-    local gameDetails = GameDetails.getGameDetails(gameId)
-    if not gameDetails then
-        return nil
-    end
-
-    local newGameTable = GameTable.new(hostUserId, gameId, isPublic)
-    return newGameTable
-end
-
 function GameTable:getTableId(): CommonTypes.TableId
     return self.tableDescription.tableId
 end
@@ -375,6 +357,7 @@ function GameTable:startGame(userId: CommonTypes.UserId): boolean
     local serverGameInstanceConstructor = self:getServerGameInstanceConstructor()
     -- _After this an instance for the game exists on the server, game is playing.
     local serverGameInstance = serverGameInstanceConstructor(self.tableDescription)
+    serverGameInstance:sanityCheck()
     ServerGameInstances.addServerGameInstance(serverGameInstance)
 
     return true

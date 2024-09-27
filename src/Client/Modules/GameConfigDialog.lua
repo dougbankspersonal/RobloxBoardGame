@@ -20,7 +20,7 @@ local GameConfigDialog = {}
 
 local nonDefaultGameOptions = {} :: CommonTypes.NonDefaultGameOptions
 
-local _makeCustomDialogContent = function(parent: Frame, gameDetails: CommonTypes.GameDetails)
+local makeCustomDialogContent = function(parent: Frame, gameDetails: CommonTypes.GameDetails)
     assert(parent, "parent must be provided")
     assert(gameDetails, "gameDetails must be provided")
     local gameOptions = gameDetails.gameOptions
@@ -98,7 +98,7 @@ GameConfigDialog.setGameConfig = function(tableDescription: CommonTypes.TableDes
             } :: DialogUtils.DialogButtonConfig,
         } :: {DialogUtils.DialogConfig},
         makeCustomDialogContent = function(parent: Frame)
-            _makeCustomDialogContent(parent, gameDetails)
+            makeCustomDialogContent(parent, gameDetails)
         end,
     }
 

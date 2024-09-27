@@ -99,8 +99,9 @@ ClientEventManagement.listenToServerEvents = function(onTableCreated: (tableDesc
     local event
     event = tableEvents:WaitForChild("TableCreated")
     assert(event, "TableCreated event missing")
-    event.OnClientEvent:Connect(function(...)
-        onTableCreated(...)
+    event.OnClientEvent:Connect(function(raw_tableDescription: CommonTypes.TableDescription)
+        local clean_tableDescription = TableDescription.sanitizeTableDescription(raw_tableDescription)
+        onTableCreated(clean_tableDescription)
     end)
 
     event = tableEvents:WaitForChild("TableDestroyed")

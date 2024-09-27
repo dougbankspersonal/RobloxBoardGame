@@ -148,9 +148,10 @@ export type ServerGameInstance = {
     tableDescription: TableDescription,
 
     -- Making the game instance starts play.
+    sanityCheck: (ServerGameInstance) -> nil,
     -- Destroying the instance ends the game.
-    -- Other than that we just need a system notification when a player leaves.
     destroy: (ServerGameInstance) -> nil,
+    -- System notification when a player leaves.
     playerLeftGame: (ServerGameInstance, userId: UserId) -> nil,
 }
 

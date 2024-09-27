@@ -14,20 +14,24 @@ local Cryo = require(ReplicatedStorage.Cryo)
 
 local Utils = {}
 
+Utils.SnackFortUserId = 5845980262
+
 local debugPrintEnabledLabels = {
     Buttons = false,
+    ClientTableDescriptions = false,
     Friends = false,
     GameConfig = false,
     GameMetadata = false,
+    GamePlay = false,
     GuiUtils = false,
     InviteToTable = false,
     Layout = false,
-    Mocks = true,
+    Mocks = false,
     RemoveInvite = false,
     Sound = false,
-    ClientTableDescriptions = false,
     TablePlaying = false,
     TableUpdated = false,
+    User = false,
     UserLayout = false,
 }
 
