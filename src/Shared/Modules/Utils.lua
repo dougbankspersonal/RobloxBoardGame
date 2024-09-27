@@ -26,6 +26,7 @@ local debugPrintEnabledLabels = {
     GuiUtils = false,
     InviteToTable = false,
     Layout = false,
+    MessageLog = true,
     Mocks = false,
     RemoveInvite = false,
     Sound = false,

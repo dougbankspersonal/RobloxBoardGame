@@ -1,6 +1,13 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Utility for a simple game message log.
 
--- RobloxBoardGameClient
+ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+-- Shared
+local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
+
+-- Client
 local RobloxBoardGameClient = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
 local TweenService = game:GetService("TweenService")
@@ -51,6 +58,14 @@ MessageLog.new = function(parent:Frame): MessageLog
     self.scrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
     self.scrollingFrame.ScrollBarImageColor3 = Color3.new(0, 0, 0)
     self.messageLayoutOrder = 1
+
+
+    self.scrollingFrame:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+        Utils.debugPrint("MessageLog", "CanvasPosition changed to: ", self.scrollingFrame.CanvasPosition)
+        -- Who did this?
+        local stackTrace = debug.traceback()
+        Utils.debugPrint("MessageLog", "CanvasPosition stackTrace: ", stackTrace)
+    end)
 
     GuiUtils.addUIListLayout(self.scrollingFrame, {
         Padding = UDim.new(0, 5),
@@ -125,35 +140,38 @@ function MessageLog:maybeConsumeFromQueue()
 
     -- Otherwise, we are now "busy".
     self.busyAddingMessage = true
-
-    -- Do some tweening so message log appearance looks cool.
     messageWidget.TextTransparency = 1
-    local currentCanvasPosition = self.scrollingFrame.CanvasPosition
-    local targetCanvasY = GuiUtils.getCanvasPositionYToShowBottomOfVerticalScroll(self.scrollingFrame)
-    local targetCanvasPosition = Vector2.new(currentCanvasPosition.X, targetCanvasY)
 
-    print("Doug: currentCanvasPosition: ", currentCanvasPosition)
-    print("Doug: targetCanvasPosition: ", targetCanvasPosition)
+    -- Give everything a second to settle.
+    task.spawn(function()
+        task.wait()
+        -- Do some tweening so message log appearance looks cool.
+        local currentCanvasPosition = self.scrollingFrame.CanvasPosition
+        local targetCanvasY = GuiUtils.getCanvasPositionYToShowBottomOfVerticalScroll(self.scrollingFrame)
+        local targetCanvasPosition = Vector2.new(currentCanvasPosition.X, targetCanvasY)
 
-    --[[
-    local movementTweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 0)
-    local t1 = TweenService:Create(self.scrollingFrame, movementTweenInfo, {CanvasPosition = targetCanvasPosition})
-    t1.Completed:Connect(function()
-    ]]
-    -- Hack
-    self.scrollingFrame.CanvasPosition = targetCanvasPosition
+        Utils.debugPrint("MessageLog", "Doug: currentCanvasPosition: ", currentCanvasPosition)
+        Utils.debugPrint("MessageLog", "Doug: targetCanvasPosition: ", targetCanvasPosition)
 
-        local transparencyTweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 0)
-        local t2 = TweenService:Create(messageWidget, transparencyTweenInfo, {TextTransparency = 0})
-        t2.Completed:Connect(function()
-            self.busyAddingMessage = false
-            self:maybeConsumeFromQueue()
+        local movementTweenInfo = TweenInfo.new(GuiConstants.messageQueueTweenTime, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 0)
+
+        local t1 = TweenService:Create(self.scrollingFrame, movementTweenInfo, {CanvasPosition = targetCanvasPosition})
+        t1.Completed:Connect(function()
+        self.scrollingFrame.CanvasPosition = targetCanvasPosition
+
+            local transparencyTweenInfo = TweenInfo.new(GuiConstants.messageQueueTweenTime, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 0)
+            local t2 = TweenService:Create(messageWidget, transparencyTweenInfo, {TextTransparency = 0})
+            t2.Completed:Connect(function()
+                self.busyAddingMessage = false
+                if messageWithCallback.opt_callback then
+                    messageWithCallback.opt_callback()
+                end
+                self:maybeConsumeFromQueue()
+            end)
+            t2:Play()
         end)
-        t2:Play()
-    --[[
+        t1:Play()
     end)
-    t1:Play()
-    ]]
 end
 
 function MessageLog:destroy()

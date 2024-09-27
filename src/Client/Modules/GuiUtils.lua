@@ -212,16 +212,21 @@ end
 
 function GuiUtils.getCanvasPositionYToShowBottomOfVerticalScroll(scrollingFrame: ScrollingFrame): number
     local canvasSize = scrollingFrame.AbsoluteCanvasSize
-    local frameSize = scrollingFrame.AbsoluteSize
+    local frameHeight = scrollingFrame.AbsoluteSize.Y
+    assert(typeof(frameHeight) == "number", "Should have number frameHeight")
     local canvasHeight = canvasSize.Y
-    local frameHeight = frameSize.Y
+    assert(typeof(canvasHeight) == "number", "Should have number canvasHeight")
+    Utils.debugPrint("MessageLog", "Doug: canvasHeight = ", canvasHeight)
+    Utils.debugPrint("MessageLog", "Doug: frameHeight = ", frameHeight)
     -- "CanvasPosition" is the location in the canvas that appears at the top left of the
     -- scrolling frame.
     -- If canvasFrame height is less than absolute canvas size, we can't scroll: just return 0.
     if canvasHeight <= frameHeight then
+        Utils.debugPrint("MessageLog", "Doug: returning 0")
         return 0
     end
     -- we want the canvas height, less the height of the frame.
+    Utils.debugPrint("MessageLog", "Doug: returning canvasHeight - frameHeight = ", canvasHeight - frameHeight)
     return canvasHeight - frameHeight
 end
 

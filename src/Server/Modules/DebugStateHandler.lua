@@ -16,7 +16,7 @@ local DebugStateHandler = {}
 DebugStateHandler.SettingNone = "None"
 DebugStateHandler.SettingJumpIntoGame = "JumpIntoGame"
 
-DebugStateHandler.Setting = DebugStateHandler.None
+DebugStateHandler.Setting = DebugStateHandler.SettingJumpIntoGame
 
 
 function DebugStateHandler.jumpIntoGame()
