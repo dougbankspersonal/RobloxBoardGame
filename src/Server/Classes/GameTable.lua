@@ -24,6 +24,7 @@ local ServerGameInstances = require(RobloxBoardGameServer.Modules.ServerGameInst
 local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
 local GameTablesStorage = require(RobloxBoardGameServer.Modules.GameTablesStorage)
 local ServerEventManagement = require(RobloxBoardGameServer.Modules.ServerEventManagement)
+local ServerEventUtils = require(RobloxBoardGameServer.Modules.ServerEventUtils)
 
 local GameTable = {}
 GameTable.__index = GameTable
@@ -75,7 +76,7 @@ function GameTable:isHost(userId: CommonTypes.UserId): boolean
     return self.tableDescription.hostUserId == userId
 end
 
-function GameTable:destroyTable(userId: CommonTypes.UserId): boolean
+function GameTable:destroy(userId: CommonTypes.UserId): boolean
     assert(userId, "Should have a userId")
 
     -- Must be the host.
@@ -85,7 +86,7 @@ function GameTable:destroyTable(userId: CommonTypes.UserId): boolean
 
     -- Kill any ongoing game.
     if self.tableDescription.gameTableState == GameTableStates.Playing then
-        self:endGame(userId)
+        self:endGame()
     end
 
     GameTablesStorage.removeTable(self)
@@ -275,7 +276,7 @@ function GameTable:leaveTable(userId: CommonTypes.UserId): boolean
     -- Let the game deal with any fallout from the player leaving.
     if self.tableDescription.gameTableState == GameTableStates.Playing then
         Utils.debugPrint("Mocks", "leaveTable 04")
-        local serverGameInstance = ServerGameInstances.getGameInstance(self.tableDescription.gameInstanceGUID)
+        local serverGameInstance = ServerGameInstances.getServerGameInstance(self.tableDescription.gameInstanceGUID)
         assert(serverGameInstance, "gameInstance should exist if gameTableState is Playing")
         -- sanity check: this is the same table description as in our game instance, right?
         -- Like having modfified it above, we have modified the copy used in game instance?
@@ -372,7 +373,12 @@ function GameTable:getServerGameInstanceConstructor(): CommonTypes.ServerGameIns
     return giCtor
 end
 
-function GameTable:endGame(userId: CommonTypes.UserId): boolean
+-- Normally, for doXAtTable, we have just one function to do it, which returns false if
+-- you can't.
+-- For destroying a game or game table it's a little different because iff we know
+-- we are going to destroy something, we want to communicate about that to client ->
+-- our communcation channels expect non-empty, non-destroyed, useful game table.
+function GameTable:canEndGame(userId: CommonTypes.UserId): boolean
     -- Must be the host.
     if not self:isHost(userId) then
         return false
@@ -382,18 +388,27 @@ function GameTable:endGame(userId: CommonTypes.UserId): boolean
     if self.tableDescription.gameTableState ~= GameTableStates.Playing then
         return false
     end
+    return true
+end
 
-    -- Stop listening for game-specific messages.
-    ServerEventManagement.removeServerToClientEventsForGame(self.tableDescription.gameInstanceGUID)
-
-    local serverGameInstance = ServerGameInstances.getGameInstance(self.tableDescription.gameInstanceGUID)
+function GameTable:endGame(): boolean
+    -- Clean up the server game instance.
+    local serverGameInstance = ServerGameInstances.getServerGameInstance(self.tableDescription.gameInstanceGUID)
     ServerGameInstances.removeServerGameInstance(self.tableDescription.gameInstanceGUID)
     assert(serverGameInstance, "should have gameInstance")
     serverGameInstance:destroy()
 
+    local gameInstanceGUID = self.tableDescription.gameInstanceGUID
+
+    -- Remove all communication channels for game.
+    ServerEventUtils.removeGameEventsFolder(gameInstanceGUID)
+    ServerEventUtils.removeGameFunctionsFolder(gameInstanceGUID)
+    -- Remove any connections.
+    ServerEventUtils.removeGameEventConnections(gameInstanceGUID)
+
+    -- Clean up the game state (not playing, no more guid).
     self.tableDescription.gameTableState = GameTableStates.WaitingForPlayers
     self.tableDescription.gameInstanceGUID = nil
-
 
     return true
 end

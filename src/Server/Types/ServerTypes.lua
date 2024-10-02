@@ -27,7 +27,7 @@ export type GameTable = {
 
     -- non-const functions.  Each returns true iff something changed.
     goToWaiting: (GameTable, CommonTypes.UserId) -> boolean,
-    destroyTable: (GameTable, {CommonTypes.UserId}) -> boolean,
+    destroy: (GameTable, {CommonTypes.UserId}) -> boolean,
     joinTable: (GameTable, CommonTypes.UserId, boolean?) -> boolean,
     inviteToTable: (GameTable, CommonTypes.UserId, CommonTypes.UserId) -> boolean,
     setInvites: (GameTable, CommonTypes.UserId, {CommonTypes.UserId}) -> boolean,
@@ -37,7 +37,8 @@ export type GameTable = {
     updateGameOptions: (GameTable, CommonTypes.UserId, CommonTypes.NonDefaultGameOptions) -> boolean,
 
     startGame: (GameTable, CommonTypes.UserId) -> boolean,
-    endGame: (GameTable, CommonTypes.UserId) -> boolean,
+    canEndGame: (GameTable, CommonTypes.UserId) -> boolean,
+    endGame: (GameTable) -> nil,
 }
 
 return ServerTypes

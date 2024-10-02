@@ -28,8 +28,8 @@ local function createTableHandler(hostId: CommonTypes.UserId, gameId: CommonType
 end
 
 local function setUpRemoteEventsAndFunctions()
-    local tableEventsFolder = ServerEventUtils.createFolder(EventUtils.TableEventsFolderName)
-    local tableFunctionsFolder = ServerEventUtils.createFolder(EventUtils.TableFunctionsFolderName)
+    local tableEventsFolder = ServerEventUtils.createFolder(EventUtils.FolderNameTableEvents)
+    local tableFunctionsFolder = ServerEventUtils.createFolder(EventUtils.FolderNameTableFunctions)
 
     ServerEventManagement.setupRemoteCommunications(tableEventsFolder, tableFunctionsFolder, createTableHandler)
 end

@@ -24,7 +24,7 @@ local ServerEventManagement = {}
 
 -- Notify every player of an event.
 local function sendToAllPlayersInExperience(eventName, ...)
-    local tableEvents = ReplicatedStorage:FindFirstChild(EventUtils.TableEventsFolderName)
+    local tableEvents = ReplicatedStorage:FindFirstChild(EventUtils.FolderNameTableEvents)
     assert(tableEvents, "TableEvents not found")
     local event = tableEvents:FindFirstChild(eventName)
     assert(event, "Event not found: " .. eventName)
@@ -40,10 +40,10 @@ local handleUserLeavingTable = function(userId: CommonTypes.UserId, gameTable: S
         -- But if game is active, we want to notify everyone.
         if gameTable.tableDescription.gameInstanceGUID then
             ServerEventUtils.sendEventForPlayersInGame(gameTable.tableDescription,
-                "PlayerLeftTable",
+                EventUtils.EventNamePlayerLeftTable,
                 userId)
         end
-        sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription())
+        sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
     end
 end
 
@@ -71,7 +71,7 @@ local function makeFetchTableDescriptionsByTableIdRemoteFunction(tableFunctionsF
     assert(tableFunctionsFolder, "tableFunctionsFolder should be defined")
 
     -- Remote function to fetch all tables.
-    ServerEventUtils.createRemoteFunction(tableFunctionsFolder, "FetchTableDescriptionsByTableId", function(_): CommonTypes.TableDescriptionsByTableId
+    ServerEventUtils.createRemoteFunction(tableFunctionsFolder, EventUtils.FunctionNameFetchTableDescriptionsByTableId, function(_): CommonTypes.TableDescriptionsByTableId
         local gameTables = GameTablesStorage.getGameTablesByTableId()
         local retVal = {} :: CommonTypes.TableDescriptionsByTableId
         for tableId, gameTable in gameTables do
@@ -97,17 +97,17 @@ end
 local function addMockEventHandlers(tableEventsFolder: Folder, createTableHandler: (CommonTypes.UserId, CommonTypes.GameId, boolean) -> nil)
     assert(RunService:IsStudio(), "Should only be run in Studio")
 
-    createGameTableRemoteEvent(tableEventsFolder, "AddMockMember", function(_, gameTable)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameAddMockMember, function(_, gameTable)
         if not gameTable.tableDescription.isPublic then
             return
         end
         if not gameTable:joinTable(ServerEventUtils.generateMockUserId(), true) then
             return
         end
-        sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription())
+        sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
     end)
 
-    createGameTableRemoteEvent(tableEventsFolder, "MockMemberLeaves", function(_, gameTable)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameMockMemberLeaves, function(_, gameTable)
         -- Pick a random mock member.
         Utils.debugPrint("Mocks", "MockMemberLeaves 001")
         local mockUserIds = Cryo.Dictionary.keys(gameTable.tableDescription.mockUserIds)
@@ -124,17 +124,17 @@ local function addMockEventHandlers(tableEventsFolder: Folder, createTableHandle
         handleUserLeavingTable(leavingUserId, gameTable)
     end)
 
-    createGameTableRemoteEvent(tableEventsFolder, "AddMockInvite", function(player, gameTable)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameAddMockInvite, function(player, gameTable)
         if gameTable.tableDescription.isPublic then
             return
         end
         if not gameTable:inviteToTable(player.UserId, ServerEventUtils.generateMockUserId(), true) then
             return
         end
-        sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription())
+        sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
     end)
 
-    createGameTableRemoteEvent(tableEventsFolder, "MockInviteAcceptance", function(_, gameTable)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameMockInviteAcceptance, function(_, gameTable)
         if gameTable.tableDescription.isPublic then
             return
         end
@@ -144,31 +144,31 @@ local function addMockEventHandlers(tableEventsFolder: Folder, createTableHandle
         end
         local accepteeId = keys[1]
         if gameTable:joinTable(accepteeId, true) then
-            sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription())
+            sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
         end
     end)
 
-    createGameTableRemoteEvent(tableEventsFolder, "MockStartGame", function(_, gameTable)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameMockStartGame, function(_, gameTable)
         if gameTable:startGame(gameTable.tableDescription.hostUserId) then
-            sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription())
+            sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
         end
     end)
 
     -- Destroy all Mock Tables.
-    ServerEventUtils.createRemoteEvent(tableEventsFolder, "DestroyAllMockTables", function(player)
+    ServerEventUtils.createRemoteEvent(tableEventsFolder, EventUtils.EventNameDestroyAllMockTables, function(player)
         Utils.debugPrint("Mocks", "Doug; Destroying all Mock Tables")
         local tablesByTableId = GameTablesStorage.getGameTablesByTableId()
         assert(tablesByTableId, "Should have tablesByTableId")
         for tableId, gameTable in tablesByTableId do
             if gameTable.isMock then
-                gameTable:destroyTable(player.UserId)
-                sendToAllPlayersInExperience("TableDestroyed", tableId)
+                gameTable:destroy(player.UserId)
+                sendToAllPlayersInExperience(EventUtils.EventNameTableDestroyed, tableId)
             end
         end
     end)
 
     -- Make a mock table.
-    ServerEventUtils.createRemoteEvent(tableEventsFolder, "MockTable", function(player: Player, isPublic: boolean, shouldJoin: boolean, isHost: boolean)
+    ServerEventUtils.createRemoteEvent(tableEventsFolder, EventUtils.FolderNameMockTableEvents, function(player: Player, isPublic: boolean, shouldJoin: boolean, isHost: boolean)
         Utils.debugPrint("Mocks", "Doug; Mocking Table")
         -- Make a random table.
         -- Get a random game id.
@@ -210,7 +210,7 @@ local function addMockEventHandlers(tableEventsFolder: Folder, createTableHandle
         Utils.debugPrint("Mocks", "Doug; Mocking Table: broadcasting TableCreated tableDescription = ", tableDescription)
 
         -- Broadcast the new table to all players
-        sendToAllPlayersInExperience("TableCreated", tableDescription)
+        sendToAllPlayersInExperience(EventUtils.EventNameTableCreated, tableDescription)
     end)
 end
 
@@ -224,73 +224,73 @@ local function setupClientToServerEvents(tableEventsFolder: Folder, createTableH
         end
 
         -- Broadcast the new table to all players
-        sendToAllPlayersInExperience("TableCreated", gameTable.tableDescription)
+        sendToAllPlayersInExperience(EventUtils.EventNameTableCreated, gameTable.tableDescription)
     end)
 
     createGameTableRemoteEvent(tableEventsFolder, "GoToWaiting", function(player, gameTable)
         if gameTable:goToWaiting(player.UserId) then
-            sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription())
+            sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
         end
     end)
 
     -- Event to destroy a table.
-    createGameTableRemoteEvent(tableEventsFolder, "DestroyTable", function(player, gameTable)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameDestroyTable, function(player, gameTable)
         assert(gameTable, "Should have a gameTable")
         assert(gameTable.tableDescription, "Should have a tableDescription")
         local gameTableId = gameTable:getTableId()
         assert(gameTableId, "Should have a gameTableId")
 
-        if gameTable:destroyTable(player.UserId) then
-            sendToAllPlayersInExperience("TableDestroyed", gameTableId)
+        if gameTable:destroy(player.UserId) then
+            sendToAllPlayersInExperience(EventUtils.EventNameTableDestroyed, gameTableId)
         end
     end)
 
     -- Event to join a table.
     createGameTableRemoteEvent(tableEventsFolder, "JoinTable", function(player, gameTable)
         if gameTable:joinTable(player.UserId) then
-            sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription())
+            sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
         end
     end)
 
     -- Event to invite someone to table.
-    createGameTableRemoteEvent(tableEventsFolder, "InvitePlayerToTable", function(player, gameTable, inviteeId)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameInvitePlayerToTable, function(player, gameTable, inviteeId)
         if gameTable:inviteToTable(player.UserId, inviteeId) then
-            sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription())
+            sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
         end
     end)
 
     -- Set the invites to this set of people, removing or adding as needed.
     -- Returns true if anything actually changed.
     -- If some invites are bad and some good, we apply the bad and ignore the good.
-    createGameTableRemoteEvent(tableEventsFolder, "SetTableInvites", function(player: Player, gameTable, inviteeIds: {CommonTypes.UserId})
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameSetTableInvites, function(player: Player, gameTable, inviteeIds: {CommonTypes.UserId})
         if gameTable:setInvites(player.UserId, inviteeIds) then
-            sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription())
+            sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
         end
     end)
 
     -- Event to remove someone to table.
-    createGameTableRemoteEvent(tableEventsFolder, "RemoveGuestFromTable", function(player, gameTable, userId)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameRemoveGuestFromTable, function(player, gameTable, userId)
         if gameTable:removeGuestFromTable(player.UserId, userId) then
-            sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription())
+            sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
         end
     end)
 
     -- Event to remove an invite from a table.
-    createGameTableRemoteEvent(tableEventsFolder, "RemoveInviteForTable", function(player, gameTable, userId)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameRemoveInviteForTable, function(player, gameTable, userId)
         if gameTable:removeInviteForTable(player.UserId, userId) then
-            sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription())
+            sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
         end
     end)
 
     -- Event to update game options.
-    createGameTableRemoteEvent(tableEventsFolder, "SetTableGameOptions", function(player, gameTable, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameSetTableGameOptions, function(player, gameTable, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions)
         if gameTable:updateGameOptions(player.UserId, nonDefaultGameOptions) then
-            sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription())
+            sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
         end
     end)
 
     -- Event to leave a table.
-    createGameTableRemoteEvent(tableEventsFolder, "LeaveTable", function(player, gameTable)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameLeaveTable, function(player, gameTable)
         handleUserLeavingTable(player.UserId, gameTable)
     end)
 
@@ -299,16 +299,27 @@ local function setupClientToServerEvents(tableEventsFolder: Folder, createTableH
         Utils.debugPrint("TablePlaying", "Doug: ServerEventManager StartGame tableId = ", gameTable:getTableDescription().tableId)
         if gameTable:startGame(player.UserId) then
             Utils.debugPrint("TablePlaying", "Doug: ServerEventManager StartGame startGame worked")
-            sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription(), gameTable:getGameInstanceGUID())
+            sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription(), gameTable:getGameInstanceGUID())
         end
     end)
 
     -- Event for host to end the game currently playing at a table.
-    createGameTableRemoteEvent(tableEventsFolder, "EndGame", function(player, gameTable)
-        if gameTable:endGame(player.UserId) then
-            sendToAllPlayersInExperience("HostAbortedGame", gameTable:getTableDescription().tableId)
-            sendToAllPlayersInExperience("TableUpdated", gameTable:getTableDescription())
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameEndGame, function(player, gameTable)
+        if not gameTable:canEndGame(player.UserId) then
+            return
         end
+
+        -- First use non-modified game table to send events to members that this game is gonna die.
+        ServerEventUtils.sendEventForPlayersInGame(gameTable:getTableDescription(), EventUtils.EventNameHostEndedGame)
+
+        -- Now end the game.
+        -- This should unset game-specific state (like gameInstanceGUID),
+        -- remove anythinig we made assocaited with the game (server game instance,
+        -- game-specific events, etc).
+        gameTable:endGame(player.UserId)
+
+        -- Broadcast new table state to the world.
+        sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
     end)
 
     if RunService:IsStudio() then
@@ -318,13 +329,13 @@ end
 
 local function setupServerToClientEvents(tableEventsFolder: Folder)
     -- Notification that a new table was created.
-    createGameTableRemoteEvent(tableEventsFolder, "TableCreated")
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameTableCreated)
     -- Notification that a table was destroyed.
-    createGameTableRemoteEvent(tableEventsFolder, "TableDestroyed")
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameTableDestroyed)
     -- Notification that something about this table has changed.
-    createGameTableRemoteEvent(tableEventsFolder, "TableUpdated")
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameTableUpdated)
     -- Notification that host has ended game early.
-    createGameTableRemoteEvent(tableEventsFolder, "HostAbortedGame")
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameHostEndedGame)
 end
 
 --[[
@@ -348,11 +359,8 @@ ServerEventManagement.setupRemoteCommunicationsForGame = function(gameInstanceGU
     -- Notification that player has left a table.
     ServerEventUtils.createGameEventFolder(gameInstanceGUID)
     ServerEventUtils.createGameFunctionFolder(gameInstanceGUID)
-    ServerEventUtils.createGameRemoteEvent(gameInstanceGUID, "PlayerLeftTable")
-end
-
-ServerEventManagement.removeServerToClientEventsForGame = function(gameInstanceGUID: CommonTypes.GameInstanceGUID)
-    ServerEventUtils.removeGameEventsFolder(gameInstanceGUID)
+    ServerEventUtils.createGameRemoteEvent(gameInstanceGUID, EventUtils.EventNamePlayerLeftTable)
+    ServerEventUtils.createGameRemoteEvent(gameInstanceGUID, EventUtils.EventNameHostEndedGame)
 end
 
 return ServerEventManagement

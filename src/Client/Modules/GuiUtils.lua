@@ -102,7 +102,7 @@ local function addInactiveOverlay(parent: Frame)
     return overlay
 end
 
-GuiUtils.addFrameInContainer = function(parent: Frame, name: string, opt_frameOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, Frame)
+ function GuiUtils.addFrameInContainer (parent: Frame, name: string, opt_frameOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, Frame)
     local container = Instance.new("Frame")
     applyInstanceOptions(container, {
         Name = GuiConstants.frameContainerName,
@@ -127,47 +127,47 @@ GuiUtils.addFrameInContainer = function(parent: Frame, name: string, opt_frameOp
     return container, frame
 end
 
-GuiUtils.getMainScreenGui = function(): ScreenGui
+ function GuiUtils.getMainScreenGui (): ScreenGui
     assert(mainScreenGui, "Should have a mainScreenGui")
     return mainScreenGui
 end
 
-GuiUtils.getUberBackground = function(): Frame
+ function GuiUtils.getUberBackground (): Frame
     assert(mainScreenGui, "Should have a mainScreenGui")
     local uberBackground = mainScreenGui:FindFirstChild(GuiConstants.uberBackgroundName, true)
     assert(uberBackground, "Should have a uberBackground")
     return uberBackground
 end
 
-GuiUtils.getMainFrame = function(): Frame?
+ function GuiUtils.getMainFrame (): Frame?
     assert(mainScreenGui, "Should have a mainScreenGui")
     local mainFrame = mainScreenGui:FindFirstChild(GuiConstants.mainFrameName, true)
     assert(mainFrame, "Should have a mainFrame")
     return mainFrame
 end
 
-GuiUtils.getContainingScrollingFrame = function(): Frame?
+ function GuiUtils.getContainingScrollingFrame (): Frame?
     assert(mainScreenGui, "Should have a mainScreenGui")
     local containingScrollingFrameName = mainScreenGui:FindFirstChild(GuiConstants.containingScrollingFrameName, true)
     assert(containingScrollingFrameName, "Should have a containingScrollingFrameName")
     return containingScrollingFrameName
 end
 
-GuiUtils.italicize = function(text: string): string
+ function GuiUtils.italicize (text: string): string
     return "<i>" .. text .. "</i>"
 end
 
-GuiUtils.bold = function(text: string): string
+ function GuiUtils.bold (text: string): string
     return "<b>" .. text .. "</b>"
 end
 
-GuiUtils.setMainScreenGui = function(msg: ScreenGui)
+ function GuiUtils.setMainScreenGui (msg: ScreenGui)
     assert(msg, "Should have a mainScreenGui")
     mainScreenGui = msg
     mainScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 end
 
-GuiUtils.addUIPadding = function(guiObject: GuiObject, opt_instanceOptions: InstanceOptions?): UIPadding
+ function GuiUtils.addUIPadding(guiObject: GuiObject, opt_instanceOptions: InstanceOptions?): UIPadding
     local uiPadding = Instance.new("UIPadding")
     local defaultPadding = UDim.new(0, GuiConstants.standardPadding)
 
@@ -185,7 +185,7 @@ GuiUtils.addUIPadding = function(guiObject: GuiObject, opt_instanceOptions: Inst
     return uiPadding
 end
 
-GuiUtils.addStandardMainFramePadding = function(frame: Frame): UIPadding
+ function GuiUtils.addStandardMainFramePadding(frame: Frame): UIPadding
     return GuiUtils.addUIPadding(frame, {
         PaddingLeft = UDim.new(0, GuiConstants.mainFramePadding),
         PaddingRight = UDim.new(0, GuiConstants.mainFramePadding),
@@ -194,7 +194,7 @@ GuiUtils.addStandardMainFramePadding = function(frame: Frame): UIPadding
     })
 end
 
-GuiUtils.addUIGradient = function(frame:Frame, colorSequence: ColorSequence, opt_instanceOptions: InstanceOptions?): UIGradient
+ function GuiUtils.addUIGradient(frame:Frame, colorSequence: ColorSequence, opt_instanceOptions: InstanceOptions?): UIGradient
     local uiGradient = Instance.new("UIGradient")
     local instanceOptions = {
         Parent = frame,
@@ -205,7 +205,7 @@ GuiUtils.addUIGradient = function(frame:Frame, colorSequence: ColorSequence, opt
     applyInstanceOptions(uiGradient, instanceOptions, opt_instanceOptions)
 end
 
-GuiUtils.centerInParent = function(guiObject: GuiObject)
+ function GuiUtils.centerInParent(guiObject: GuiObject)
     guiObject.Position = UDim2.fromScale(0.5, 0.5)
     guiObject.AnchorPoint = Vector2.new(0.5, 0.5)
 end
@@ -216,17 +216,13 @@ function GuiUtils.getCanvasPositionYToShowBottomOfVerticalScroll(scrollingFrame:
     assert(typeof(frameHeight) == "number", "Should have number frameHeight")
     local canvasHeight = canvasSize.Y
     assert(typeof(canvasHeight) == "number", "Should have number canvasHeight")
-    Utils.debugPrint("MessageLog", "Doug: canvasHeight = ", canvasHeight)
-    Utils.debugPrint("MessageLog", "Doug: frameHeight = ", frameHeight)
     -- "CanvasPosition" is the location in the canvas that appears at the top left of the
     -- scrolling frame.
     -- If canvasFrame height is less than absolute canvas size, we can't scroll: just return 0.
     if canvasHeight <= frameHeight then
-        Utils.debugPrint("MessageLog", "Doug: returning 0")
         return 0
     end
     -- we want the canvas height, less the height of the frame.
-    Utils.debugPrint("MessageLog", "Doug: returning canvasHeight - frameHeight = ", canvasHeight - frameHeight)
     return canvasHeight - frameHeight
 end
 
@@ -250,7 +246,7 @@ function GuiUtils.scrollingFrameIsScrolledToBottom(scrollingFrame: ScrollingFram
     return false
 end
 
-GuiUtils.getNextLayoutOrder = function(parent:Instance): number
+ function GuiUtils.getNextLayoutOrder(parent:Instance): number
     local layoutOrder
     local nextLayourOrder = parent:FindFirstChild(GuiConstants.layoutOrderGeneratorName)
     if nextLayourOrder then
@@ -263,7 +259,7 @@ GuiUtils.getNextLayoutOrder = function(parent:Instance): number
     return layoutOrder
 end
 
-GuiUtils.addLayoutOrderGenerator = function(parent:Instance)
+ function GuiUtils.addLayoutOrderGenerator(parent:Instance)
     local layoutOrderGenerator = Instance.new("IntValue")
     layoutOrderGenerator.Parent = parent
     layoutOrderGenerator.Value = 0
@@ -271,7 +267,7 @@ GuiUtils.addLayoutOrderGenerator = function(parent:Instance)
 end
 
 -- Make a text label, standardized look & feel.
-GuiUtils.addTextLabel = function(parent: Instance, text: string, opt_instanceOptions: InstanceOptions?): TextLabel
+ function GuiUtils.addTextLabel(parent: Instance, text: string, opt_instanceOptions: InstanceOptions?): TextLabel
     local textLabel = Instance.new("TextLabel")
 
     applyInstanceOptions(textLabel, {
@@ -293,7 +289,7 @@ GuiUtils.addTextLabel = function(parent: Instance, text: string, opt_instanceOpt
 end
 
 -- Make a text box, standardized look & feel.
-GuiUtils.addTextBox = function(parent: Instance, opt_instanceOptions: InstanceOptions?): TextBox
+ function GuiUtils.addTextBox(parent: Instance, opt_instanceOptions: InstanceOptions?): TextBox
     local textBox = Instance.new("TextBox")
 
     GuiUtils.addUIPadding(textBox)
@@ -343,7 +339,7 @@ local toggleCheckbox = function(checkbox: TextButton, callback: (boolean))
     callback(isOn)
 end
 
-GuiUtils.addCheckbox = function(parent:Frame, startValue: boolean, callback: (boolean), opt_checkboxOptions: CheckboxOptions?, opt_instanceOptions: InstanceOptions?)
+ function GuiUtils.addCheckbox(parent:Frame, startValue: boolean, callback: (boolean), opt_checkboxOptions: CheckboxOptions?, opt_instanceOptions: InstanceOptions?)
     local checkboxOptions = opt_checkboxOptions or {}
 
     local mark = checkboxOptions.mark or GuiConstants.checkMarkString
@@ -384,7 +380,7 @@ GuiUtils.addCheckbox = function(parent:Frame, startValue: boolean, callback: (bo
     return checkbox
 end
 
-GuiUtils.addRadioButtonFamily = function(parent: Frame, options: {string}, startValue: number, callback: (number))
+ function GuiUtils.addRadioButtonFamily(parent: Frame, options: {string}, startValue: number, callback: (number))
     local allButtonsStack = Instance.new("Frame")
     allButtonsStack.BackgroundTransparency = 1
     allButtonsStack.AutomaticSize = Enum.AutomaticSize.XY
@@ -456,7 +452,7 @@ end
 -- Defaults to vertical fill direction, vertical align center, horizontal align left.
 -- This can be overridden with options.
 -- Defaults to center/center.
-GuiUtils.addUIListLayout = function(frame: Frame, opt_instanceOptions: InstanceOptions?) : UIListLayout
+ function GuiUtils.addUIListLayout(frame: Frame, opt_instanceOptions: InstanceOptions?) : UIListLayout
     local uiListLayout = Instance.new("UIListLayout")
 
     applyInstanceOptions(uiListLayout, {
@@ -485,7 +481,7 @@ end
 --  |   of row      |  | widget | widget
 --  |               |  +--------+--------
 --  +--------------------------------------------
-GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, opt_rowOptions: RowOptions?, opt_contentOptions: InstanceOptions?): GuiObject
+ function GuiUtils.addRowAndReturnRowContent(parent:Instance, rowName: string, opt_rowOptions: RowOptions?, opt_contentOptions: InstanceOptions?): GuiObject
     assert(parent, "Should have a parent")
     assert(rowName, "Should have a rowName")
 
@@ -580,7 +576,7 @@ GuiUtils.addRowAndReturnRowContent = function(parent:Instance, rowName: string, 
     return rowContent
 end
 
-GuiUtils.addCorner = function(parent: Frame, opt_instanceOptions: InstanceOptions?): UICorner
+ function GuiUtils.addCorner(parent: Frame, opt_instanceOptions: InstanceOptions?): UICorner
     local uiCorner = Instance.new("UICorner")
 
     applyInstanceOptions(uiCorner, {
@@ -593,7 +589,7 @@ end
 
 -- Parent contains rows.
 -- Find row with given name, return the rowContent frame for that row.
-GuiUtils.getRowContent = function(parent: GuiObject, rowName: string): Frame
+ function GuiUtils.getRowContent(parent: GuiObject, rowName: string): Frame
     Utils.debugPrint("Layout", "Doug: getRowContent rowName = ", rowName)
     local row = parent:FindFirstChild(rowName)
     assert(row, "row should exist")
@@ -602,7 +598,7 @@ GuiUtils.getRowContent = function(parent: GuiObject, rowName: string): Frame
     return rowContent
 end
 
-GuiUtils.addTextButtonInContainer = function(parent: Frame, name: string, opt_buttonOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, TextButton)
+ function GuiUtils.addTextButtonInContainer(parent: Frame, name: string, opt_buttonOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, TextButton)
     local container = Instance.new("Frame")
     applyInstanceOptions(container, {
         Parent = parent,
@@ -637,7 +633,7 @@ GuiUtils.addTextButtonInContainer = function(parent: Frame, name: string, opt_bu
 end
 
 -- Make a button with common look & feel.
-GuiUtils.addStandardTextButtonInContainer = function(parent: Instance, text: string, callback: () -> (), opt_buttonOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, Instance)
+ function GuiUtils.addStandardTextButtonInContainer(parent: Instance, text: string, callback: () -> (), opt_buttonOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, Instance)
     local container, textButton = GuiUtils.addTextButtonInContainer(parent, GuiConstants.textButtonName, {
         Text = text,
     }, opt_containerOptions)
@@ -665,7 +661,7 @@ GuiUtils.addStandardTextButtonInContainer = function(parent: Instance, text: str
     return container, textButton
 end
 
-GuiUtils.getGameName = function(gameId: CommonTypes.GameId): string?
+ function GuiUtils.getGameName(gameId: CommonTypes.GameId): string?
     local gameDetails = GameDetails.getGameDetails(gameId)
     if gameDetails then
         return gameDetails.name
@@ -676,7 +672,7 @@ end
 
 -- An "item" is a user or a game.
 -- We have a standard notion of size/style for an image for an item.
-GuiUtils.addItemImage = function(parent: GuiObject, opt_instanceOptions: InstanceOptions?): ImageLabel
+ function GuiUtils.addItemImage(parent: GuiObject, opt_instanceOptions: InstanceOptions?): ImageLabel
     assert(parent, "Should have parent")
     local imageLabel = Instance.new("ImageLabel")
 
@@ -694,7 +690,7 @@ end
 
 -- An "item" is a user or a game.
 -- We have a standard notion of size/style for a text label for an item.
-GuiUtils.addItemTextLabel = function(parent:GuiObject, opt_instanceOptions: InstanceOptions?): TextLabel
+ function GuiUtils.addItemTextLabel(parent:GuiObject, opt_instanceOptions: InstanceOptions?): TextLabel
     local incomingInstanceOptions = opt_instanceOptions or {}
     local instanceOptions = {
         TextXAlignment = Enum.TextXAlignment.Center,
@@ -712,7 +708,7 @@ GuiUtils.addItemTextLabel = function(parent:GuiObject, opt_instanceOptions: Inst
     return userTextLabel
 end
 
-GuiUtils.addImageOverTextLabel = function(frame: GuiObject): (ImageLabel, TextLabel)
+ function GuiUtils.addImageOverTextLabel(frame: GuiObject): (ImageLabel, TextLabel)
     assert(frame, "Should have parent")
 
     GuiUtils.addUIListLayout(frame, {
@@ -777,7 +773,7 @@ end
 -- a child "itemType" string value and a child "itemId" number value.
 -- <type, id> should be globally unique.
 -- Name is just "WidgetContainer_<type>_<id>
-GuiUtils.constructWidgetContainerName = function(itemType: string, itemId: number): string
+ function GuiUtils.constructWidgetContainerName(itemType: string, itemId: number): string
     assert(itemType, "Should have a itemType")
     assert(itemId, "Should have a itemId")
     return "WidgetContainer_" .. itemType .. "_" .. tostring(itemId)
@@ -786,7 +782,7 @@ end
 -- If this thing is a proper widget container, what should it's name be?
 -- WidgetContainer_<type>_<id>
 -- If something is missing just return nil.
-GuiUtils.getExpectedWidgetContainerName = function(widgetContainer: Instance): string?
+ function GuiUtils.getExpectedWidgetContainerName(widgetContainer: Instance): string?
     if not widgetContainer then
         return nil
     end
@@ -802,7 +798,7 @@ GuiUtils.getExpectedWidgetContainerName = function(widgetContainer: Instance): s
 end
 
 -- All WidgetContainers have names of the form "WidgetContainer_ItemType_ItemId".
-GuiUtils.isAWidgetContainer = function(instance: Instance): boolean
+ function GuiUtils.isAWidgetContainer(instance: Instance): boolean
     if not instance:IsA("Frame") then
         return false
     end
@@ -848,7 +844,7 @@ local collectWidgetsTweeningOut = function(parent: GuiObject): {GuiObject}
     return deadMeatFrames
 end
 
-GuiUtils.updateNilWidgetContainer = function(parentFrame: Frame, renderEmptyList: (Frame) -> nil, cleanupEmptyList: (Frame) -> nil)
+ function GuiUtils.updateNilWidgetContainer(parentFrame: Frame, renderEmptyList: (Frame) -> nil, cleanupEmptyList: (Frame) -> nil)
     -- How many non-nil widget containers, or guys tweening out?
     assert(parentFrame, "Should have a parentFrame")
     local widgetContainers = collectWidgetContainers(parentFrame)
@@ -868,7 +864,7 @@ end
 -- Update the parent to remove/add widgets so the widgets match the incoming list of things.
 -- Return a list of any tweens we created so we can murder them later if we need to.
 -- If "skipTweens" is true, just slap things in there, no tweens.
-GuiUtils.updateWidgetContainerChildren = function(parentFrame:Frame,
+ function GuiUtils.updateWidgetContainerChildren(parentFrame:Frame,
         itemIds:{number},
         makeWidgetContainerForItem: (Instance, number) -> Instance,
         renderEmptyList: (Frame) -> nil,
@@ -960,7 +956,7 @@ end
 
 local genericIdGenerator = 0
 
-GuiUtils.getNameFromUserWidgetContainer = function(widgetContainer: Instance): string?
+ function GuiUtils.getNameFromUserWidgetContainer(widgetContainer: Instance): string?
     assert(widgetContainer, "Should have a widgetContainer")
     assert(GuiUtils.isAWidgetContainer(widgetContainer), "Should be a widgetContainer")
 
@@ -971,7 +967,7 @@ GuiUtils.getNameFromUserWidgetContainer = function(widgetContainer: Instance): s
     return textLabel.Text
 end
 
-GuiUtils.removeNullStaticWidget = function(parent:Instance)
+ function GuiUtils.removeNullStaticWidget(parent:Instance)
     if parent:FindFirstChild(GuiConstants.nullStaticWidgetName) then
         parent:FindFirstChild(GuiConstants.nullStaticWidgetName):Destroy()
     end
@@ -979,7 +975,7 @@ end
 
 -- Make standard "nothing there" indicator.
 -- Idempotent: will remove old/previous one if present.
-GuiUtils.addNullStaticWidget = function(parent: Instance, message: string, opt_instanceOptions: InstanceOptions?): Frame
+ function GuiUtils.addNullStaticWidget(parent: Instance, message: string, opt_instanceOptions: InstanceOptions?): Frame
     -- Make sure old label is gone.
     GuiUtils.removeNullStaticWidget(parent)
     local instanceOptions = opt_instanceOptions or {}
@@ -1001,7 +997,7 @@ GuiUtils.addNullStaticWidget = function(parent: Instance, message: string, opt_i
     return textLabel
 end
 
-GuiUtils.makeWidgetContainer = function(parent:GuiObject, widgetType: string, opt_itemId: number?): GuiObject
+ function GuiUtils.makeWidgetContainer(parent:GuiObject, widgetType: string, opt_itemId: number?): GuiObject
     assert(parent, "Should have a parent")
     assert(widgetType, "Should have a widgetType")
 
@@ -1036,7 +1032,7 @@ GuiUtils.makeWidgetContainer = function(parent:GuiObject, widgetType: string, op
     return widgetContainer
 end
 
-GuiUtils.updateTextLabel = function(textLabel: TextLabel, text: string): boolean
+ function GuiUtils.updateTextLabel(textLabel: TextLabel, text: string): boolean
     assert(textLabel, "Should have a textLabel")
     if textLabel.Text == text then
         return false
@@ -1045,7 +1041,7 @@ GuiUtils.updateTextLabel = function(textLabel: TextLabel, text: string): boolean
     return true
 end
 
-GuiUtils.getOptionValue = function(gameOption: CommonTypes.GameOption, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions): string?
+ function GuiUtils.getOptionValue(gameOption: CommonTypes.GameOption, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions): string?
     -- Does this particular option have a non-default value?
     local opt_nonDefaultGameOption = nonDefaultGameOptions[gameOption.gameOptionId]
 
@@ -1081,7 +1077,7 @@ GuiUtils.getOptionValue = function(gameOption: CommonTypes.GameOption, nonDefaul
     return "No"
 end
 
-GuiUtils.getSelectedGameOptionsString = function(tableDescription: CommonTypes.TableDescription): string?
+ function GuiUtils.getSelectedGameOptionsString(tableDescription: CommonTypes.TableDescription): string?
     local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
 
     -- Game doesn't even have options: nothing to say.
@@ -1109,13 +1105,13 @@ GuiUtils.getSelectedGameOptionsString = function(tableDescription: CommonTypes.T
     return table.concat(enabledOptionsStrings,"\n")
 end
 
-GuiUtils.getTableSizeString = function(gameDetails: CommonTypes.GameDetails): string
+ function GuiUtils.getTableSizeString(gameDetails: CommonTypes.GameDetails): string
     return tostring(gameDetails.minPlayers) .. " - " .. tostring(gameDetails.maxPlayers) .. " players"
 end
 
 -- A row with a text label and a row of same-size items.
 -- Row is just one item high. Will add scrollbar if needed.
-GuiUtils.addRowOfUniformItemsAndReturnRowContent = function(frame: Frame, name: string, labelText: string, itemHeight: number): Frame
+ function GuiUtils.addRowOfUniformItemsAndReturnRowContent(frame: Frame, name: string, labelText: string, itemHeight: number): Frame
     assert(frame, "Should have frame")
     assert(name, "Should have name")
     assert(labelText, "Should have labelText")
@@ -1147,7 +1143,7 @@ GuiUtils.addRowOfUniformItemsAndReturnRowContent = function(frame: Frame, name: 
     return rowContent
 end
 
-GuiUtils.addRowWithItemGridAndReturnRowContent = function(parent:GuiObject, rowName: string, itemSize: UDim2)
+ function GuiUtils.addRowWithItemGridAndReturnRowContent(parent:GuiObject, rowName: string, itemSize: UDim2)
     assert(parent, "Should have parent")
     assert(rowName, "Should have rowName")
     assert(itemSize,  "Should have itemSize")
@@ -1184,7 +1180,7 @@ end
 --[[
 
 local didVerticalScrollToggle = function()
-GuiUtils.sanitizeScrollingFrame = function(scrollingFrame: ScrollingFrame)
+ function GuiUtils.sanitizeScrollingFrame(scrollingFrame: ScrollingFrame)
 
     if scrollingFrame.ScrollBarThickness == 0 then
         return
@@ -1206,9 +1202,168 @@ GuiUtils.sanitizeScrollingFrame = function(scrollingFrame: ScrollingFrame)
 end
 ]]
 
-GuiUtils.setScrollingFrameColors = function(scrollingFrame: ScrollingFrame)
+function GuiUtils.setScrollingFrameColors(scrollingFrame: ScrollingFrame)
     scrollingFrame.ScrollBarImageColor3 = GuiConstants.scrollBarColor
     scrollingFrame.ScrollBarImageTransparency = GuiConstants.scrollBarTransparency
+end
+
+function setBooleanValue(parent:Instance, name: string, value: boolean)
+    local booleanValue = parent:FindFirstChild(name)
+    if not booleanValue then
+        booleanValue = Instance.new("BoolValue")
+        booleanValue.Name = name
+        booleanValue.Parent = parent
+    end
+    booleanValue.Value = value
+end
+
+function getBooleanValue(parent:Instance, name: string)
+    local booleanValue = parent:FindFirstChild(name)
+    assert(booleanValue, "Should have a booleanValue")
+    return booleanValue.Value
+end
+
+-- Give scrolling frame the following logic:
+-- If content is added to the bottom, and the user is scrolled to the bottom, then
+-- tween the scroll bar to the new bottom.
+-- Otherwise just slap it in there.
+-- Either way hit the callback once the content is fully in there.
+function GuiUtils.addSlideOutEffectToScrollingFrame(scrollingFrame:ScrollingFrame, opt_callback: ()->()?)
+    -- Some sanity checks for this to work properly.
+    assert(scrollingFrame.CanvasSize.Y.Scale == 0, "CanvasSize.Y.Scale should be 0")
+    assert(scrollingFrame.AutomaticCanvasSize == Enum.AutomaticSize.Y, "AutomaticCanvasSize should be Y")
+
+    -- were we at the bottom of the scrolling frame?
+    local isAtBottom = GuiUtils.scrollingFrameIsScrolledToBottom(scrollingFrame)
+    setBooleanValue(scrollingFrame, "IsAtBottom", isAtBottom)
+    setBooleanValue(scrollingFrame, "IsBusy", false)
+
+    export type CanvasPosition = {
+        wasAtBottom: boolean,
+        newTargetCanvasPosition: Vector2,
+    }
+    local canvasStatusQueue = {} :: {CanvasPosition}
+
+    local function enqueuePossibleSizeChangeResponse(targetCanvasPosition: Vector2, wasAtBottom: boolean)
+        table.insert(canvasStatusQueue, {
+            wasAtBottom = wasAtBottom,
+            newTargetCanvasPosition = targetCanvasPosition,
+        })
+    end
+
+    local function maybeConsumeFromQueue()
+        Utils.debugPrint("MessageLog", "maybeConsumeFromQueue: 001")
+        -- Nothing in queue, no.
+        if #canvasStatusQueue == 0 then
+            return
+        end
+
+        Utils.debugPrint("MessageLog", "maybeConsumeFromQueue: 002")
+        -- Busy, no.
+        local isBusy = getBooleanValue(scrollingFrame, "IsBusy")
+        if isBusy then
+            return
+        end
+
+        Utils.debugPrint("MessageLog", "maybeConsumeFromQueue: 003")
+        -- Remove the next target from the queue.
+        local canvasStatus = table.remove(canvasStatusQueue, 1)
+
+        -- Are we right now at the bottom of the scroll widget?
+        -- Do we need a slide-in effect?
+
+        Utils.debugPrint("MessageLog", "maybeConsumeFromQueue: 004")
+        -- If target position matches current position, no.
+        -- If we were not scrolled to bottom, no.
+        local canSkipTweening = false
+        Utils.debugPrint("MessageLog", "scrollingFrame.CanvasPosition = ", scrollingFrame.CanvasPosition)
+        Utils.debugPrint("MessageLog", "canvasStatus.newTargetCanvasPosition = ", canvasStatus.newTargetCanvasPosition)
+
+        if canvasStatus.newTargetCanvasPosition == scrollingFrame.CanvasPosition then
+            Utils.debugPrint("MessageLog", "maybeConsumeFromQueue: 004.001")
+            canSkipTweening = true
+        elseif canvasStatus.wasAtBottom == false then
+            Utils.debugPrint("MessageLog", "maybeConsumeFromQueue: 004.002")
+            canSkipTweening = true
+        end
+
+        Utils.debugPrint("MessageLog", "maybeConsumeFromQueue: 005")
+        -- If we can skip tweening:
+        --   No changes to canvas pos.
+        --   Hit the callback.
+        --   Try to consume again.
+        if canSkipTweening then
+            if opt_callback then
+                opt_callback()
+            end
+            maybeConsumeFromQueue()
+            return
+        end
+
+        Utils.debugPrint("MessageLog", "maybeConsumeFromQueue: 006")
+        -- Otherwise we are busy until the tween is done.
+        setBooleanValue(scrollingFrame, "IsBusy", true)
+
+        -- Wait here too?
+        task.spawn(function()
+            task.wait()
+            -- Use slide out effect to get to target position.
+            local movementTweenInfo = TweenInfo.new(GuiConstants.scrollingFrameSlideTweenTime, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 0)
+            local t1 = TweenService:Create(scrollingFrame, movementTweenInfo, {CanvasPosition = canvasStatus.newTargetCanvasPosition})
+            t1.Completed:Connect(function()
+                Utils.debugPrint("MessageLog", "maybeConsumeFromQueue: 007")
+                -- When the tween is done:
+                -- 1. We are no longer busy.
+                -- 2. Hit the callback: yes we did slide out.
+                setBooleanValue(scrollingFrame, "IsBusy", false)
+                if opt_callback then
+                    opt_callback()
+                end
+                maybeConsumeFromQueue()
+            end)
+            Utils.debugPrint("MessageLog", "maybeConsumeFromQueue: 008")
+            t1:Play()
+        end)
+    end
+
+    scrollingFrame.ChildAdded:Connect(function(instance:Instance)
+        Utils.debugPrint("MessageLog", "ChildAdded 001")
+
+        -- A new gui object has been added to scrolling frame.
+        -- If the user us not at the bottom of the sceen, fine, nothing to do.
+        -- But maybe the user is scrolled to bottom and new content is offscreen.
+        -- In that case, we want to "slide down" to show the new content.
+        --
+        -- This is further complicated by enqueuing logic: if a blast of new items come in
+        -- all at once we don't want things to get janky.
+
+        -- Not a gui object, don't care.
+        if not instance:IsA("GuiObject") then
+            return
+        end
+
+        -- Before waiting, ask: was scroll widget scrolled to bottom?
+        local wasAtBottom = GuiUtils.scrollingFrameIsScrolledToBottom(scrollingFrame)
+
+        task.spawn(function()
+            task.wait()
+
+            -- Figure out where we want the canvas to go.
+            local absoluteCanvasSize = scrollingFrame.AbsoluteCanvasSize
+            local scrollingFrameAbsoluteSize = scrollingFrame.AbsoluteSize
+
+            local targetCanvasPositionY = absoluteCanvasSize.Y - scrollingFrameAbsoluteSize.Y
+            local targetCanvasPosition = Vector2.new(0, targetCanvasPositionY)
+
+            Utils.debugPrint("MessageLog", "ChildAdded absoluteCanvasSize = ", absoluteCanvasSize)
+            Utils.debugPrint("MessageLog", "ChildAdded scrollingFrameAbsoluteSize = ", scrollingFrameAbsoluteSize)
+            Utils.debugPrint("MessageLog", "ChildAdded targetCanvasPositionY = ", targetCanvasPositionY)
+            Utils.debugPrint("MessageLog", "ChildAdded targetCanvasPosition = ", targetCanvasPosition)
+
+            enqueuePossibleSizeChangeResponse(targetCanvasPosition, wasAtBottom)
+            maybeConsumeFromQueue()
+        end)
+    end)
 end
 
 return GuiUtils

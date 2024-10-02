@@ -83,8 +83,7 @@ ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId
     -- d) we get the updates
     ClientEventManagement.listenToServerEvents(GuiMain.onTableCreated,
         GuiMain.onTableDestroyed,
-        GuiMain.onTableUpdated,
-        GuiMain.onHostAbortedGame)
+        GuiMain.onTableUpdated)
 
     task.spawn(function()
         local tableDescriptionsByTableId = ClientEventManagement.fetchTableDescriptionsByTableIdAsync()

@@ -218,7 +218,8 @@ GuiConstants.blueColorSequence = ColorSequence.new(Color3.new(0.5, 0.6, 0.8), Co
 Times
 ]]
 GuiConstants.standardTweenTime = 0.25
-GuiConstants.messageQueueTweenTime = 0.25
+GuiConstants.messageQueueTransparencyTweenTime = 0.25
+GuiConstants.scrollingFrameSlideTweenTime = 0.25
 
 --[[
 Images

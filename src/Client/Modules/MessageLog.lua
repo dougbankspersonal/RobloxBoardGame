@@ -16,8 +16,8 @@ local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
 local MessageLog = {}
 MessageLog.__index = MessageLog
 
-export type MessageWithCallback = {
-    message: string,
+export type TextLabelWithCallback = {
+    textLabel: TextLabel,
     opt_callback: ()->()?
 }
 
@@ -26,7 +26,7 @@ export type MessageLog = {
     parent: Frame,
     scrollingFrame: ScrollingFrame,
     messageLayoutOrder: number,
-    messageWithCallbackQueue: {MessageWithCallback},
+    textLabelsWithCallbacks: {TextLabelWithCallback},
     busyAddingMessage: boolean,
 
     -- static functions.
@@ -34,15 +34,13 @@ export type MessageLog = {
 
     -- non static member functions.
     enqueueMessage: (MessageLog, string, ()->()?) -> nil,
-    maybeConsumeFromQueue: (MessageLog) -> nil,
-    addMessageWidget: (MessageLog, string) -> GuiObject,
+    consumeMessageTransparencyQueue: (MessageLog, boolean) -> nil,
 }
 
 MessageLog.new = function(parent:Frame): MessageLog
     local self = setmetatable({}, MessageLog)
 
-    self.messageWithCallbackQueue = {}
-    self.busyAddingMessage = false
+    self.textLabelsWithCallbacks = {}
 
     self.parent = parent
     self.scrollingFrame = Instance.new("ScrollingFrame")
@@ -59,12 +57,9 @@ MessageLog.new = function(parent:Frame): MessageLog
     self.scrollingFrame.ScrollBarImageColor3 = Color3.new(0, 0, 0)
     self.messageLayoutOrder = 1
 
-
-    self.scrollingFrame:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
-        Utils.debugPrint("MessageLog", "CanvasPosition changed to: ", self.scrollingFrame.CanvasPosition)
-        -- Who did this?
-        local stackTrace = debug.traceback()
-        Utils.debugPrint("MessageLog", "CanvasPosition stackTrace: ", stackTrace)
+    -- Adapt scrolling frame with "slide out" effect.
+    GuiUtils.addSlideOutEffectToScrollingFrame(self.scrollingFrame, function()
+        self:consumeMessageTransparencyQueue()
     end)
 
     GuiUtils.addUIListLayout(self.scrollingFrame, {
@@ -74,104 +69,99 @@ MessageLog.new = function(parent:Frame): MessageLog
         VerticalAlignment = Enum.VerticalAlignment.Top,
     })
 
-    self.scrollingFrame.ChildAdded:Connect(function(_)
-        task.wait() -- delay for one frame to ensure child has been positioned
-        -- set the canvasPosition to the bottom of the scrolling frame
-        self.scrollingFrame.CanvasPosition = Vector2.new(0, self.scrollingFrame.CanvasSize.Y.Offset - self.scrollingFrame.AbsoluteSize.Y)
-    end)
-
     return self
 end
 
-function MessageLog:enqueueMessage(message: string, opt_callback: ()->()?)
-    local messageWithCallback = {
-        message = message,
-        opt_callback = opt_callback,
-    }
-    table.insert(self.messageWithCallbackQueue, messageWithCallback)
-    self:maybeConsumeFromQueue()
-end
+local messageSequenceNumber = 0
 
-function MessageLog:addMessageWidget(message:string): GuiObject
+function MessageLog:enqueueMessage(message: string, opt_callback: ()->()?)
+
+    Utils.debugPrint("MessageLog", "enqueueMessage: " .. message)
     local layoutOrder = self.messageLayoutOrder
     self.messageLayoutOrder = self.messageLayoutOrder + 1
 
-    local messageLabel = Instance.new("TextLabel")
-    messageLabel.Name = "Message"
-    messageLabel.Size = UDim2.new(1, 0, 0, 20)
-    messageLabel.Position = UDim2.new(0, 0, 0, 0)
-    messageLabel.BackgroundTransparency = 1
-    messageLabel.Text = message
-    messageLabel.TextSize = 14
-    messageLabel.TextXAlignment = Enum.TextXAlignment.Left
-    messageLabel.Parent = self.scrollingFrame
-    messageLabel.LayoutOrder = layoutOrder
-    messageLabel.RichText = true
+    -- make but do not add text label.
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Name = "Message" .. tostring(messageSequenceNumber)
+    messageSequenceNumber = messageSequenceNumber + 1
+    textLabel.Size = UDim2.new(1, 0, 0, 20)
+    textLabel.Position = UDim2.new(0, 0, 0, 0)
+    textLabel.TextTransparency = 1
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = message
+    textLabel.TextSize = 14
+    textLabel.TextXAlignment = Enum.TextXAlignment.Left
+    textLabel.LayoutOrder = layoutOrder
+    textLabel.RichText = true
 
-    return messageLabel
+    -- enqueue a struct with this label and callback.
+    local textLabelWithCallback = {
+        textLabel = textLabel,
+        opt_callback = opt_callback,
+    }
+    table.insert(self.textLabelsWithCallbacks, textLabelWithCallback)
+
+    -- Now parent.
+    Utils.debugPrint("MessageLog", "parenting new message: " .. message)
+
+    textLabel.Parent = self.scrollingFrame
 end
 
-function MessageLog:maybeConsumeFromQueue()
-    -- Nothing in queue, done.
-    if #self.messageWithCallbackQueue == 0 then
-        return
+local function isOnscreen(scrollingFrame: ScrollingFrame, guiObject: GuiObject)
+    local guiObjectPosition = guiObject.AbsolutePosition
+    local guiObjectSize = guiObject.AbsoluteSize
+    local canvasPosition = scrollingFrame.CanvasPosition
+    local frameSize = scrollingFrame.AbsoluteSize
+
+    local guiObjectBottom = guiObjectPosition.Y + guiObjectSize.Y
+    local canvasTop = canvasPosition.Y
+
+    if guiObjectBottom < canvasTop then
+        return false
     end
 
-    -- Busy, done.
-    if self.busyAddingMessage then
-        return
+    local guiObjectTop = guiObjectPosition.Y
+    local canvasBottom = canvasPosition.Y + frameSize.Y
+
+
+    if guiObjectTop > canvasBottom then
+        return false
     end
 
-    -- were we at the bottom of the scrolling frame?
-    local wasAtBottom = GuiUtils.scrollingFrameIsScrolledToBottom(self.scrollingFrame)
+    return true
+end
 
-    -- Remove the next message feom queue.
-    local messageWithCallback = table.remove(self.messageWithCallbackQueue, 1)
-    -- Add the message widget.
-    local messageWidget = self:addMessageWidget(messageWithCallback.message)
+function MessageLog:consumeMessageTransparencyQueue()
+    -- There should be something in here.
+    assert(self.textLabelsWithCallbacks, "MessageLog:consumeMessageTransparencyQueue: self.textLabelsWithCallbacks is nil")
+    assert(#self.textLabelsWithCallbacks > 0, "MessageLog:consumeMessageTransparencyQueue: self.textLabelsWithCallbacks is empty")
+    local textLabelWithCallback = table.remove(self.textLabelsWithCallbacks, 1)
 
-    -- If the user is scrolled up to some non-bottom location, we're done.
-    if not wasAtBottom then
-        if messageWithCallback.opt_callback then
-            messageWithCallback.opt_callback()
+    assert(textLabelWithCallback, "MessageLog:consumeMessageTransparencyQueue: textLabelWithCallback is nil")
+    local textLabel = textLabelWithCallback.textLabel
+
+    assert(textLabel, "MessageLog:consumeMessageTransparencyQueue: textLabel is nil")
+    -- This label is now fully added to the scrolling frame.
+    -- If offscreen, just make it visible and punt.
+    local _isOnscreen = isOnscreen(self.scrollingFrame, textLabel)
+    if not _isOnscreen then
+        textLabel.TextTransparency = 0
+        if textLabelWithCallback.opt_callback then
+            textLabelWithCallback.opt_callback()
         end
         return
     end
 
-    -- Otherwise, we are now "busy".
-    self.busyAddingMessage = true
-    messageWidget.TextTransparency = 1
-
-    -- Give everything a second to settle.
-    task.spawn(function()
-        task.wait()
-        -- Do some tweening so message log appearance looks cool.
-        local currentCanvasPosition = self.scrollingFrame.CanvasPosition
-        local targetCanvasY = GuiUtils.getCanvasPositionYToShowBottomOfVerticalScroll(self.scrollingFrame)
-        local targetCanvasPosition = Vector2.new(currentCanvasPosition.X, targetCanvasY)
-
-        Utils.debugPrint("MessageLog", "Doug: currentCanvasPosition: ", currentCanvasPosition)
-        Utils.debugPrint("MessageLog", "Doug: targetCanvasPosition: ", targetCanvasPosition)
-
-        local movementTweenInfo = TweenInfo.new(GuiConstants.messageQueueTweenTime, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 0)
-
-        local t1 = TweenService:Create(self.scrollingFrame, movementTweenInfo, {CanvasPosition = targetCanvasPosition})
-        t1.Completed:Connect(function()
-        self.scrollingFrame.CanvasPosition = targetCanvasPosition
-
-            local transparencyTweenInfo = TweenInfo.new(GuiConstants.messageQueueTweenTime, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 0)
-            local t2 = TweenService:Create(messageWidget, transparencyTweenInfo, {TextTransparency = 0})
-            t2.Completed:Connect(function()
-                self.busyAddingMessage = false
-                if messageWithCallback.opt_callback then
-                    messageWithCallback.opt_callback()
-                end
-                self:maybeConsumeFromQueue()
-            end)
-            t2:Play()
-        end)
-        t1:Play()
+    -- Otherwise fade in it.
+    local transparencyTweenInfo = TweenInfo.new(GuiConstants.messageQueueTransparencyTweenTime, Enum.EasingStyle.Linear, Enum.EasingDirection.In, 0, false, 0)
+    local t1 = TweenService:Create(textLabel, transparencyTweenInfo, {TextTransparency = 0})
+    t1.Completed:Connect(function()
+        -- When the tween is done, hit callback.
+        if textLabelWithCallback.opt_callback then
+            textLabelWithCallback.opt_callback()
+        end
     end)
+    t1:Play()
 end
 
 function MessageLog:destroy()
