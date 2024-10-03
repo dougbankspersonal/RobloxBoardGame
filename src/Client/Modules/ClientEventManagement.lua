@@ -63,10 +63,17 @@ local setupMockEventFunctions = function()
         event:FireServer(tableId)
     end
 
-    ClientEventManagement.mockMemberLeaves = function(tableId: CommonTypes.TableId)
-        local event = ReplicatedStorage.TableEvents:WaitForChild(EventUtils.EventNameMockMemberLeaves)
+    ClientEventManagement.mockNonHostMemberLeaves = function(tableId: CommonTypes.TableId)
+        local event = ReplicatedStorage.TableEvents:WaitForChild(EventUtils.EventNameMockNonHostMemberLeaves)
         assert(event, "Event missing")
-        Utils.debugPrint("Mocks", "firing mockMemberLeaves event")
+        Utils.debugPrint("Mocks", "firing mockNonHostMemberLeaves event")
+        event:FireServer(tableId)
+    end
+
+    ClientEventManagement.mockHostDestroysTable = function(tableId: CommonTypes.TableId)
+        local event = ReplicatedStorage.TableEvents:WaitForChild(EventUtils.EventNameMockHostDestroysTable)
+        assert(event, "Event missing")
+        Utils.debugPrint("Mocks", "firing mockHostDestroysTable event")
         event:FireServer(tableId)
     end
 
@@ -121,13 +128,13 @@ end
 
 ClientEventManagement.listenToServerEventsForActiveGame = function(gameInstanceGUID: CommonTypes.GameInstanceGUID,
     onPlayerLeftTable: (CommonTypes.GameInstanceGUID, CommonTypes.UserId) -> nil,
-    onHostEndedGame: (CommonTypes.GameInstanceGUID) -> nil)
+    notifyThatHostEndedGame: (CommonTypes.GameInstanceGUID, CommonTypes.GameEndDetails) -> nil)
 
     assert(gameInstanceGUID, "gameInstanceGUID must be provided")
     assert(onPlayerLeftTable, "onPlayerLeftTable must be provided")
 
     ClientEventUtils.connectToGameEvent(gameInstanceGUID, EventUtils.EventNamePlayerLeftTable, onPlayerLeftTable)
-    ClientEventUtils.connectToGameEvent(gameInstanceGUID, EventUtils.EventNameHostEndedGame, onHostEndedGame)
+    ClientEventUtils.connectToGameEvent(gameInstanceGUID, EventUtils.EventNameNotifyThatHostEndedGame, notifyThatHostEndedGame)
 end
 
 ClientEventManagement.createTable = function(gameId: CommonTypes.GameId, isPublic: boolean)
@@ -198,10 +205,10 @@ ClientEventManagement.setTableGameOptions = function(tableId: CommonTypes.TableI
     event:FireServer(tableId, nonDefaultGameOptions)
 end
 
-ClientEventManagement.endGame = function(tableId: CommonTypes.TableId)
+ClientEventManagement.endGame = function(tableId: CommonTypes.TableId, clientGameEndDetails: any?)
     local event = ReplicatedStorage.TableEvents:WaitForChild(EventUtils.EventNameEndGame)
     assert(event, "event missing")
-    event:FireServer(tableId)
+    event:FireServer(tableId, clientGameEndDetails)
 end
 
 if RunService:IsStudio() then

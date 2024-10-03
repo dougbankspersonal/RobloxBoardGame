@@ -19,7 +19,7 @@ local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 local TableDescription = {}
 
-TableDescription.fetchUserDataAsync = function(tableDescription: CommonTypes.TableDescription)
+function TableDescription.fetchUserDataAsync(tableDescription: CommonTypes.TableDescription)
     -- For everyone I might care about, prefetch the user info.
     local memberUserIds = Cryo.Dictionary.keys(tableDescription.memberUserIds)
     local invitedUserIds = Cryo.Dictionary.keys(tableDescription.invitedUserIds)
@@ -31,7 +31,7 @@ TableDescription.fetchUserDataAsync = function(tableDescription: CommonTypes.Tab
     PlayerUtils.asyncFetchPlayerInfo(allUserIds)
 end
 
-TableDescription.createTableDescription = function(tableId: CommonTypes.TableId, hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): CommonTypes.TableDescription
+function TableDescription.createTableDescription(tableId: CommonTypes.TableId, hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): CommonTypes.TableDescription
     return {
         tableId = tableId,
         memberUserIds = {
@@ -46,30 +46,16 @@ TableDescription.createTableDescription = function(tableId: CommonTypes.TableId,
     }
 end
 
-TableDescription.sanityCheck = function(tableDescription: CommonTypes.TableDescription)
-    assert(tableDescription, "tableDescription must be provided")
-    assert(tableDescription.tableId, "tableId must be provided")
-    assert(tableDescription.memberUserIds, "memberUserIds must be provided")
-    assert(tableDescription.hostUserId, "hostUserId must be provided")
-    assert(tableDescription.invitedUserIds, "invitedUserIds must be provided")
-    assert(tableDescription.gameId, "gameId must be provided")
-    assert(tableDescription.gameTableState, "gameTableState must be provided")
-    assert(tableDescription.memberUserIds[tableDescription.hostUserId], "hostUserId must be in memberUserIds")
-    if RunService:IsStudio() then
-        assert(tableDescription.mockUserIds, "mockUserIds must be provided")
-    end
-end
-
-TableDescription.getNumberOfPlayersAtTable = function(tableDescription: CommonTypes.TableDescription): number
+function TableDescription.getNumberOfPlayersAtTable(tableDescription: CommonTypes.TableDescription): number
     return #(Cryo.Dictionary.keys(tableDescription.memberUserIds))
 end
 
-TableDescription.tableHasRoom = function(tableDescription: CommonTypes.TableDescription): boolean
+function TableDescription.tableHasRoom(tableDescription: CommonTypes.TableDescription): boolean
     local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
     return gameDetails.maxPlayers > TableDescription.getNumberOfPlayersAtTable(tableDescription)
 end
 
-TableDescription.playerCanJoinInvitedTable = function(tableDescription: CommonTypes.TableDescription, userId: CommonTypes.UserId): boolean
+function TableDescription.playerCanJoinInvitedTable(tableDescription: CommonTypes.TableDescription, userId: CommonTypes.UserId): boolean
     assert(userId, "userId must be provided")
     assert(tableDescription, "tableDescription must be provided")
 
@@ -92,7 +78,7 @@ TableDescription.playerCanJoinInvitedTable = function(tableDescription: CommonTy
     return tableDescription.gameTableState == GameTableStates.WaitingForPlayers
 end
 
-TableDescription.playerCanJoinPublicTable = function(tableDescription: CommonTypes.TableDescription, userId: CommonTypes.UserId): boolean
+function TableDescription.playerCanJoinPublicTable(tableDescription: CommonTypes.TableDescription, userId: CommonTypes.UserId): boolean
     assert(tableDescription, "tableDescription must be provided")
 
     if not tableDescription.isPublic then
@@ -110,13 +96,13 @@ TableDescription.playerCanJoinPublicTable = function(tableDescription: CommonTyp
     return tableDescription.gameTableState == GameTableStates.WaitingForPlayers
 end
 
-TableDescription.isMockUserId = function(tableDescription: CommonTypes.TableDescription, userId: CommonTypes.UserId): boolean
+function TableDescription.isMockUserId(tableDescription: CommonTypes.TableDescription, userId: CommonTypes.UserId): boolean
     assert(tableDescription, "tableDescription must be provided")
     assert(userId, "userId must be provided")
     return tableDescription.mockUserIds[userId] or false
 end
 
-TableDescription.getPlayers = function(tableDescription: CommonTypes.TableDescription): { Player }
+function TableDescription.getPlayers(tableDescription: CommonTypes.TableDescription): { Player }
     assert(tableDescription, "tableDescription must be provided")
     -- Get Player for everyone I think is in the game.
     -- Due to timing issues and mocking for tests, Player may not actually exist: just leave those out.
@@ -135,7 +121,7 @@ When sent over a wire table descriptions are changed.
 Specifically, keys that are ints become strings.  Turn them back.
 ]]
 
-TableDescription.sanitizeTableDescriptionsByTableId = function(tableDescriptionsByTableId: CommonTypes.TableDescriptionsByTableId): CommonTypes.TableDescriptionsByTableId
+function TableDescription.sanitizeTableDescriptionsByTableId(tableDescriptionsByTableId: CommonTypes.TableDescriptionsByTableId): CommonTypes.TableDescriptionsByTableId
     local retVal = {}
     for stringTableId, tableDescription in pairs(tableDescriptionsByTableId) do
         local tableId = tonumber(stringTableId)
@@ -144,7 +130,7 @@ TableDescription.sanitizeTableDescriptionsByTableId = function(tableDescriptions
     return retVal
 end
 
-TableDescription.sanitizeTableDescription = function(tableDescription: CommonTypes.TableDescription): CommonTypes.TableDescription
+function TableDescription.sanitizeTableDescription(tableDescription: CommonTypes.TableDescription): CommonTypes.TableDescription
     local retVal = Cryo.Dictionary.join(tableDescription, {})
 
     retVal.memberUserIds = {}
@@ -165,6 +151,47 @@ TableDescription.sanitizeTableDescription = function(tableDescription: CommonTyp
     end
 
     return retVal
+end
+
+function TableDescription.sanityCheck(tableDescription: CommonTypes.TableDescription)
+    assert(tableDescription, "tableDescription must be provided")
+    assert(tableDescription.tableId, "tableId must be provided")
+    assert(typeof(tableDescription.tableId) == "number", "tableId must be a number")
+    assert(tableDescription.hostUserId, "hostUserId must be provided")
+    assert(typeof(tableDescription.hostUserId) == "number", "hostUserId must be a number")
+    assert(tableDescription.gameId, "gameId must be provided")
+    assert(typeof(tableDescription.gameId) == "number", "gameId must be a number")
+    local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
+    assert(gameDetails, "gameDetails must be provided")
+
+    assert(tableDescription.gameTableState, "gameTableState must be provided")
+    assert(typeof(tableDescription.gameTableState) == "number", "gameTableState must be a string")
+
+    assert(tableDescription.memberUserIds, "memberUserIds must be provided")
+    for userId, _ in pairs(tableDescription.memberUserIds) do
+        assert(typeof(userId) == "number", "userId must be a number")
+    end
+    assert(tableDescription.invitedUserIds, "invitedUserIds must be provided")
+    for userId, _ in pairs(tableDescription.invitedUserIds) do
+        assert(typeof(userId) == "number", "userId must be a number")
+    end
+    -- Invites only if private.
+    if tableDescription.isPublic then
+        local invitedUserIds = Cryo.Dictionary.keys(tableDescription.invitedUserIds)
+        assert(#invitedUserIds == 0, "If there are invited users, the table must be private")
+    end
+
+    -- Host should be a member.
+    assert(tableDescription.memberUserIds[tableDescription.hostUserId], "hostUserId must be in memberUserIds")
+
+    if RunService:IsStudio() then
+        for mockUserId, _ in pairs(tableDescription.mockUserIds) do
+            assert(typeof(mockUserId) == "number", "mockUserId must be a number")
+            local isMember = tableDescription.memberUserIds[mockUserId]
+            local isInvited = tableDescription.invitedUserIds[mockUserId]
+            assert(isMember or isInvited, "Any mock user should be invited or member")
+        end
+    end
 end
 
 return TableDescription

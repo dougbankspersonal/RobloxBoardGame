@@ -17,6 +17,7 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local PlayerUtils = require(RobloxBoardGameShared.Modules.PlayerUtils)
+local SanityChecks = require(RobloxBoardGameShared.Modules.SanityChecks)
 
 -- Client
 local RobloxBoardGameClient = script.Parent.Parent
@@ -185,7 +186,9 @@ local makeClientGameInstance = function(tableDescription: CommonTypes.TableDescr
     local clientGameInstanceFunctions = ClientGameInstanceFunctions.getClientGameInstanceFunctions(tableDescription.gameId)
     assert(clientGameInstanceFunctions, "Should have gameInstanceFunctions")
     assert(clientGameInstanceFunctions.makeClientGameInstance, "Should have gameInstanceFunctions.makeClientGameInstance")
-    return clientGameInstanceFunctions.makeClientGameInstance(tableDescription, frame)
+    local clientGameInstance = clientGameInstanceFunctions.makeClientGameInstance(tableDescription, frame)
+    SanityChecks.sanityCheckClientGameInstance(clientGameInstance)
+    return clientGameInstance
 end
 
 -- Create barebones structure for this UI,
@@ -211,7 +214,9 @@ TablePlayingUI.build = function(tableId: CommonTypes.TableId)
 
     addSidebar(mainFrame, tableDescription)
     local gameFrame = makeClientGameFrame(mainFrame)
-    makeClientGameInstance(tableDescription, gameFrame)
+    local gameInstance = makeClientGameInstance(tableDescription, gameFrame)
+
+    SanityChecks.sanityCheckClientGameInstance(gameInstance)
 end
 
 TablePlayingUI.update = function()

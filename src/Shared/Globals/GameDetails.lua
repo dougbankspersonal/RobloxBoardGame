@@ -21,6 +21,17 @@ local GameDetails = {}
 
 local gameDetailsByGameId = {} :: CommonTypes.GameDetailsByGameId
 
+
+GameDetails.sanityCheck = function(gameDetails:CommonTypes.GameDetails)
+    assert(gameDetails, "gameDetails must be provided")
+    assert(gameDetails.gameId, "gameId must be provided")
+    assert(gameDetails.gameImage, "gameImage must be provided")
+    assert(gameDetails.name, "name must be provided")
+    assert(gameDetails.description, "description must be provided")
+    assert(gameDetails.minPlayers, "minPlayers must be provided")
+    assert(gameDetails.maxPlayers, "maxPlayers must be provided")
+end
+
 GameDetails.setAllGameDetails = function(_gameDetailsByGameId: CommonTypes.GameDetailsByGameId): nil
     gameDetailsByGameId = _gameDetailsByGameId
 end

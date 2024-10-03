@@ -4,6 +4,7 @@ local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
+local SanityChecks = require(RobloxBoardGameShared.Modules.SanityChecks)
 
 -- Client
 local RobloxBoardGameClient = script.Parent.Parent
@@ -40,18 +41,25 @@ end
 
 local ClientStartUp = {}
 
+local function sanityCheckClientGameInstanceFunctionsByGameId(clientGameInstanceFunctionsByGameId: CommonTypes.ClientGameInstanceFunctionsByGameId)
+    for gameId, clientGameInstanceFunctions in pairs(clientGameInstanceFunctionsByGameId) do
+      assert(gameId, "gameId must be provided")
+      assert(clientGameInstanceFunctions, "clientGameInstanceFunctions must be provided")
+      assert(clientGameInstanceFunctions.makeClientGameInstance, "makeClientGameInstance must be provided")
+      assert(clientGameInstanceFunctions.getClientGameInstance, "getClientGameInstance must be provided")
+    end
+  end
+
+
 ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, clientGameInstanceFunctionsByGameId: CommonTypes.ClientGameInstanceFunctionsByGameId)
-    -- Sanity checks.
-    assert(gameDetailsByGameId ~= nil, "Should have non=nil gameDetailsByGameIds")
-    assert(clientGameInstanceFunctionsByGameId ~= nil, "Should have non=nil clientGameInstanceFunctionsByGameId")
+    -- Sanity check on tables coming in from client of RobloxBoardGame library.
+    SanityChecks.sanityCheckGameDetailsByGameId(gameDetailsByGameId)
+    sanityCheckClientGameInstanceFunctionsByGameId(clientGameInstanceFunctionsByGameId)
+
     -- must be at least one.
     local numGames = Utils.tableSize(gameDetailsByGameId)
     assert(numGames > 0, "Should have at least one game")
     assert(Utils.tablesHaveSameKeys(gameDetailsByGameId, clientGameInstanceFunctionsByGameId), "tables should have same keys")
-
-    -- Sanity check on tables coming in from client of RobloxBoardGame library.
-    Utils.sanityCheckGameDetailsByGameId(gameDetailsByGameId)
-    Utils.sanityCheckClientGameInstanceFunctionsByGameId(clientGameInstanceFunctionsByGameId)
 
     -- Set up globals.
     GameDetails.setAllGameDetails(gameDetailsByGameId)

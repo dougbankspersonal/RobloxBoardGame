@@ -33,7 +33,8 @@ EventUtils.EventNameDestroyAllMockTables = "DestroyAllMockTables"
 EventUtils.EventNameAddMockInvite = "AddMockInvite"
 EventUtils.EventNameMockInviteAcceptance = "MockInviteAcceptance"
 EventUtils.EventNameMockStartGame = "MockStartGame"
-EventUtils.EventNameMockMemberLeaves = "MockMemberLeaves"
+EventUtils.EventNameMockNonHostMemberLeaves = "MockNonHostMemberLeaves"
+EventUtils.EventNameMockHostDestroysTable = "MockHostDestroysTable"
 
 --[[
 Client -> Server function names.
@@ -49,7 +50,7 @@ EventUtils.EventNameTableDestroyed = "TableDestroyed"
 EventUtils.EventNameTableCreated = "TableCreated"
 -- Game-specific: only for players in a particular game.
 EventUtils.EventNamePlayerLeftTable = "PlayerLeftTable"
-EventUtils.EventNameHostEndedGame = "HostEndedGame"
+EventUtils.EventNameNotifyThatHostEndedGame = "NotifyThatHostEndedGame"
 
 -- Get the name of the folder holding events for a particular game instance.
 function EventUtils.getGameEventFolderName(gameInstanceGUID: CommonTypes.GameInstanceGUID): string

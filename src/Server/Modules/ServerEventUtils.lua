@@ -8,6 +8,7 @@ local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local EventUtils = require(RobloxBoardGameShared.Modules.EventUtils)
 local TableDescription = require(RobloxBoardGameShared.Modules.TableDescription)
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+local TableDescripton = require(RobloxBoardGameShared.Modules.TableDescription)
 
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
@@ -161,7 +162,7 @@ end
 Server is sending an event only to players in this game.
 ]]
 function ServerEventUtils.sendEventForPlayersInGame(tableDescription: CommonTypes.TableDescription, eventName: string, ...)
-    TableDescription.sanityCheck(tableDescription)
+    TableDescripton.sanityCheck(tableDescription)
     assert(eventName, "eventName not found")
     local eventForGame = EventUtils.getRemoteEventForGame(tableDescription.gameInstanceGUID, eventName)
     assert(eventForGame, "Event not found")

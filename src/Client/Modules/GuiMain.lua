@@ -15,6 +15,7 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local UIModes = require(RobloxBoardGameShared.Globals.UIModes)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
+local SanityChecks = require(RobloxBoardGameShared.Modules.SanityChecks)
 
 -- Client
 local RobloxBoardGameClient = script.Parent.Parent
@@ -95,7 +96,7 @@ end
 --[[
     Remove all ui elements from mainFrame.
 ]]
-local cleanupCurrentUI = function(currentUIMode: CommonTypes.UIMode)
+local function cleanupCurrentUI()
     -- Cancel anything that needs cancelling.
     for _, cleanupFunction in cleanupFunctionsForCurrentUIMode do
         cleanupFunction()
@@ -118,13 +119,19 @@ function GuiMain.showLoadingUI()
     LoadingUI.build()
 end
 
-local onHostEndedGame = function()
+-- Called when we receive a notification that a game has ended.
+-- (Game can only end because of some action from the host).
+-- Handling this message is purely about communication with the user explaining what's happening:
+-- all cleanup of state, ui elements, etc happens when the updated not-playing-anymore table
+-- state is broadcast.
+local function notifyThatHostEndedGame(gameInstanceGUID: CommonTypes.GameInstanceGUID, gameEndDetails: CommonTypes.GameEndDetails)
     local currentTableDescription = StateDigest.getCurrentTableDescription()
 
     -- If the custom game instance wants to consume this fine, otherwise put up a generic "game ended" dialog.
     assert(currentTableDescription, "Should have a currentTableDescription")
     assert(currentTableDescription.gameId, "Should have a gameId")
     assert(currentTableDescription.gameInstanceGUID, "Should have a gameInstanceGUID")
+    assert(currentTableDescription.gameInstanceGUID == gameInstanceGUID, "Should have the right gameInstanceGUID")
     local clientGameInstanceFunctions = ClientGameInstanceFunctions.getClientGameInstanceFunctions(currentTableDescription.gameId)
     assert(clientGameInstanceFunctions, "Should have clientGameInstanceFunctions")
     assert(clientGameInstanceFunctions.getClientGameInstance, "Should have clientGameInstanceFunctions.new")
@@ -133,20 +140,39 @@ local onHostEndedGame = function()
     assert(clientGameInstance, "Should have clientGameInstance")
     assert(clientGameInstance.tableDescription.gameInstanceGUID == currentTableDescription.gameInstanceGUID, "Should have the right gameInstanceGUID")
 
-    if clientGameInstance.onHostEndedGame() then
-        return
-    else
-        assert(ClientTableDescriptions.localPlayerIsAtTable(currentTableDescription.tableId), "Should be a table member")
-        assert(currentTableDescription.gameTableState == GameTableStates.Playing, "Should be playing")
+    -- We want to message the users about this.
+    -- Prefer more specific messages to less.
+    -- First give the game instance a chance to say anything it wants.
+    -- If it handles the messaging for this scenario, then we're done.
+    local success = clientGameInstance:notifyThatHostEndedGame(gameEndDetails)
+    -- Should still be sane.
+    SanityChecks.sanityCheckClientGameInstance(clientGameInstance)
 
-        task.spawn(function()
-            DialogUtils.showAckDialog("Game Ended", "The game has ended.")
-        end)
+    if success then
+        return
     end
+
+    -- Game-specific instance had nothing specific to say about this.
+    -- So we fall back to system-level messaging.
+    if gameEndDetails.tableDestroyed then
+        task.spawn(function()
+            DialogUtils.showAckDialog("Game Ended", "The host has taken down the game table, so the game is over.")
+        end)
+        return
+    end
+
+    if gameEndDetails.hostEndedGame then
+        task.spawn(function()
+            DialogUtils.showAckDialog("Game Ended", "The host has ended the game.")
+        end)
+        return
+    end
+
+    -- How did we get here?
+    assert(false, "Unexpected game end details.")
 end
 
-
-local onPlayerLeftTable = function(gameInstanceGUID: CommonTypes.gameInstanceGUID, userId: CommonTypes.UserId)
+local function onPlayerLeftTable(gameInstanceGUID: CommonTypes.GameInstanceGUID, userId: CommonTypes.UserId)
     local currentTableDescription = StateDigest.getCurrentTableDescription()
 
     -- We should only be getting this if we are sitting at the table with the game in question.
@@ -167,6 +193,9 @@ local onPlayerLeftTable = function(gameInstanceGUID: CommonTypes.gameInstanceGUI
     assert(clientGameInstance.tableDescription.gameInstanceGUID == currentTableDescription.gameInstanceGUID, "Should have the right gameInstanceGUID")
 
     local customUIHandling = clientGameInstance:onPlayerLeftTable(userId)
+    -- Things should still be sane.
+    SanityChecks.sanityCheckClientGameInstance(clientGameInstance)
+
     if not customUIHandling then
         -- Don't notify the guy who left, he already knows.
         if localUserId ~= userId then
@@ -192,9 +221,9 @@ local function cleanupTablePlayingUI()
     ClientEventUtils.removeGameEventConnections(currentTableDescription.gameInstanceGUID)
     local clientGameInstanceFunctions = ClientGameInstanceFunctions.getClientGameInstanceFunctions(currentTableDescription.gameId)
     assert(clientGameInstanceFunctions, "Should have clientGameInstanceFunctions")
-    local gameInstance = clientGameInstanceFunctions.getClientGameInstance()
-    assert(gameInstance,    "Should have gameInstance")
-    gameInstance:destroy()
+    local clientGameInstance = clientGameInstanceFunctions.getClientGameInstance()
+    assert(clientGameInstance,    "Should have gameInstance")
+    clientGameInstance:destroy()
 end
 
 --[[
@@ -215,7 +244,7 @@ function GuiMain.updateUI()
     -- If this causes a change in UIMode, destroy the old UI and build a new one.
     if currentUIMode ~= previousUIMode then
         Utils.debugPrint("TablePlaying", "Doug: updateUI 003")
-        cleanupCurrentUI(currentUIMode)
+        cleanupCurrentUI()
         cleanupFunctionsForCurrentUIMode = {}
         if currentUIMode == UIModes.TableSelection then
             Utils.debugPrint("TablePlaying", "Doug: updateUI 004")
@@ -233,7 +262,7 @@ function GuiMain.updateUI()
             -- Start listening for game-centric events.
             ClientEventManagement.listenToServerEventsForActiveGame(currentTableDescription.gameInstanceGUID,
                 onPlayerLeftTable,
-                onHostEndedGame)
+                notifyThatHostEndedGame)
             TablePlayingUI.build(currentTableDescription.tableId)
         else
             -- ???

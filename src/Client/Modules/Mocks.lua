@@ -83,7 +83,7 @@ local summonMocksDialog = function(): Frame?
 
         if currentTableDescription.isPublic then
             table.insert(dialogButtonConfigs, {
-                text = "Add Mock Member",
+                text = "Add Member",
                 heading = WaitingAtTableHeading,
                 callback = function()
                     ClientEventManagement.addMockMember(tableId)
@@ -91,14 +91,14 @@ local summonMocksDialog = function(): Frame?
             } :: DialogUtils.DialogButtonConfig)
         else
             table.insert(dialogButtonConfigs, {
-                text = "Add Mock Invite",
+                text = "Add Invite",
                 heading = WaitingAtTableHeading,
                 callback = function()
                     ClientEventManagement.addMockInvite(tableId)
                 end,
             } :: DialogUtils.DialogButtonConfig)
             table.insert(dialogButtonConfigs, {
-                text = "Mock Invite Acceptance",
+                text = "Accept Random Invite",
                 heading = WaitingAtTableHeading,
                 callback = function()
                     ClientEventManagement.mockInviteAcceptance(tableId)
@@ -107,11 +107,20 @@ local summonMocksDialog = function(): Frame?
         end
 
         table.insert(dialogButtonConfigs, {
-            text = "Player Quit",
+            text = "Non-Host Player Quits",
             heading = WaitingAtTableHeading,
             callback = function()
-                Utils.debugPrint("Mocks", "firing mockMemberLeaves event")
-                ClientEventManagement.mockMemberLeaves(tableId)
+                Utils.debugPrint("Mocks", "firing mockNonHostMemberLeaves event")
+                ClientEventManagement.mockNonHostMemberLeaves(tableId)
+            end,
+        } :: DialogUtils.DialogButtonConfig)
+
+        table.insert(dialogButtonConfigs, {
+            text = "Host Destroys Table",
+            heading = WaitingAtTableHeading,
+            callback = function()
+                Utils.debugPrint("Mocks", "firing mockHostDestroysTable event")
+                ClientEventManagement.mockHostDestroysTable(tableId)
             end,
         } :: DialogUtils.DialogButtonConfig)
 

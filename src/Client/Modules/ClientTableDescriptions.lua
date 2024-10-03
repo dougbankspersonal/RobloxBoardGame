@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local TableDescription = require(RobloxBoardGameShared.Modules.TableDescription)
+local TableDescripton = require(RobloxBoardGameShared.Modules.TableDescription)
 
 local ClientTableDescriptions = {
 }
@@ -20,20 +21,20 @@ ClientTableDescriptions.tableDescriptionsByTableId = {} :: CommonTypes.TableDesc
 ClientTableDescriptions.setTableDescriptionsAsync = function(tableDescriptionsByTableId: CommonTypes.TableDescriptionsByTableId)
     ClientTableDescriptions.tableDescriptionsByTableId = tableDescriptionsByTableId
     for _, tableDescription in pairs(tableDescriptionsByTableId) do
-        TableDescription.sanityCheck(tableDescription)
+        TableDescripton.sanityCheck(tableDescription)
         TableDescription.fetchUserDataAsync(tableDescription)
     end
 end
 
 -- Async because we do some work fetching per-user data.
 ClientTableDescriptions.addTableDescriptionAsync = function(tableDescription: CommonTypes.TableDescription)
-    TableDescription.sanityCheck(tableDescription)
+    TableDescripton.sanityCheck(tableDescription)
     TableDescription.fetchUserDataAsync(tableDescription)
     ClientTableDescriptions.tableDescriptionsByTableId[tableDescription.tableId] = tableDescription
 end
 
 ClientTableDescriptions.updateTableDescriptionAsync = function(tableDescription: CommonTypes.TableDescription)
-    TableDescription.sanityCheck(tableDescription)
+    TableDescripton.sanityCheck(tableDescription)
     TableDescription.fetchUserDataAsync(tableDescription)
     ClientTableDescriptions.tableDescriptionsByTableId[tableDescription.tableId] = tableDescription
 end

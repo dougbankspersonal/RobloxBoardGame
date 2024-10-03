@@ -16,6 +16,7 @@ local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local TableDescription = require(RobloxBoardGameShared.Modules.TableDescription)
+local SanityChecks = require(RobloxBoardGameShared.Modules.SanityChecks)
 
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
@@ -46,10 +47,14 @@ GameTable.new = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.Gam
     self.gameDetails = GameDetails.getGameDetails(gameId)
 
     GameTablesStorage.addTable(self)
+    self:sanityCheck()
 
     return self
 end
 
+--[[
+Const getters.
+]]
 function GameTable:getTableId(): CommonTypes.TableId
     return self.tableDescription.tableId
 end
@@ -76,7 +81,7 @@ function GameTable:isHost(userId: CommonTypes.UserId): boolean
     return self.tableDescription.hostUserId == userId
 end
 
-function GameTable:destroy(userId: CommonTypes.UserId): boolean
+function GameTable:canDestroy(userId: CommonTypes.UserId): boolean
     assert(userId, "Should have a userId")
 
     -- Must be the host.
@@ -84,9 +89,56 @@ function GameTable:destroy(userId: CommonTypes.UserId): boolean
         return false
     end
 
-    -- Kill any ongoing game.
+    return true
+end
+
+function GameTable:getServerGameInstance(): CommonTypes.ServerGameInstance?
+    if not self.tableDescription.gameInstanceGUID then
+        return nil
+    end
+    return ServerGameInstances.getServerGameInstance(self.tableDescription.gameInstanceGUID)
+end
+
+function GameTable:getServerGameInstanceConstructor(): CommonTypes.ServerGameInstanceConstructor
+    assert(self.tableDescription.gameId, "getServerGameInstanceConstructor: gameId is required")
+   local giCtor = ServerGameInstanceConstructors.getServerGameInstanceConstructor(self.tableDescription.gameId)
+
+    assert(giCtor, "getServerGameInstanceConstructor: giCtor not found for gameId: " .. self.tableDescription.gameId)
+
+    return giCtor
+end
+
+-- Normally, for doXAtTable, we have just one function to do it, which returns false if
+-- you can't.
+-- For destroying a game or game table it's a little different because iff we know
+-- we are going to destroy something, we want to communicate about that to client ->
+-- our communcation channels expect non-empty, non-destroyed, useful game table.
+function GameTable:canEndGame(userId: CommonTypes.UserId): boolean
+    -- Must be the host.
+    if not self:isHost(userId) then
+        return false
+    end
+
+    -- Game isn't playing, no.
+    if self.tableDescription.gameTableState ~= GameTableStates.Playing then
+        return false
+    end
+    return true
+end
+
+function GameTable:getTableDescription(): CommonTypes.TableDescription
+    return self.tableDescription
+end
+
+--[[
+Non-const modifiers.
+]]
+function GameTable:destroy()
+    -- Should never call this with an outstanding game: it's callers responsibility to sort that out first.
+    assert(self.tableDescription, "self.tableDescription missing")
     if self.tableDescription.gameTableState == GameTableStates.Playing then
-        self:endGame()
+        assert(false, "Cannot destroy a game table with running game")
+        return
     end
 
     GameTablesStorage.removeTable(self)
@@ -134,6 +186,8 @@ function GameTable:joinTable(userId: CommonTypes.UserId, opt_isMock:boolean?): b
         self.tableDescription.mockUserIds[userId] = true
     end
 
+    self:sanityCheck()
+
     return true
 end
 
@@ -166,6 +220,9 @@ function GameTable:inviteToTable(userId: CommonTypes.UserId, inviteeId: CommonTy
     end
 
     self.tableDescription.invitedUserIds[inviteeId] = true
+
+    self:sanityCheck()
+
     return true
 end
 
@@ -205,6 +262,8 @@ function GameTable:setInvites(userId: CommonTypes.UserId, inviteeIds: {CommonTyp
         self.tableDescription.invitedUserIds = newInvitedUserIds
     end
 
+    self:sanityCheck()
+
     return somethingChanged
 end
 
@@ -230,6 +289,9 @@ function GameTable:removeGuestFromTable(userId: CommonTypes.UserId, guestId: Com
     self.tableDescription.memberUserIds[guestId] = nil
     -- Just for kicks remove the invite too.
     self.tableDescription.invitedUserIds[guestId] = nil
+
+    self:sanityCheck()
+
     return true
 end
 
@@ -245,6 +307,9 @@ function GameTable:removeInviteForTable(userId: CommonTypes.UserId, inviteeId: C
     end
 
     self.tableDescription.invitedUserIds[inviteeId] = nil
+
+    self:sanityCheck()
+
     return true
 end
 
@@ -276,16 +341,20 @@ function GameTable:leaveTable(userId: CommonTypes.UserId): boolean
     -- Let the game deal with any fallout from the player leaving.
     if self.tableDescription.gameTableState == GameTableStates.Playing then
         Utils.debugPrint("Mocks", "leaveTable 04")
-        local serverGameInstance = ServerGameInstances.getServerGameInstance(self.tableDescription.gameInstanceGUID)
+        local serverGameInstance = self:getServerGameInstance()
         assert(serverGameInstance, "gameInstance should exist if gameTableState is Playing")
         -- sanity check: this is the same table description as in our game instance, right?
         -- Like having modfified it above, we have modified the copy used in game instance?
         assert(Cryo.Dictionary.equals(self.tableDescription, serverGameInstance.tableDescription), "tableDescription should be the same as in game instance")
 
         serverGameInstance:playerLeftGame(userId)
+        SanityChecks.sanityCheckServerGameInstance(serverGameInstance)
     end
 
     Utils.debugPrint("Mocks", "leaveTable 005")
+
+    self:sanityCheck()
+
     return true
 end
 
@@ -324,6 +393,9 @@ function GameTable:updateGameOptions(userId: CommonTypes.UserId, nonDefaultGameO
 
     -- Slap them in there.
     self.tableDescription.opt_nonDefaultGameOptions = nonDefaultGameOptions
+
+    self:sanityCheck()
+
     return true
 end
 
@@ -358,42 +430,17 @@ function GameTable:startGame(userId: CommonTypes.UserId): boolean
     local serverGameInstanceConstructor = self:getServerGameInstanceConstructor()
     -- _After this an instance for the game exists on the server, game is playing.
     local serverGameInstance = serverGameInstanceConstructor(self.tableDescription)
-    serverGameInstance:sanityCheck()
     ServerGameInstances.addServerGameInstance(serverGameInstance)
 
-    return true
-end
+    self:sanityCheck()
 
-function GameTable:getServerGameInstanceConstructor(): CommonTypes.ServerGameInstanceConstructor
-    assert(self.tableDescription.gameId, "getServerGameInstanceConstructor: gameId is required")
-   local giCtor = ServerGameInstanceConstructors.getServerGameInstanceConstructor(self.tableDescription.gameId)
-
-    assert(giCtor, "getServerGameInstanceConstructor: giCtor not found for gameId: " .. self.tableDescription.gameId)
-
-    return giCtor
-end
-
--- Normally, for doXAtTable, we have just one function to do it, which returns false if
--- you can't.
--- For destroying a game or game table it's a little different because iff we know
--- we are going to destroy something, we want to communicate about that to client ->
--- our communcation channels expect non-empty, non-destroyed, useful game table.
-function GameTable:canEndGame(userId: CommonTypes.UserId): boolean
-    -- Must be the host.
-    if not self:isHost(userId) then
-        return false
-    end
-
-    -- Game isn't playing, no.
-    if self.tableDescription.gameTableState ~= GameTableStates.Playing then
-        return false
-    end
     return true
 end
 
 function GameTable:endGame(): boolean
     -- Clean up the server game instance.
-    local serverGameInstance = ServerGameInstances.getServerGameInstance(self.tableDescription.gameInstanceGUID)
+    local serverGameInstance = self:getServerGameInstance()
+    assert(serverGameInstance, "should have gameInstance")
     ServerGameInstances.removeServerGameInstance(self.tableDescription.gameInstanceGUID)
     assert(serverGameInstance, "should have gameInstance")
     serverGameInstance:destroy()
@@ -410,12 +457,29 @@ function GameTable:endGame(): boolean
     self.tableDescription.gameTableState = GameTableStates.WaitingForPlayers
     self.tableDescription.gameInstanceGUID = nil
 
+    self:sanityCheck()
+
     return true
 end
 
+function GameTable:sanityCheck()
+    -- Should have game details and table description.
+    assert(self.gameDetails, "gameDetails should be provided")
+    assert(self.tableDescription, "tableDescription should be provided")
+    -- Both should be sane
+    GameDetails.sanityCheck(self.gameDetails)
+    TableDescription.sanityCheck(self.tableDescription)
 
-function GameTable:getTableDescription(): CommonTypes.TableDescription
-    return self.tableDescription
+    -- If there's a game playing, extra fu.
+    if self.tableDescription.gameTableState == GameTableStates.Playing then
+        assert(self.tableDescription.gameInstanceGUID, "Should have gameInstanceGUID")
+        local serverGameInstance = self:getServerGameInstance()
+        assert(serverGameInstance, "gameInstance should exist if gameTableState is Playing")
+        SanityChecks.sanityCheckServerGameInstance(serverGameInstance)
+
+        -- GUIDs match.
+        assert(self.tableDescription.gameInstanceGUID == serverGameInstance.tableDescription.gameInstanceGUID, "gameInstanceGUID should match")
+    end
 end
 
 return GameTable

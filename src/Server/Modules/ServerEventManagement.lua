@@ -1,5 +1,10 @@
 --[[
 Logic for creating and handling events on the server.
+FIXME(dbanks)
+This has gotta overstuffed.
+We could trim this down to just be make events/functions, listen to events/functions and ping local signals when things fire.
+Then move actual logic into third party observer.
+Like all the handleXXX functions.
 ]]
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -13,6 +18,7 @@ local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local TableDescription = require(RobloxBoardGameShared.Modules.TableDescription)
 local EventUtils = require(RobloxBoardGameShared.Modules.EventUtils)
+local SanityChecks = require(RobloxBoardGameShared.Modules.SanityChecks)
 
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
@@ -31,13 +37,20 @@ local function sendToAllPlayersInExperience(eventName, ...)
     event:FireAllClients(...)
 end
 
-local handleUserLeavingTable = function(userId: CommonTypes.UserId, gameTable: ServerTypes.GameTable)
-    Utils.debugPrint("Mocks", "handleUserLeavingTable userId = ", userId, " gameTable = ", gameTable)
+local function handleUserLeavingTable(userId: CommonTypes.UserId, gameTable: ServerTypes.GameTable)
+    -- The host is not allowed to leave the table: leaves a useless orphaned table.
+    -- If he wants to leave he has to destroy.
+    -- Client side does not provide a path for host to send this message so it must be spoof, ignore.
+    if gameTable.tableDescription.hostUserId == userId then
+        return
+    end
+
     if gameTable:leaveTable(userId) then
-        Utils.debugPrint("Mocks", "leaveTable worked")
-        assert(gameTable.tableDescription, "Should have a tableDescription")
-        -- People coming and going from a table where no game is playing: who cares.
-        -- But if game is active, we want to notify everyone.
+        -- For a waiting table, nothing extra to do: table is modified, updated table will be broadcast with
+        -- EventNameTableUpdated, done.
+        -- If a game is going through, it's a bit disruptive: all the players should have some UI
+        -- experience showing that the player left, and the host may get some controls to react
+        -- somehow (maybe end the game or somehow adjust gameplay to account for missing player).
         if gameTable.tableDescription.gameInstanceGUID then
             ServerEventUtils.sendEventForPlayersInGame(gameTable.tableDescription,
                 EventUtils.EventNamePlayerLeftTable,
@@ -45,6 +58,77 @@ local handleUserLeavingTable = function(userId: CommonTypes.UserId, gameTable: S
         end
         sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
     end
+end
+
+local function handleMockNonHostMemberLeaves(gameTable: ServerTypes.GameTable)
+    -- Pick a random mock member who is NOT the host.
+    local mockUserIds = Cryo.Dictionary.keys(gameTable.tableDescription.mockUserIds)
+    if not mockUserIds then
+        return
+    end
+    local nonHostUserIds = Cryo.List.map(mockUserIds, function(userId)
+        if userId ~= gameTable.tableDescription.hostUserId then
+            return userId
+        end
+    end)
+    if #nonHostUserIds == 0 then
+        return
+    end
+
+    local leavingUserId = nonHostUserIds[1]
+    assert(leavingUserId, "Should have a leavingUserId")
+
+    handleUserLeavingTable(leavingUserId, gameTable)
+end
+
+local function handleEndGame(actorUserId: CommonTypes.UserId, gameTable: ServerTypes.GameTable, opt_gameEndDetails: CommonTypes.GameEndDetails?): boolean
+    if not gameTable:canEndGame(actorUserId) then
+        return false
+    end
+
+    local serverGameInstance = gameTable:getServerGameInstance()
+
+    -- Add whatever extra info we might care about on why this ended.
+    local gameEndDetails = opt_gameEndDetails or {}
+    gameEndDetails.gameSpecificDetails = serverGameInstance:getGameSpecificGameEndDetails()
+    SanityChecks.sanityCheckServerGameInstance(serverGameInstance)
+
+    -- First use non-modified game table to send events to members that this game is gonna die.
+    ServerEventUtils.sendEventForPlayersInGame(gameTable:getTableDescription(), EventUtils.EventNameNotifyThatHostEndedGame, gameEndDetails)
+
+    -- Now end the game.
+    -- This should unset game-specific state (like gameInstanceGUID),
+    -- remove anythinig we made assocaited with the game (server game instance,
+    -- game-specific events, etc).
+    gameTable:endGame()
+
+    -- Broadcast new table state to the world.
+    sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
+    return true
+end
+
+function ServerEventManagement.handleDestroyTable(actorUserId: CommonTypes.UserId, gameTable: ServerTypes.GameTable, opt_gameEndDetails: any?)
+    -- We separate out 'can' from 'do it' because it's useful to have the table around while we do some cleanup
+    -- work.
+    if not gameTable:canDestroy(actorUserId) then
+        -- Ignore, someone is trying to do something they should not.
+        return
+    end
+
+    -- If there is a game going, end it.  The 'end the game' logic includes info on why game ended: we
+    -- note that it's because the table was destroyed.
+    if gameTable.tableDescription.gameInstanceGUID then
+        local finalGameEndDetails = opt_gameEndDetails or {}
+        finalGameEndDetails.tableDestroyed = true
+        local success = handleEndGame(actorUserId, gameTable, finalGameEndDetails)
+        -- This better work.
+        assert(success, "Should have been able to end game")
+    end
+
+    local tableId = gameTable.tableDescription.tableId
+
+    gameTable:destroy()
+    sendToAllPlayersInExperience(EventUtils.EventNameTableDestroyed, tableId)
 end
 
 -- Convenience function for creating a remote event that is specific to a game table.
@@ -58,6 +142,8 @@ local function createGameTableRemoteEvent(tableEventsFolder: Folder, eventName: 
     if opt_onServerEventForTable then
         augmentedOnServerEvent = function(player, tableId: CommonTypes.TableId, ...)
             local gameTable = GameTablesStorage.getGameTableByTableId(tableId)
+            -- Sanity check the table.
+            gameTable:sanityCheck()
             if not gameTable then
                 return
             end
@@ -107,21 +193,12 @@ local function addMockEventHandlers(tableEventsFolder: Folder, createTableHandle
         sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
     end)
 
-    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameMockMemberLeaves, function(_, gameTable)
-        -- Pick a random mock member.
-        Utils.debugPrint("Mocks", "MockMemberLeaves 001")
-        local mockUserIds = Cryo.Dictionary.keys(gameTable.tableDescription.mockUserIds)
-        Utils.debugPrint("Mocks", "MockMemberLeaves mockUserIds = ", mockUserIds)
-        if not mockUserIds or #mockUserIds == 0 then
-            Utils.debugPrint("Mocks", "MockMemberLeaves 001.5")
-            return
-        end
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameMockNonHostMemberLeaves, function(_, gameTable)
+        handleMockNonHostMemberLeaves(gameTable)
+    end)
 
-        Utils.debugPrint("Mocks", "MockMemberLeaves 002")
-        local leavingUserId = mockUserIds[1]
-        assert(leavingUserId, "Should have a leavingUserId")
-        Utils.debugPrint("Mocks", "MockMemberLeaves leavingUserId = ", leavingUserId)
-        handleUserLeavingTable(leavingUserId, gameTable)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameMockHostDestroysTable, function(_, gameTable)
+        ServerEventManagement.handleDestroyTable(gameTable.tableDescription.hostUserId, gameTable)
     end)
 
     createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameAddMockInvite, function(player, gameTable)
@@ -235,14 +312,7 @@ local function setupClientToServerEvents(tableEventsFolder: Folder, createTableH
 
     -- Event to destroy a table.
     createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameDestroyTable, function(player, gameTable)
-        assert(gameTable, "Should have a gameTable")
-        assert(gameTable.tableDescription, "Should have a tableDescription")
-        local gameTableId = gameTable:getTableId()
-        assert(gameTableId, "Should have a gameTableId")
-
-        if gameTable:destroy(player.UserId) then
-            sendToAllPlayersInExperience(EventUtils.EventNameTableDestroyed, gameTableId)
-        end
+        ServerEventManagement.handleDestroyTable(player.UserId, gameTable)
     end)
 
     -- Event to join a table.
@@ -304,22 +374,8 @@ local function setupClientToServerEvents(tableEventsFolder: Folder, createTableH
     end)
 
     -- Event for host to end the game currently playing at a table.
-    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameEndGame, function(player, gameTable)
-        if not gameTable:canEndGame(player.UserId) then
-            return
-        end
-
-        -- First use non-modified game table to send events to members that this game is gonna die.
-        ServerEventUtils.sendEventForPlayersInGame(gameTable:getTableDescription(), EventUtils.EventNameHostEndedGame)
-
-        -- Now end the game.
-        -- This should unset game-specific state (like gameInstanceGUID),
-        -- remove anythinig we made assocaited with the game (server game instance,
-        -- game-specific events, etc).
-        gameTable:endGame(player.UserId)
-
-        -- Broadcast new table state to the world.
-        sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameEndGame, function(player: Player, gameTable: ServerTypes.GameTable, gameEndDetailsFromClient: any?)
+        handleEndGame(player.UserId, gameTable, gameEndDetailsFromClient)
     end)
 
     if RunService:IsStudio() then
@@ -334,8 +390,6 @@ local function setupServerToClientEvents(tableEventsFolder: Folder)
     createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameTableDestroyed)
     -- Notification that something about this table has changed.
     createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameTableUpdated)
-    -- Notification that host has ended game early.
-    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameHostEndedGame)
 end
 
 --[[
@@ -360,7 +414,7 @@ ServerEventManagement.setupRemoteCommunicationsForGame = function(gameInstanceGU
     ServerEventUtils.createGameEventFolder(gameInstanceGUID)
     ServerEventUtils.createGameFunctionFolder(gameInstanceGUID)
     ServerEventUtils.createGameRemoteEvent(gameInstanceGUID, EventUtils.EventNamePlayerLeftTable)
-    ServerEventUtils.createGameRemoteEvent(gameInstanceGUID, EventUtils.EventNameHostEndedGame)
+    ServerEventUtils.createGameRemoteEvent(gameInstanceGUID, EventUtils.EventNameNotifyThatHostEndedGame)
 end
 
 return ServerEventManagement

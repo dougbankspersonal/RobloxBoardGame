@@ -22,13 +22,14 @@ local debugPrintEnabledLabels = {
     Friends = false,
     GameConfig = false,
     GameMetadata = false,
-    GamePlay = true,
+    GamePlay = false,
     GuiUtils = false,
     InviteToTable = false,
     Layout = false,
     MessageLog = false,
     Mocks = false,
     RemoveInvite = false,
+    SanityChecks = true,
     Sound = false,
     TablePlaying = false,
     TableUpdated = false,
@@ -68,6 +69,19 @@ end
 function Utils.arrayHasValue(array: {any}, value: any): boolean
     local index = Cryo.List.find(array, value)
     return index ~= nil
+end
+
+-- Two arrays have exactly same entries, mod order.
+function Utils.unsortedListsMatch(list1: {any}, list2: {any}): boolean
+    if #list1 ~= #list2 then
+        return false
+    end
+    for _, value in ipairs(list1) do
+        if not Utils.arrayHasValue(list2, value) then
+            return false
+        end
+    end
+    return true
 end
 
 function Utils.tableSize(table: {[any]: any}): number
@@ -121,38 +135,6 @@ function Utils.getRandomKey(table: {[any]: any}): any
     local keys = Cryo.Dictionary.keys(table)
     local randomIndex = math.random(1, #keys)
     return keys[randomIndex]
-end
-
-function Utils.sanityCheckGameDetails(gameId: CommonTypes.GameId, gameDetails: CommonTypes.GameDetails)
-    assert(gameDetails.gameId == gameId, "gameId should match key")
-    assert(gameDetails.gameImage ~= nil, "Should have non-nil gameImage")
-    assert(gameDetails.name ~= nil, "Should have non-nil name")
-    assert(gameDetails.description ~= nil, "Should have non-nil description")
-    assert(gameDetails.maxPlayers ~= nil, "Should have non-nil maxPlayers")
-    assert(gameDetails.minPlayers ~= nil, "Should have non-nil minPlayers")
-end
-
-function Utils.sanityCheckGameDetailsByGameId(gameDetailsByGameId: CommonTypes.GameDetailsByGameId)
-    assert(gameDetailsByGameId ~= nil, "Should have non-nil gameDetailsByGameId")
-    for gameId, gameDetails in pairs(gameDetailsByGameId) do
-        Utils.sanityCheckGameDetails(gameId, gameDetails)
-    end
-end
-
-function Utils.sanityCheckClientGameInstanceFunctionsByGameId(clientGameInstanceFunctionsByGameId: CommonTypes.ClientGameInstanceFunctionsByGameId)
-    assert(clientGameInstanceFunctionsByGameId ~= nil, "Should have non-nil clientGameInstanceFunctionsByGameId")
-    assert(Cryo.Dictionary.keys(clientGameInstanceFunctionsByGameId) ~= nil, "Should have non-nil keys")
-    assert(#Cryo.Dictionary.keys(clientGameInstanceFunctionsByGameId) > 0, "Should have at least one game")
-    for _, clientGameInstanceFunctions in pairs(clientGameInstanceFunctionsByGameId) do
-        assert(clientGameInstanceFunctions.makeClientGameInstance ~= nil, "Should have non-nil makeClientGameInstance")
-        assert(clientGameInstanceFunctions.getClientGameInstance ~= nil, "Should have non-nil getClientGameInstance")
-    end
-end
-
-function Utils.sanityCheckServerGameInstanceConstructorsByGameId(serverGameInstanceConstructorsByGameId: CommonTypes.ServerGameInstanceConstructorsByGameId)
-    assert(serverGameInstanceConstructorsByGameId ~= nil, "Should have non-nil serverGameInstanceConstructorsByGameId")
-    assert(Cryo.Dictionary.keys(serverGameInstanceConstructorsByGameId) ~= nil, "Should have non-nil keys")
-    assert(#Cryo.Dictionary.keys(serverGameInstanceConstructorsByGameId) > 0, "Should have at least one game")
 end
 
 function Utils.randomizeArray(array: {any}): {any}

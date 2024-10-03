@@ -144,15 +144,36 @@ export type GameDetailsByGameId = {
     [GameId]: GameDetails,
 }
 
+-- Details on why game ended.
+-- Some are generic, some are game-specific.
+export type GameEndDetails = {
+    -- Game ended because it was at a table that got destroyed.
+    tableDestroyed: boolean?,
+    -- Host clicked a button to end the game.
+    -- * Maybe game is over, there's a winner.
+    -- * Maybe host just decided to kill the game mid-stride.
+    -- * Maybe it's a casual game where you just play until you're bored.
+    -- Specifying which of these cases is more up to the specific game instance.
+    -- Thi is just high-level, universal "host deliberately ended the game".
+    hostEndedGame: boolean?,
+    -- Game specific details.  Up to the game to decide what if anything to put here.
+    gameSpecificDetails: any?
+}
+
 export type ServerGameInstance = {
     tableDescription: TableDescription,
 
-    -- Making the game instance starts play.
+    -- Assert all is well.
     sanityCheck: (ServerGameInstance) -> nil,
-    -- Destroying the instance ends the game.
+
+    -- There is no "start play" function: creatinng the instance starts the game.
+    -- The game is done, destroy it.
     destroy: (ServerGameInstance) -> nil,
     -- System notification when a player leaves.
     playerLeftGame: (ServerGameInstance, userId: UserId) -> nil,
+    -- For some reason we have decided the end the game.
+    -- Add any game-specific info we might want about how/why the game ended, state at end of game, etc.
+    getGameSpecificGameEndDetails: (ServerGameInstance) -> any?,
 }
 
 export type ServerGameInstanceConstructor = (TableDescription) -> ServerGameInstance
@@ -161,12 +182,41 @@ export type ServerGameInstanceConstructorsByGameId = {
     [GameId]: ServerGameInstanceConstructor,
 }
 
-
+-- Any client game instance has to implement these functions/have these members.
 export type ClientGameInstance = {
     tableDescription: TableDescription,
 
+    -- Assert all is well.
+    sanityCheck: (ClientGameInstance) -> nil,
+
+    -- The game is over.  Destroy the game instance (self), do any instance-specific cleanup.
+    -- Note you do NOT need to worry about the following:
+    --   * Connections to remote events.  If you used ClientEventUtils.connectToGameEvent to connect to the event, it
+    --     will be disconnected automatically.
+    --   * Any GUI elements under the game instance's main frame (passed in through makeClientGameInstance): those are
+    --     automatically destroyed.
     destroy: (ClientGameInstance) -> nil,
+
+    -- Your game is being notified that a player has bounced.
+    -- You may want to add game-specific logic for this:
+    --   * Cleaning up UI elements referring to the player.
+    --   * Some custom notifications to the player, so and so is gone.
+    --   * A custom notification to the host: player is gone, what do you want to do now? (Some games
+    --     cannot really continue once a player leaves).
+    --
+    -- If you return true, nothing further will happen.
+    -- If you return false, a boilerplate "so and so has left" message will be displayed with no further actions.
+    --
+    -- Note that this is all CLIENT ONLY.  There's a server-side equivalent where you update game state, handle host-specific
+    -- choices about what to do next, etc.
     onPlayerLeftTable: (ClientGameInstance, userId: UserId) -> boolean,
+
+    -- The game has been ended by the host.
+    -- Do we want to message the local user about this somehow?
+    -- All the info about why game ended is in GameEndDetails.
+    -- If the instance has something intelligent to say about details, it messages the user and returns true.
+    -- Otherwise return false, and some system-level notificaiton might show up.
+    notifyThatHostEndedGame: (ClientGameInstance, GameEndDetails) -> boolean,
 }
 
 export type ClientGameInstanceFunctions = {

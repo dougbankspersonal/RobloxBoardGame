@@ -4,12 +4,15 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local Cryo = require(ReplicatedStorage.Cryo)
+
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local EventUtils = require(RobloxBoardGameShared.Modules.EventUtils)
+local SanityChecks = require(RobloxBoardGameShared.Modules.SanityChecks)
 
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
@@ -19,6 +22,7 @@ local GameTable = require(RobloxBoardGameServer.Classes.GameTable)
 local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
 local ServerEventUtils = require(RobloxBoardGameServer.Modules.ServerEventUtils)
 local DebugStateHandler = require(RobloxBoardGameServer.Modules.DebugStateHandler)
+local ServerPlayerWatcher = require(RobloxBoardGameServer.Modules.ServerPlayerWatcher)
 
 local ServerStartUp = {}
 
@@ -34,20 +38,28 @@ local function setUpRemoteEventsAndFunctions()
     ServerEventManagement.setupRemoteCommunications(tableEventsFolder, tableFunctionsFolder, createTableHandler)
 end
 
+local function sanityCheckServerGameInstanceConstructorsByGameId(serverGameInstanceConstructorsByGameId: CommonTypes.ServerGameInstanceConstructorsByGameId)
+    assert(serverGameInstanceConstructorsByGameId ~= nil, "Should have non-nil serverGameInstanceConstructorsByGameId")
+    assert(Cryo.Dictionary.keys(serverGameInstanceConstructorsByGameId) ~= nil, "Should have non-nil keys")
+    assert(#Cryo.Dictionary.keys(serverGameInstanceConstructorsByGameId) > 0, "Should have at least one game")
+    for gameId, serverGameInstanceConstructor in serverGameInstanceConstructorsByGameId do
+        assert(typeof(gameId) == "number", "gameId should be a number")
+        assert(typeof(serverGameInstanceConstructor) == "function", "serverGameInstanceConstructor should be a function")
+    end
+end
+
 ServerStartUp.ServerStartUp = function(gameDetailsByGameId: CommonTypes.GameDetailsByGameId, serverGameInstanceConstructorsByGameId: CommonTypes.ServerGameInstanceConstructorsByGameId): nil
     -- Sanity checks.
-    assert(gameDetailsByGameId, "gameDetailsByGameId is nil")
-    assert(serverGameInstanceConstructorsByGameId, "serverGameInstanceConstructorsByGameId is nil")
+    SanityChecks.sanityCheckGameDetailsByGameId(gameDetailsByGameId)
+    sanityCheckServerGameInstanceConstructorsByGameId(serverGameInstanceConstructorsByGameId)
+
     assert(Utils.tablesHaveSameKeys(gameDetailsByGameId, serverGameInstanceConstructorsByGameId), "tables should have same keys")
     assert(Utils.tableSize(gameDetailsByGameId) > 0, "Should have at least one game")
 
-
-    -- Sanity check on tables coming in from client of RobloxBoardGame library.
-    Utils.sanityCheckGameDetailsByGameId(gameDetailsByGameId)
-    Utils.sanityCheckServerGameInstanceConstructorsByGameId(serverGameInstanceConstructorsByGameId)
-
     GameDetails.setAllGameDetails(gameDetailsByGameId)
     ServerGameInstanceConstructors.setAllServerGameInstanceConstructors(serverGameInstanceConstructorsByGameId)
+
+    ServerPlayerWatcher.startWatchingPlayers()
     setUpRemoteEventsAndFunctions()
 
     if RunService:IsStudio() then

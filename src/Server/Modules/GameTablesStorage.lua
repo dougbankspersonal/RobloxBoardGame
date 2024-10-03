@@ -13,10 +13,7 @@ local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
 local gameTablesByTableId : {[CommonTypes.TableId]: ServerTypes.GameTable} = {}
 
 GameTablesStorage.addTable = function(gameTable: ServerTypes.GameTable): nil
-    assert(gameTable, "GameTablesStorage.addTable: gameTable is nil")
-    assert(gameTable.tableDescription, "GameTablesStorage.addTable: gameTable.tableDescription is nil")
     local tableId = gameTable.tableDescription.tableId
-    assert(tableId, "GameTablesStorage.addTable: tableId is nil")
 
     assert(gameTablesByTableId[tableId] == nil, "GameTablesStorage.addTable: table already exists: " .. tableId)
     gameTablesByTableId[tableId] = gameTable
