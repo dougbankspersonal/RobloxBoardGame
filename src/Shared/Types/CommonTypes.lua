@@ -228,6 +228,18 @@ export type ClientGameInstanceFunctionsByGameId = {
     [GameId]: ClientGameInstanceFunctions,
 }
 
+export type DebugStateConfigs = {
+    -- Required.  What game are we talking about.
+    gameId: GameId,
+    -- Optional.  If true then the host is a mock user, else it's the "real player".
+    mockHost: boolean?,
+    -- Optional.  Is the game table public. Defaults to private.
+    isPublic: boolean?,
+    -- Optional.  If non-zero, add this many players.  Else if the game is playing, add min players for game.
+    playerCount: number?,
+    -- Optional.  If true, start the game.
+    startGame: boolean?,
+}
 
 local CommonTypes = {
 }

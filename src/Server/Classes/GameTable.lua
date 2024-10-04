@@ -31,14 +31,12 @@ GameTable.__index = GameTable
 
 local nextGameTableId: CommonTypes.TableId = 10000
 
-function GameTable.new(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean, opt_isMock: boolean?): ServerTypes.GameTable
+function GameTable.new(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): ServerTypes.GameTable
     local self = {}
     setmetatable(self, GameTable)
 
     local tableId = nextGameTableId
     nextGameTableId = nextGameTableId + 1
-
-    self.isMock = opt_isMock or false
 
     -- Fill in table description.
     self.tableDescription = TableDescription.createTableDescription(tableId, hostUserId, gameId, isPublic)

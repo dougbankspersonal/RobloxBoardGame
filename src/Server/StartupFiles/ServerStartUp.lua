@@ -2,7 +2,6 @@
 -- Call from a Server script ASAP.
 -- Creates events, listens for them.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local Cryo = require(ReplicatedStorage.Cryo)
 
@@ -19,7 +18,6 @@ local RobloxBoardGameServer = script.Parent.Parent
 local ServerGameInstanceConstructors = require(RobloxBoardGameServer.Globals.ServerGameInstanceConstructors)
 local ServerEventManagement = require(RobloxBoardGameServer.Modules.ServerEventManagement)
 local ServerEventUtils = require(RobloxBoardGameServer.Modules.ServerEventUtils)
-local DebugStateHandler = require(RobloxBoardGameServer.Modules.DebugStateHandler)
 local ServerPlayerWatcher = require(RobloxBoardGameServer.Modules.ServerPlayerWatcher)
 
 local ServerStartUp = {}
@@ -54,10 +52,6 @@ ServerStartUp.ServerStartUp = function(gameDetailsByGameId: CommonTypes.GameDeta
 
     ServerPlayerWatcher.startWatchingPlayers()
     setUpRemoteEventsAndFunctions()
-
-    if RunService:IsStudio() then
-        DebugStateHandler.enterDebugState()
-    end
 end
 
 return ServerStartUp

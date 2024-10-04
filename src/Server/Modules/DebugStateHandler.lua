@@ -1,17 +1,23 @@
+--[[
+Debug tools to quickly jump into some state:
+ * A table is created and ready to join.
+ * A table is created and joined.
+ * A table is created and the game is playing.
+ ]]
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-
-local Cryo = require(ReplicatedStorage.Cryo)
 
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
-local Utils = require(RobloxBoardGameShared.Modules.Utils)
+local CommonTypes= require(RobloxBoardGameShared.Types.CommonTypes)
 
 -- Server
 local RobloxBoardGameServer = script.Parent.Parent
 local GameTable = require(RobloxBoardGameServer.Classes.GameTable)
 local ServerEventUtils = require(RobloxBoardGameServer.Modules.ServerEventUtils)
+local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
 
 local DebugStateHandler = {}
 
@@ -22,49 +28,47 @@ DebugStateHandler.SettingPublicGameMockHostLocalIsMember = "PublicGameMockHostLo
 
 DebugStateHandler.Setting = DebugStateHandler.SettingPublicGameLocalHost
 
-function DebugStateHandler.publicGameLocalHost()
-    -- Make an instance of the first configured game.
-    local gameDetailsByGameId = GameDetails.getAllGameDetails()
-    local gameIds = Cryo.Dictionary.keys(gameDetailsByGameId)
-    assert(#gameIds > 0, "Should have at least one game")
-    local firstGameId = gameIds[1]
+-- Shortcut to jump into a game right away.
+function DebugStateHandler.enterDebugState(realPlayerUserId: CommonTypes.UserId, opt_configs: CommonTypes.DebugStateConfigs?): ServerTypes.GameTable?
+    assert(RunService:IsStudio(), "Should be in studio")
 
-    -- Make a table for the game.
-    local gameTable = GameTable.new(Utils.StudioUserId, firstGameId, true)
-    -- Add some mock players.
-    gameTable:joinTable(ServerEventUtils.generateMockUserId(), true)
-    gameTable:joinTable(ServerEventUtils.generateMockUserId(), true)
+    if not opt_configs then
+        return nil
+    end
 
-    -- Start the game.
-    gameTable:startGame(Utils.StudioUserId)
-end
+    local configs = opt_configs
 
-function DebugStateHandler.setupGame(configs: {[string]: boolean})
-    -- Make an instance of the first configured game.
-    local gameDetailsByGameId = GameDetails.getAllGameDetails()
-    local gameIds = Cryo.Dictionary.keys(gameDetailsByGameId)
-    assert(#gameIds > 0, "Should have at least one game")
-    local firstGameId = gameIds[1]
+    -- at the very least we need a valid game id.
+    assert(configs.gameId, "Should have a game id")
+    local gameDetails = GameDetails.getGameDetails(configs.gameId)
+    assert(gameDetails, "Should have game details")
 
-    -- Make a table for the game.
-    -- Host is local or mock?
+    -- Make a table
+    -- Host is 'real player' or mock?
     local hostUserId
     if configs.mockHost then
         hostUserId = ServerEventUtils.generateMockUserId()
     else
-        hostUserId = Utils.StudioUserId
+        hostUserId = realPlayerUserId
     end
 
     local isPublic = configs.isPublic or false
-    local gameTable = GameTable.new(hostUserId, firstGameId, isPublic)
-
+    local gameTable = GameTable.new(hostUserId, configs.gameId, isPublic)
+    assert(gameTable.tableDescription.mockUserIds, "Should have mockUserIds")
     if configs.mockHost then
         gameTable.tableDescription.mockUserIds[hostUserId] = true
     end
 
-    -- Add some mock players.
-    local mockPlayerCount = 2
-    for _ = 1, mockPlayerCount do
+    -- Add players.
+    -- If configured with a number, use that.
+    -- If, but game is playing, use min players for game.
+    -- Else use 0.
+    local playerCount = configs.playerCount or 0
+    if playerCount == 0 and configs.startGame then
+        playerCount = gameDetails.minPlayers
+    end
+
+    for _ = 1, playerCount do
         local mockUserId = ServerEventUtils.generateMockUserId()
         if not isPublic then
             gameTable:inviteToTable(hostUserId, mockUserId, true)
@@ -72,44 +76,22 @@ function DebugStateHandler.setupGame(configs: {[string]: boolean})
         gameTable:joinTable(mockUserId, true)
     end
 
-    -- Maybe add local player as non-host.
+    -- If we are set to use a mock host and we want to 'real user' to join, make that
+    -- happen.
     if configs.mockHost then
         if configs.localIsMember then
             if not isPublic then
-                gameTable:inviteToTable(hostUserId, Utils.StudioUserId)
+                gameTable:inviteToTable(hostUserId, realPlayerUserId)
             end
-            gameTable:joinTable(Utils.StudioUserId)
+            gameTable:joinTable(realPlayerUserId)
         end
     end
 
-    -- Start the game.
-    gameTable:startGame(hostUserId)
-end
-
--- Shortcut to jump into a game right away.
-function DebugStateHandler.enterDebugState()
-    assert(RunService:IsStudio(), "Should be in studio")
-
-    if DebugStateHandler.Setting == DebugStateHandler.SettingNone then
-        return
+    if configs.startGame then
+        gameTable:startGame(hostUserId)
     end
 
-    if DebugStateHandler.Setting == DebugStateHandler.SettingPublicGameLocalHost then
-        DebugStateHandler.setupGame({
-            isPublic = true,
-        })
-    elseif DebugStateHandler.Setting == DebugStateHandler.SettingPublicGameMockHostLocalNotMember then
-        DebugStateHandler.setupGame({
-            isPublic = true,
-            mockHost = true,
-        })
-    elseif DebugStateHandler.Setting == DebugStateHandler.SettingPublicGameMockHostLocalIsMember then
-        DebugStateHandler.setupGame({
-            isPublic = true,
-            mockHost = true,
-            localIsMember = true,
-        })
-    end
+    return gameTable
 end
 
 return DebugStateHandler

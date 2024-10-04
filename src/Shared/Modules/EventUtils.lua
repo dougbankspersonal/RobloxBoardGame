@@ -35,7 +35,7 @@ EventUtils.EventNameRemoveGuestFromTable = "RemoveGuestFromTable"
 -- Mock events.
 EventUtils.EventNameCreateMockTable = "CreateMockTable"
 EventUtils.EventNameAddMockMember = "AddMockMember"
-EventUtils.EventNameDestroyAllMockTables = "DestroyAllMockTables"
+EventUtils.EventNameDestroyTablesWithMockHosts = "DestroyTablesWithMockHosts"
 EventUtils.EventNameAddMockInvite = "AddMockInvite"
 EventUtils.EventNameMockInviteAcceptance = "MockInviteAcceptance"
 EventUtils.EventNameMockStartGame = "MockStartGame"

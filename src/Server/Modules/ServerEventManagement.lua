@@ -280,15 +280,17 @@ local function addMockEventHandlers(tableEventsFolder: Folder)
     end)
 
     -- Destroy all Mock Tables.
-    ServerEventUtils.createRemoteEvent(tableEventsFolder, EventUtils.EventNameDestroyAllMockTables, function(player)
+    ServerEventUtils.createRemoteEvent(tableEventsFolder, EventUtils.EventNameDestroyTablesWithMockHosts, function(player)
         if player.UserId ~= Utils.StudioUserId then
             return
         end
-        Utils.debugPrint("Mocks", "Doug; Destroying all Mock Tables")
+        Utils.debugPrint("Mocks", "Doug; Destroying tables with mock hosts")
         local tablesByTableId = GameTablesStorage.getGameTablesByTableId()
         assert(tablesByTableId, "Should have tablesByTableId")
         for _, gameTable in tablesByTableId do
-            if gameTable.isMock then
+            local hostUserId = gameTable.tableDescription.hostUserId
+            local hostIsMock = gameTable.tableDescription.mockUserIds[hostUserId]
+            if hostIsMock then
                 ServerEventManagement.handleDestroyTable(gameTable.tableDescription.hostUserId, gameTable)
             end
         end

@@ -51,8 +51,8 @@ local setupMockEventFunctions = function()
         event:FireServer(isPublic, joined, isHost)
     end
 
-    ClientEventManagement.destroyAllMockTables = function()
-        local event = ReplicatedStorage.TableEvents:WaitForChild(EventUtils.EventNameDestroyAllMockTables)
+    ClientEventManagement.destroyTablesWithMockHost = function()
+        local event = ReplicatedStorage.TableEvents:WaitForChild(EventUtils.EventNameDestroyTablesWithMockHosts)
         assert(event, "Event missing")
         event:FireServer()
     end

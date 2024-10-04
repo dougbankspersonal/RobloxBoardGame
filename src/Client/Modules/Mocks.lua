@@ -64,10 +64,10 @@ local summonMocksDialog = function(): Frame?
             end,
         } :: DialogUtils.DialogButtonConfig,
         {
-            text = "Destroy Mocks",
+            text = "Destroy Tables With Mock Host",
             heading = CrossTableHeading,
             callback = function()
-                ClientEventManagement.destroyAllMockTables(false)
+                ClientEventManagement.destroyTablesWithMockHost(false)
             end,
         } :: DialogUtils.DialogButtonConfig,
     } :: {DialogUtils.DialogButtonConfig}

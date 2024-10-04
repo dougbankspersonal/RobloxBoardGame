@@ -12,7 +12,6 @@ export type GameTable = {
     -- members
     gameDetails: CommonTypes.GameDetails,
     tableDescription: CommonTypes.TableDescription,
-    isMock: boolean,
 
     -- static functions.
     new: CreateTableHandler,
@@ -28,7 +27,7 @@ export type GameTable = {
     getGameInstanceGUID: (GameTable) -> CommonTypes.GameInstanceGUID,
     canEndGame: (GameTable, CommonTypes.UserId) -> boolean,
     canDestroy: (GameTable, CommonTypes.UserId) -> boolean,
-    getServerGameInstance: (GameTable) -> CommonTypes.ServerGameInstance,
+    getServerGameInstance: (GameTable) -> CommonTypes.ServerGameInstance?,
     sanityCheck: (GameTable) -> nil,
 
     -- non-const functions.  Each returns true iff something changed.

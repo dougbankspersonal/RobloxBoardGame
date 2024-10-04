@@ -15,7 +15,6 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
 local PlayerUtils = require(RobloxBoardGameShared.Modules.PlayerUtils)
-local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 local TableDescription = {}
 
