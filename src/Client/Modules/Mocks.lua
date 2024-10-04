@@ -25,42 +25,42 @@ local summonMocksDialog = function(): Frame?
             text = "3rd Party Public, unjoined",
             heading = CrossTableHeading,
             callback = function()
-                ClientEventManagement.mockTable(true, false)
+                ClientEventManagement.createMockTable(true, false)
             end,
         } :: DialogUtils.DialogButtonConfig,
         {
             text = "3rd Party Private, unjoined",
             heading = CrossTableHeading,
             callback = function()
-                ClientEventManagement.mockTable(false, false)
+                ClientEventManagement.createMockTable(false, false)
             end,
         } :: DialogUtils.DialogButtonConfig,
         {
             text = "3rd Party Public, joined",
             heading = CrossTableHeading,
             callback = function()
-                ClientEventManagement.mockTable(true, true)
+                ClientEventManagement.createMockTable(true, true)
             end,
         } :: DialogUtils.DialogButtonConfig,
         {
             text = "3rd Party Private, joined",
             heading = CrossTableHeading,
             callback = function()
-                ClientEventManagement.mockTable(false, true)
+                ClientEventManagement.createMockTable(false, true)
             end,
         } :: DialogUtils.DialogButtonConfig,
         {
             text = "Mine, Public",
             heading = CrossTableHeading,
             callback = function()
-                ClientEventManagement.mockTable(true, true, true)
+                ClientEventManagement.createMockTable(true, true, true)
             end,
         } :: DialogUtils.DialogButtonConfig,
         {
             text = "Mine, Private",
             heading = CrossTableHeading,
             callback = function()
-                ClientEventManagement.mockTable(false, true, true)
+                ClientEventManagement.createMockTable(false, true, true)
             end,
         } :: DialogUtils.DialogButtonConfig,
         {
@@ -127,7 +127,7 @@ local summonMocksDialog = function(): Frame?
         local localUserId = Players.LocalPlayer.UserId
         if currentTableDescription.hostUserId ~= localUserId then
             table.insert(dialogButtonConfigs, {
-                text = "Start Mock Game",
+                text = "Mock Host Starts Game",
                 heading = WaitingAtTableHeading,
                 callback = function()
                     ClientEventManagement.mockStartGame(tableId)
@@ -148,13 +148,17 @@ end
 Mocks.addMocksButton = function(screenGui: ScreenGui)
     -- Throw on a button with a very high z index to summon mocks.
     if RunService:IsStudio() then
-        GuiUtils.addStandardTextButtonInContainer(screenGui, "Mocks", summonMocksDialog, {
-            Name = "MocksButton",
-        }, {
-            AnchorPoint = Vector2.new(1, 1),
-            Position = UDim2.new(1, -10, 1, -10),
-            ZIndex = 1000,
-        })
+        -- I may be running a test with multiple clients.  I only want Mocks for the client that's the real
+        -- me.
+        if Players.LocalPlayer.UserId == Utils.StudioUserId then
+            GuiUtils.addStandardTextButtonInContainer(screenGui, "Mocks", summonMocksDialog, {
+                Name = "MocksButton",
+            }, {
+                AnchorPoint = Vector2.new(1, 1),
+                Position = UDim2.new(1, -10, 1, -10),
+                ZIndex = 1000,
+            })
+        end
     end
 end
 

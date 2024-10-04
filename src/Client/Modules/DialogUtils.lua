@@ -156,17 +156,17 @@ DialogUtils.makeDialog = function(dialogConfig: DialogConfig): Frame?
                 gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
             end
 
-            Utils.debugPrint("Layout", "Doug: configsForHeading = ", configsForHeading)
+            Utils.debugPrint("Layout", "configsForHeading = ", configsForHeading)
             for _, dialogButtonConfig in ipairs(configsForHeading) do
                 -- Should be properly configured.
                 assert(dialogButtonConfig.text, "Should have text")
 
                 local _, button = GuiUtils.addStandardTextButtonInContainer(controlsContent, dialogButtonConfig.text, function()
-                    Utils.debugPrint("Mocks", "Doug: button clicked")
+                    Utils.debugPrint("Mocks", "button clicked")
                     -- Destroy the dialog.
                     DialogUtils.cleanupDialog()
                     -- Hit callback if provided.
-                    Utils.debugPrint("Mocks", "Doug: dialogButtonConfig.callback = ", dialogButtonConfig.callback)
+                    Utils.debugPrint("Mocks", "dialogButtonConfig.callback = ", dialogButtonConfig.callback)
                     if dialogButtonConfig.callback then
                         dialogButtonConfig.callback()
                     end

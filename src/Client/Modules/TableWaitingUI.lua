@@ -100,12 +100,12 @@ end
 
 local onManageInvitesClicked = function(tableId: CommonTypes.TableId)
     assert(tableId, "Should have a tableId")
-    Utils.debugPrint("Friends", "Doug: tableId = ", tableId)
+    Utils.debugPrint("Friends", "tableId = ", tableId)
 
     local tableDescription = ClientTableDescriptions.getTableDescription(tableId)
     local inviteeIds = Cryo.Dictionary.keys(tableDescription.invitedUserIds)
 
-    Utils.debugPrint("Friends", "Doug: inviteeIds = ", inviteeIds)
+    Utils.debugPrint("Friends", "inviteeIds = ", inviteeIds)
 
     local friendSelectionDialogConfig: FriendSelectionDialog.FriendSelectionDialogConfig = {
         title = "Select Friends",
@@ -117,7 +117,7 @@ local onManageInvitesClicked = function(tableId: CommonTypes.TableId)
         end
     }
 
-    Utils.debugPrint("Friends", "Doug: friendSelectionDialogConfig = ", friendSelectionDialogConfig)
+    Utils.debugPrint("Friends", "friendSelectionDialogConfig = ", friendSelectionDialogConfig)
 
     FriendSelectionDialog.selectFriends(friendSelectionDialogConfig)
 end
@@ -152,7 +152,6 @@ local addTableControls = function (frame: Frame, tableDescription: CommonTypes.T
         --
         -- Keep track of the id for the start game button: we need to update it later.
         local _, _startButton = GuiUtils.addStandardTextButtonInContainer(controlsRowContent, "Start Game", function()
-            Utils.debugPrint("TablePlaying", "Doug: Start Game clicked")
             ClientEventManagement.startGame(tableId)
         end)
         startButton = _startButton
@@ -167,7 +166,7 @@ local addTableControls = function (frame: Frame, tableDescription: CommonTypes.T
 
         if not tableDescription.isPublic then
             GuiUtils.addStandardTextButtonInContainer(controlsRowContent, "Manage Invites", function()
-                Utils.debugPrint("Friends", "Doug: Manage Invites clicked")
+                Utils.debugPrint("Friends", "Manage Invites clicked")
                 onManageInvitesClicked(tableId)
             end)
         end
@@ -255,7 +254,7 @@ local updateGameOptions = function(parentOfRow: Frame, tableDescription: CommonT
 end
 
 local addMemberUserNullStaticWidget = function(parent: Frame)
-    print("Doug: addMemberUserNullStaticWidget GuiConstants.userWidgetSize = ", GuiConstants.userWidgetSize)
+    print("addMemberUserNullStaticWidget GuiConstants.userWidgetSize = ", GuiConstants.userWidgetSize)
     return GuiUtils.addNullStaticWidget(parent, GuiUtils.italicize("No players have joined yet."), {
         Size = GuiConstants.userWidgetSize,
     })
@@ -310,7 +309,7 @@ local updateInvites = function(isHost: boolean, tableDescription: CommonTypes.Ta
 
     local tableId = tableDescription.tableId
 
-    Utils.debugPrint("Friends", "Doug: updateInvites tableDescription = ", tableDescription)
+    Utils.debugPrint("Friends", "updateInvites tableDescription = ", tableDescription)
 
     -- Some functions used as args below.
     local function canRemoveInvite(_: CommonTypes.UserId): boolean

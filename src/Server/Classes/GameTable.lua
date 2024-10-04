@@ -24,7 +24,6 @@ local ServerGameInstanceConstructors = require(RobloxBoardGameServer.Globals.Ser
 local ServerGameInstances = require(RobloxBoardGameServer.Modules.ServerGameInstances)
 local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
 local GameTablesStorage = require(RobloxBoardGameServer.Modules.GameTablesStorage)
-local ServerEventManagement = require(RobloxBoardGameServer.Modules.ServerEventManagement)
 local ServerEventUtils = require(RobloxBoardGameServer.Modules.ServerEventUtils)
 
 local GameTable = {}
@@ -32,14 +31,14 @@ GameTable.__index = GameTable
 
 local nextGameTableId: CommonTypes.TableId = 10000
 
-GameTable.new = function(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): ServerTypes.GameTable
+function GameTable.new(hostUserId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean, opt_isMock: boolean?): ServerTypes.GameTable
     local self = {}
     setmetatable(self, GameTable)
 
     local tableId = nextGameTableId
     nextGameTableId = nextGameTableId + 1
 
-    self.isMock = false
+    self.isMock = opt_isMock or false
 
     -- Fill in table description.
     self.tableDescription = TableDescription.createTableDescription(tableId, hostUserId, gameId, isPublic)
@@ -76,8 +75,6 @@ function GameTable:isInvitedToTable(userId: CommonTypes.UserId): boolean
 end
 
 function GameTable:isHost(userId: CommonTypes.UserId): boolean
-    Utils.debugPrint("TablePlaying", "GameTable:isHost userId = ", userId)
-    Utils.debugPrint("TablePlaying", "GameTable:isHost self.tableDescription.hostUserId = ", self.tableDescription.hostUserId)
     return self.tableDescription.hostUserId == userId
 end
 
@@ -141,7 +138,7 @@ function GameTable:destroy()
         return
     end
 
-    GameTablesStorage.removeTable(self)
+    GameTablesStorage.removeTable(self.tableDescription.tableId)
 
     return true
 end
@@ -193,7 +190,7 @@ end
 
 -- Try to add user as invitee of table.
 -- Return true iff anything changes.
-function GameTable:inviteToTable(userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId): boolean
+function GameTable:inviteToTable(userId: CommonTypes.UserId, inviteeId: CommonTypes.UserId, opt_isMock: boolean?): boolean
     -- Must be the host.
     if not self:isHost(userId) then
         return false
@@ -220,6 +217,9 @@ function GameTable:inviteToTable(userId: CommonTypes.UserId, inviteeId: CommonTy
     end
 
     self.tableDescription.invitedUserIds[inviteeId] = true
+    if opt_isMock then
+        self.tableDescription.mockUserIds[inviteeId] = true
+    end
 
     self:sanityCheck()
 
@@ -425,7 +425,7 @@ function GameTable:startGame(userId: CommonTypes.UserId): boolean
     self.tableDescription.gameInstanceGUID = HttpService:GenerateGUID(false)
 
     -- Create communication channels for game-specific messages.
-    ServerEventManagement.setupRemoteCommunicationsForGame(self.tableDescription.gameInstanceGUID)
+    ServerEventUtils.setupRemoteCommunicationsForGame(self.tableDescription.gameInstanceGUID)
     -- Make the instance and start the game playing.
     local serverGameInstanceConstructor = self:getServerGameInstanceConstructor()
     -- _After this an instance for the game exists on the server, game is playing.

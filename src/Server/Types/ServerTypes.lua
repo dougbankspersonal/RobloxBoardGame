@@ -6,6 +6,8 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 
 local ServerTypes = {}
 
+export type CreateTableHandler = (CommonTypes.UserId, CommonTypes.GameDetails, boolean, boolean?) -> GameTable
+
 export type GameTable = {
     -- members
     gameDetails: CommonTypes.GameDetails,
@@ -13,7 +15,7 @@ export type GameTable = {
     isMock: boolean,
 
     -- static functions.
-    new: (CommonTypes.UserId, CommonTypes.GameDetails, boolean) -> GameTable,
+    new: CreateTableHandler,
 
     -- const member  functions.
     -- Shortcuts to ask questions about table.
@@ -30,10 +32,9 @@ export type GameTable = {
     sanityCheck: (GameTable) -> nil,
 
     -- non-const functions.  Each returns true iff something changed.
-    goToWaiting: (GameTable, CommonTypes.UserId) -> boolean,
     destroy: (GameTable) -> nil,
     joinTable: (GameTable, CommonTypes.UserId, boolean?) -> boolean,
-    inviteToTable: (GameTable, CommonTypes.UserId, CommonTypes.UserId) -> boolean,
+    inviteToTable: (GameTable, CommonTypes.UserId, CommonTypes.UserId, boolean?) -> boolean,
     setInvites: (GameTable, CommonTypes.UserId, {CommonTypes.UserId}) -> boolean,
     removeGuestFromTable: (GameTable, CommonTypes.UserId, CommonTypes.UserId) -> boolean,
     removeInviteForTable: (GameTable, CommonTypes.UserId, CommonTypes.UserId) -> boolean,

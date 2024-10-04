@@ -45,8 +45,8 @@ end
 local setupMockEventFunctions = function()
     assert(RunService:IsStudio(), "setupMockEventFunctions should only be called in Studio")
 
-    ClientEventManagement.mockTable = function(isPublic: boolean, joined: boolean, isHost: boolean)
-        local event = ReplicatedStorage.TableEvents:WaitForChild(EventUtils.FolderNameMockTableEvents)
+    ClientEventManagement.createMockTable = function(isPublic: boolean, joined: boolean, isHost: boolean)
+        local event = ReplicatedStorage.TableEvents:WaitForChild(EventUtils.EventNameCreateMockTable)
         assert(event, "Event missing")
         event:FireServer(isPublic, joined, isHost)
     end
@@ -66,14 +66,13 @@ local setupMockEventFunctions = function()
     ClientEventManagement.mockNonHostMemberLeaves = function(tableId: CommonTypes.TableId)
         local event = ReplicatedStorage.TableEvents:WaitForChild(EventUtils.EventNameMockNonHostMemberLeaves)
         assert(event, "Event missing")
-        Utils.debugPrint("Mocks", "firing mockNonHostMemberLeaves event")
+        Utils.debugPrint("Mocks", "ClientEventManagement.mockNonHostMemberLeaves")
         event:FireServer(tableId)
     end
 
     ClientEventManagement.mockHostDestroysTable = function(tableId: CommonTypes.TableId)
         local event = ReplicatedStorage.TableEvents:WaitForChild(EventUtils.EventNameMockHostDestroysTable)
         assert(event, "Event missing")
-        Utils.debugPrint("Mocks", "firing mockHostDestroysTable event")
         event:FireServer(tableId)
     end
 
@@ -121,6 +120,7 @@ ClientEventManagement.listenToServerEvents = function(onTableCreated: (tableDesc
     event = tableEvents:WaitForChild(EventUtils.EventNameTableUpdated)
     assert(event, "TableUpdated event missing")
     event.OnClientEvent:Connect(function(raw_tableDescription: CommonTypes.TableDescription)
+        Utils.debugPrint("GamePlay", "ClientEventManagement got TableUpdated")
         local tableDescription = TableDescription.sanitizeTableDescription(raw_tableDescription)
         onTableUpdated(tableDescription)
     end)
@@ -138,15 +138,9 @@ ClientEventManagement.listenToServerEventsForActiveGame = function(gameInstanceG
 end
 
 ClientEventManagement.createTable = function(gameId: CommonTypes.GameId, isPublic: boolean)
-    local event = ReplicatedStorage.TableEvents:WaitForChild("CreateNewTable")
+    local event = ReplicatedStorage.TableEvents:WaitForChild(EventUtils.EventNameCreateNewTable)
     assert(event, "event missing")
     event:FireServer(gameId, isPublic)
-end
-
-ClientEventManagement.goToWaiting = function(tableId: CommonTypes.TableId)
-    local event = ReplicatedStorage.TableEvents:WaitForChild("GoToWaiting")
-    assert(event, "event missing")
-    event:FireServer(tableId)
 end
 
 ClientEventManagement.destroyTable = function(tableId: CommonTypes.TableId)
@@ -156,7 +150,7 @@ ClientEventManagement.destroyTable = function(tableId: CommonTypes.TableId)
 end
 
 ClientEventManagement.joinTable = function(tableId: CommonTypes.TableId)
-    local event = ReplicatedStorage.TableEvents:WaitForChild("JoinTable")
+    local event = ReplicatedStorage.TableEvents:WaitForChild(EventUtils.EventNameJoinTable)
     assert(event, "event missing")
     event:FireServer(tableId)
 end
@@ -169,8 +163,7 @@ ClientEventManagement.leaveTable = function(tableId: CommonTypes.TableId)
 end
 
 ClientEventManagement.startGame = function(tableId: CommonTypes.TableId)
-    Utils.debugPrint("TablePlaying", "Doug: ClientEventManagement.startGame tableId = ", tableId)
-    local event = ReplicatedStorage.TableEvents:WaitForChild("StartGame")
+    local event = ReplicatedStorage.TableEvents:WaitForChild(EventUtils.EventNameStartGame)
     assert(event, "event missing")
     event:FireServer(tableId)
 end
@@ -205,10 +198,11 @@ ClientEventManagement.setTableGameOptions = function(tableId: CommonTypes.TableI
     event:FireServer(tableId, nonDefaultGameOptions)
 end
 
-ClientEventManagement.endGame = function(tableId: CommonTypes.TableId, clientGameEndDetails: any?)
+ClientEventManagement.endGame = function(tableId: CommonTypes.TableId)
     local event = ReplicatedStorage.TableEvents:WaitForChild(EventUtils.EventNameEndGame)
     assert(event, "event missing")
-    event:FireServer(tableId, clientGameEndDetails)
+    Utils.debugPrint("GamePlay", "ClientEventManagement.endGame")
+    event:FireServer(tableId)
 end
 
 if RunService:IsStudio() then

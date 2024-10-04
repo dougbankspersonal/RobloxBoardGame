@@ -170,4 +170,12 @@ function ServerEventUtils.sendEventForPlayersInGame(tableDescription: CommonType
     ServerEventUtils.sendEventForPlayers(eventForGame, players, ...)
 end
 
+function ServerEventUtils.setupRemoteCommunicationsForGame(gameInstanceGUID: CommonTypes.GameInstanceGUID)
+    -- Notification that player has left a table.
+    ServerEventUtils.createGameEventFolder(gameInstanceGUID)
+    ServerEventUtils.createGameFunctionFolder(gameInstanceGUID)
+    ServerEventUtils.createGameRemoteEvent(gameInstanceGUID, EventUtils.EventNamePlayerLeftTable)
+    ServerEventUtils.createGameRemoteEvent(gameInstanceGUID, EventUtils.EventNameNotifyThatHostEndedGame)
+end
+
 return ServerEventUtils

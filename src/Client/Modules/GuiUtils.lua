@@ -49,8 +49,8 @@ local function applyInstanceOptions(instance: Instance, opt_defaultOptions: Inst
     local defaultOptions = opt_defaultOptions or {}
     local instanceOptions = opt_instanceOptions or {}
 
-    Utils.debugPrint("GuiUtils", "Doug: applyInstanceOptions: defaultOptions = ", defaultOptions)
-    Utils.debugPrint("GuiUtils", "Doug: applyInstanceOptions: instanceOptions = ", instanceOptions)
+    Utils.debugPrint("GuiUtils", "applyInstanceOptions: defaultOptions = ", defaultOptions)
+    Utils.debugPrint("GuiUtils", "applyInstanceOptions: instanceOptions = ", instanceOptions)
 
     local finalOptions = Cryo.Dictionary.join(defaultOptions, instanceOptions)
 
@@ -550,8 +550,8 @@ end
     -- Rows usually contain ordered list of widgets, add a layout order generator.
     GuiUtils.addLayoutOrderGenerator(rowContent)
 
-    Utils.debugPrint("Layout", "Doug: rowName = ", rowName)
-    Utils.debugPrint("Layout", "Doug: rowOptions = ", rowOptions)
+    Utils.debugPrint("Layout", "rowName = ", rowName)
+    Utils.debugPrint("Layout", "rowOptions = ", rowOptions)
 
     if rowOptions.useGridLayout then
         local uiGridLayout = Instance.new("UIGridLayout")
@@ -590,7 +590,7 @@ end
 -- Parent contains rows.
 -- Find row with given name, return the rowContent frame for that row.
  function GuiUtils.getRowContent(parent: GuiObject, rowName: string): Frame
-    Utils.debugPrint("Layout", "Doug: getRowContent rowName = ", rowName)
+    Utils.debugPrint("Layout", "getRowContent rowName = ", rowName)
     local row = parent:FindFirstChild(rowName)
     assert(row, "row should exist")
     local rowContent = row:FindFirstChild(GuiConstants.rowContentName)

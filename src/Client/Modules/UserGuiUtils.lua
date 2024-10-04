@@ -64,15 +64,14 @@ UserGuiUtils.configureUserTextLabel = function(textLabel:TextLabel, userId: Comm
     textLabel.TextSize = GuiConstants.userTextLabelFontSize
     textLabel.Text = ""
 
-    Utils.debugPrint("TablePlaying", "Doug: configureUserTextLabel userId = ", userId)
     local playerName = PlayerUtils.getName(userId)
     assert(playerName, "playerName should exist")
 
     local formatString = if opt_formatString then opt_formatString else "%s"
-    Utils.debugPrint("Buttons", "Doug formatString = ", formatString)
-    Utils.debugPrint("Buttons", "Doug playerName = ", playerName)
+    Utils.debugPrint("Buttons", "formatString = ", formatString)
+    Utils.debugPrint("Buttons", "playerName = ", playerName)
     local formattedString = string.format(formatString, playerName)
-    Utils.debugPrint("Buttons", "Doug formattedString = ", formattedString)
+    Utils.debugPrint("Buttons", "formattedString = ", formattedString)
     textLabel.Text = formattedString
 end
 
@@ -89,7 +88,7 @@ local function addUserImageOverTextLabel(frame: GuiObject, userId: CommonTypes.U
 end
 
 UserGuiUtils.addUserButtonInContainer = function(parent: Instance, userId: CommonTypes.UserId, onButtonClicked: (CommonTypes.UserId) -> nil): (Frame, TextButton)
-    Utils.debugPrint("Layout", "Doug: addUserButtonInContainer 001")
+    Utils.debugPrint("Layout", "addUserButtonInContainer 001")
 
     local container, textButton = GuiUtils.addTextButtonInContainer(parent, GuiConstants.userButtonName, {
         Size = GuiConstants.userWidgetSize,

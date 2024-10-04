@@ -18,19 +18,22 @@ function StateDigest.getCurrentTableDescription(): CommonTypes.TableDescription?
     return ClientTableDescriptions.getTableWithUserId(localUserId)
 end
 
-function StateDigest.getCurrentUIMode(): CommonTypes.UIMode
-    local tableDescription = StateDigest.getCurrentTableDescription()
-
+function StateDigest.getUIModeFromTableDescription(opt_tableDescription: CommonTypes.TableDescription?): CommonTypes.UIMode
     -- The local player is not part of any table: we show them the "select/create table" UI.
-    if not tableDescription then
+    if not opt_tableDescription then
         return UIModes.TableSelection
-    elseif tableDescription.gameTableState == GameTableStates.WaitingForPlayers then
+    elseif opt_tableDescription.gameTableState == GameTableStates.WaitingForPlayers then
         return UIModes.TableWaitingForPlayers
-    elseif tableDescription.gameTableState == GameTableStates.Playing then
+    elseif opt_tableDescription.gameTableState == GameTableStates.Playing then
         return UIModes.TablePlaying
     else
         assert(false, "we have a table description in an unknown state")
     end
+end
+
+function StateDigest.getCurrentUIMode(): CommonTypes.UIMode
+    local tableDescription = StateDigest.getCurrentTableDescription()
+    return StateDigest.getUIModeFromTableDescription(tableDescription)
 end
 
 return StateDigest

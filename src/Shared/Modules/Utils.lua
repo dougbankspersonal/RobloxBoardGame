@@ -14,7 +14,15 @@ local Cryo = require(ReplicatedStorage.Cryo)
 
 local Utils = {}
 
-Utils.SnackFortUserId = 5845980262
+if RunService:IsStudio() then
+    -- FIXME(dbanks)
+    -- I don't know a way around this.  StudioService has what I want but can only be used in
+    -- Plugin.
+    -- If running in Studio, I want user ID of the person logged in to Studio: he is allowed to
+    -- play as a mock user.
+    -- Seems like i just have to hard wire my user id?
+    Utils.StudioUserId = 5845980262
+end
 
 local debugPrintEnabledLabels = {
     Buttons = false,
@@ -29,13 +37,15 @@ local debugPrintEnabledLabels = {
     MessageLog = false,
     Mocks = false,
     RemoveInvite = false,
-    SanityChecks = true,
+    SanityChecks = false,
     Sound = false,
     TablePlaying = false,
     TableUpdated = false,
     User = false,
     UserLayout = false,
 }
+
+debugPrintEnabledLabels.GamePlay = true
 
 function Utils.splitString(str: string, delimiter: string): {string}
     local result = {}
@@ -144,6 +154,33 @@ function Utils.randomizeArray(array: {any}): {any}
         result[i], result[j] = result[j], result[i]
     end
     return result
+end
+
+-- For debugging.
+-- In Studio, the dude logged in is allowed to take actions on behalf of any mock user.
+function Utils.firstUserCanPlayAsSecondUser(tableDescription: CommonTypes.TableDescription, firstUserId: CommonTypes.UserId, secondUserId:CommonTypes.UserId): boolean
+    -- Better be a member of the game.
+    assert(firstUserId, "firstUserId is nil")
+    assert(secondUserId, "secondUserId is nil")
+
+    Utils.debugPrint("Mocks", "firstUserCanPlayAsSecondUser: firstUserId = ", firstUserId)
+    Utils.debugPrint("Mocks", "firstUserCanPlayAsSecondUser: secondUserId = ", secondUserId)
+
+    -- If current player is attemped actor, fine.
+    if firstUserId == secondUserId then
+        Utils.debugPrint("Mocks", "firstUserCanPlayAsSecondUser: they match")
+        return true
+    end
+
+    Utils.debugPrint("Mocks", "firstUserCanPlayAsSecondUser: tableDescription = ", tableDescription)
+    -- If current player is mock and attempted actor is host, fine.
+    if Utils.StudioUserId  == firstUserId and tableDescription.mockUserIds[secondUserId] then
+        Utils.debugPrint("Mocks", "firstUserCanPlayAsSecondUser: firstUserId is Utils.StudioUserId and secondUserId is mock")
+        return true
+    end
+
+    -- No good.
+    return false
 end
 
 return Utils

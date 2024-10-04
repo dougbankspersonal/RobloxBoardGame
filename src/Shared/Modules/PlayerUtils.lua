@@ -35,7 +35,7 @@ end
 function PlayerUtils.asyncFetchPlayerInfo(userIds: {CommonTypes.UserId})
     assert(userIds, "userIds should exist")
 
-    Utils.debugPrint("Mocks", "Doug userIds = ", userIds)
+    Utils.debugPrint("Mocks", "userIds = ", userIds)
 
     local mappedUserIds = Cryo.List.map(userIds, function(element, _)
         return Utils.debugMapUserId(element)

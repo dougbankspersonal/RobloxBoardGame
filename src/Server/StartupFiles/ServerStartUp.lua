@@ -18,24 +18,17 @@ local SanityChecks = require(RobloxBoardGameShared.Modules.SanityChecks)
 local RobloxBoardGameServer = script.Parent.Parent
 local ServerGameInstanceConstructors = require(RobloxBoardGameServer.Globals.ServerGameInstanceConstructors)
 local ServerEventManagement = require(RobloxBoardGameServer.Modules.ServerEventManagement)
-local GameTable = require(RobloxBoardGameServer.Classes.GameTable)
-local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
 local ServerEventUtils = require(RobloxBoardGameServer.Modules.ServerEventUtils)
 local DebugStateHandler = require(RobloxBoardGameServer.Modules.DebugStateHandler)
 local ServerPlayerWatcher = require(RobloxBoardGameServer.Modules.ServerPlayerWatcher)
 
 local ServerStartUp = {}
 
-local function createTableHandler(hostId: CommonTypes.UserId, gameId: CommonTypes.GameId, isPublic: boolean): ServerTypes.GameTable?
-    local gameTable = GameTable.new(hostId, gameId, isPublic)
-    return gameTable
-end
-
 local function setUpRemoteEventsAndFunctions()
     local tableEventsFolder = ServerEventUtils.createFolder(EventUtils.FolderNameTableEvents)
     local tableFunctionsFolder = ServerEventUtils.createFolder(EventUtils.FolderNameTableFunctions)
 
-    ServerEventManagement.setupRemoteCommunications(tableEventsFolder, tableFunctionsFolder, createTableHandler)
+    ServerEventManagement.setupRemoteCommunications(tableEventsFolder, tableFunctionsFolder)
 end
 
 local function sanityCheckServerGameInstanceConstructorsByGameId(serverGameInstanceConstructorsByGameId: CommonTypes.ServerGameInstanceConstructorsByGameId)

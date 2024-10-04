@@ -10,6 +10,7 @@ local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local TableDescription = require(RobloxBoardGameShared.Modules.TableDescription)
 local TableDescripton = require(RobloxBoardGameShared.Modules.TableDescription)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 local ClientTableDescriptions = {
 }
@@ -34,8 +35,10 @@ ClientTableDescriptions.addTableDescriptionAsync = function(tableDescription: Co
 end
 
 ClientTableDescriptions.updateTableDescriptionAsync = function(tableDescription: CommonTypes.TableDescription)
+    Utils.debugPrint("GamePlay", "updateTableDescriptionAsync 001 tableDescription = ", tableDescription)
     TableDescripton.sanityCheck(tableDescription)
     TableDescription.fetchUserDataAsync(tableDescription)
+    Utils.debugPrint("GamePlay", "updateTableDescriptionAsync 002 tableDescription = ", tableDescription)
     ClientTableDescriptions.tableDescriptionsByTableId[tableDescription.tableId] = tableDescription
 end
 

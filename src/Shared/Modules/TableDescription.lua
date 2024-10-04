@@ -25,9 +25,6 @@ function TableDescription.fetchUserDataAsync(tableDescription: CommonTypes.Table
     local invitedUserIds = Cryo.Dictionary.keys(tableDescription.invitedUserIds)
     local allUserIds = Cryo.List.join(memberUserIds, invitedUserIds)
 
-    Utils.debugPrint("Mocks", "Doug allUserIds = ", allUserIds)
-    Utils.debugPrint("Mocks", "Doug PlayerUtils = ", PlayerUtils)
-
     PlayerUtils.asyncFetchPlayerInfo(allUserIds)
 end
 

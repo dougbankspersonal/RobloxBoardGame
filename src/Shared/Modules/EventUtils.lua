@@ -12,22 +12,28 @@ local EventUtils = {}
 
 EventUtils.FolderNameTableEvents = "TableEvents"
 EventUtils.FolderNameTableFunctions = "TableFunctions"
-EventUtils.FolderNameMockTableEvents = "MockTableEvents"
 
 --[[
 Client -> Server event names.
 ]]
 -- External to game: these are about table creation, config, destruction.
-EventUtils.EventNameEndGame = "EndGame"
-EventUtils.EventNameLeaveTable = "LeaveTable"
-EventUtils.EventNameSetTableGameOptions = "SetTableGameOptions"
+EventUtils.EventNameCreateNewTable  = "CreateNewTable"
 EventUtils.EventNameDestroyTable = "DestroyTable"
+
+EventUtils.EventNameStartGame = "StartGame"
+EventUtils.EventNameEndGame = "EndGame"
+
+EventUtils.EventNameLeaveTable = "LeaveTable"
+
+EventUtils.EventNameJoinTable = "JoinTable"
+EventUtils.EventNameInvitePlayerToTable = "InvitePlayerToTable"
+EventUtils.EventNameSetTableGameOptions = "SetTableGameOptions"
 EventUtils.EventNameRemoveInviteForTable = "RemoveInviteForTable"
 EventUtils.EventNameSetTableInvites = "SetTableInvites"
-EventUtils.EventNameInvitePlayerToTable = "InvitePlayerToTable"
 EventUtils.EventNameRemoveGuestFromTable = "RemoveGuestFromTable"
 
 -- Mock events.
+EventUtils.EventNameCreateMockTable = "CreateMockTable"
 EventUtils.EventNameAddMockMember = "AddMockMember"
 EventUtils.EventNameDestroyAllMockTables = "DestroyAllMockTables"
 EventUtils.EventNameAddMockInvite = "AddMockInvite"

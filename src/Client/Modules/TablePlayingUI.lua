@@ -15,7 +15,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
-local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local PlayerUtils = require(RobloxBoardGameShared.Modules.PlayerUtils)
 local SanityChecks = require(RobloxBoardGameShared.Modules.SanityChecks)
 
@@ -220,7 +219,6 @@ TablePlayingUI.build = function(tableId: CommonTypes.TableId)
 end
 
 TablePlayingUI.update = function()
-    Utils.debugPrint("TablePlaying", "Doug: in TablePlayingUI.update")
 end
 
 return TablePlayingUI

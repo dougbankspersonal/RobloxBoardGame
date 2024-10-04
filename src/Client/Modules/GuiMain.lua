@@ -6,8 +6,9 @@
 local GuiMain = {}
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local Players = game:GetService("Players")
+
+local Cryo = require(ReplicatedStorage.Cryo)
 
 -- Shared
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
@@ -35,8 +36,6 @@ local ClientEventUtils = require(RobloxBoardGameClient.Modules.ClientEventUtils)
 -- Globals
 local localUserId = Players.LocalPlayer.UserId
 assert(localUserId, "Should have a localUserId")
-
-local cleanupFunctionsForCurrentUIMode = {}:: {() -> nil}
 
 function GuiMain.makeUberBackground(parent: Instance)
     local backgroundScreenGui = Instance.new("ScreenGui")
@@ -94,14 +93,28 @@ function GuiMain.makeMainFrame(): Frame
 end
 
 --[[
-    Remove all ui elements from mainFrame.
+    We have transitioned to a new ui mode.
+    Clean up whatever belongs to old mode:
+      * UI elements.
+      * allocated instances
+      * connections
 ]]
-local function cleanupCurrentUI()
-    -- Cancel anything that needs cancelling.
-    for _, cleanupFunction in cleanupFunctionsForCurrentUIMode do
-        cleanupFunction()
+local function cleanupPreviousUI(previousUIMode: CommonTypes.UIMode, opt_previousTableDescription: CommonTypes.TableDescription?)
+    if previousUIMode == UIModes.TablePlaying then
+        -- There must have been  a prior table description.
+        assert(opt_previousTableDescription, "Should have a previous table description")
+        local previousTableDescription = opt_previousTableDescription
+        -- Should have been playing.
+        local gameInstanceGUID = previousTableDescription.gameInstanceGUID
+        assert(previousTableDescription.gameTableState == GameTableStates.Playing, "Should have been playing")
+        assert(gameInstanceGUID, "Should have a gameInstanceGUID")
+        -- No longer listening for game-centric events.
+        ClientEventUtils.removeGameEventConnections(gameInstanceGUID)
+        -- Clean up the game instance itself.
+        local clientGameInstanceFunctions = ClientGameInstanceFunctions.getClientGameInstanceFunctions(previousTableDescription.gameId)
+        local clientGameInstance = clientGameInstanceFunctions.getClientGameInstance()
+        clientGameInstance:destroy()
     end
-    cleanupFunctionsForCurrentUIMode = {}
 
     -- Remove all the ui elements.
     local mainFrame = GuiUtils.getMainFrame()
@@ -126,6 +139,8 @@ end
 -- state is broadcast.
 local function notifyThatHostEndedGame(gameInstanceGUID: CommonTypes.GameInstanceGUID, gameEndDetails: CommonTypes.GameEndDetails)
     local currentTableDescription = StateDigest.getCurrentTableDescription()
+
+    Utils.debugPrint("GamePlay", "GuiMain notifyThatHostEndedGame: gameEndDetails = ", gameEndDetails)
 
     -- If the custom game instance wants to consume this fine, otherwise put up a generic "game ended" dialog.
     assert(currentTableDescription, "Should have a currentTableDescription")
@@ -169,7 +184,7 @@ local function notifyThatHostEndedGame(gameInstanceGUID: CommonTypes.GameInstanc
     end
 
     -- How did we get here?
-    assert(false, "Unexpected game end details.")
+    assert(false, "Unexpected gameEndDetails")
 end
 
 local function onPlayerLeftTable(gameInstanceGUID: CommonTypes.GameInstanceGUID, userId: CommonTypes.UserId)
@@ -210,54 +225,27 @@ local function onPlayerLeftTable(gameInstanceGUID: CommonTypes.GameInstanceGUID,
     end
 end
 
-local function cleanupTablePlayingUI()
-    -- When we're done playing, we can ditch events listening for server details about the game, and we can
-    -- ditch the client game instance.
-    local currentUIMode = StateDigest.getCurrentUIMode()
-    assert(currentUIMode == UIModes.TablePlaying, "Should be in TablePlaying mode")
-    local currentTableDescription = StateDigest.getCurrentTableDescription()
-    assert(currentTableDescription, "Should have a currentTableDescription")
-    assert(currentTableDescription.gameInstanceGUID, "Should have a gameInstanceGUID")
-    ClientEventUtils.removeGameEventConnections(currentTableDescription.gameInstanceGUID)
-    local clientGameInstanceFunctions = ClientGameInstanceFunctions.getClientGameInstanceFunctions(currentTableDescription.gameId)
-    assert(clientGameInstanceFunctions, "Should have clientGameInstanceFunctions")
-    local clientGameInstance = clientGameInstanceFunctions.getClientGameInstance()
-    assert(clientGameInstance,    "Should have gameInstance")
-    clientGameInstance:destroy()
-end
-
 --[[
     When we receieve updates from the server, this function is called.
     Updates UI to reflect current state.
 ]]
 local previousUIMode = UIModes.None
-function GuiMain.updateUI()
-    Utils.debugPrint("TablePlaying", "Doug: updateUI 001")
+function GuiMain.updateUI(opt_previousTableDescription: CommonTypes.TableDescription?)
+    Utils.debugPrint("GamePlay", "GuiMain.onTableUpdated calling GuiMain.updateUI")
 
     local currentUIMode = StateDigest.getCurrentUIMode()
-
-    Utils.debugPrint("TablePlaying", "Doug: updateUI 002 previousUIMode = " .. tostring(previousUIMode))
-    Utils.debugPrint("TablePlaying", "Doug: updateUI 002 currentUIMode = " .. tostring(currentUIMode))
 
     local currentTableDescription = StateDigest.getCurrentTableDescription()
 
     -- If this causes a change in UIMode, destroy the old UI and build a new one.
     if currentUIMode ~= previousUIMode then
-        Utils.debugPrint("TablePlaying", "Doug: updateUI 003")
-        cleanupCurrentUI()
-        cleanupFunctionsForCurrentUIMode = {}
+        cleanupPreviousUI(previousUIMode, opt_previousTableDescription)
         if currentUIMode == UIModes.TableSelection then
-            Utils.debugPrint("TablePlaying", "Doug: updateUI 004")
             TableSelectionUI.build()
         elseif currentUIMode == UIModes.TableWaitingForPlayers then
-            Utils.debugPrint("TablePlaying", "Doug: updateUI 005")
             assert(currentTableDescription, "Should have a currentTableDescription")
             TableWaitingUI.build(currentTableDescription.tableId)
         elseif currentUIMode == UIModes.TablePlaying then
-            cleanupFunctionsForCurrentUIMode = {
-                cleanupTablePlayingUI,
-            }
-            Utils.debugPrint("TablePlaying", "Doug: updateUI 006")
             assert(currentTableDescription, "Should have a currentTableDescription")
             -- Start listening for game-centric events.
             ClientEventManagement.listenToServerEventsForActiveGame(currentTableDescription.gameInstanceGUID,
@@ -272,13 +260,10 @@ function GuiMain.updateUI()
 
     -- Update the existing UI based on what we know about tables.
     if currentUIMode == UIModes.TableSelection then
-        Utils.debugPrint("TablePlaying", "Doug: updateUI 007")
         TableSelectionUI.update()
     elseif currentUIMode == UIModes.TableWaitingForPlayers then
-        Utils.debugPrint("TablePlaying", "Doug: updateUI 008")
         TableWaitingUI.update()
     elseif currentUIMode == UIModes.TablePlaying then
-        Utils.debugPrint("TablePlaying", "Doug: updateUI 009")
         TablePlayingUI.update()
     else
         -- ???
@@ -312,8 +297,17 @@ function GuiMain.onTableDestroyed(tableId: CommonTypes.TableId)
 end
 
 function GuiMain.onTableUpdated(tableDescription: CommonTypes.TableDescription)
+    Utils.debugPrint("GamePlay", "GuiMain.onTableUpdated tableDescription = ", tableDescription)
+    Utils.debugPrint("GamePlay", "GuiMain.onTableUpdated calling ClientTableDescriptions.updateTableDescriptionAsync")
+    local tableId = tableDescription.tableId
+    local previousTableDescription = ClientTableDescriptions.getTableDescription(tableId)
+    -- Copy it just to be safe.
+    previousTableDescription = Cryo.Dictionary.join({}, previousTableDescription)
+
     ClientTableDescriptions.updateTableDescriptionAsync(tableDescription)
-    GuiMain.updateUI()
+    Utils.debugPrint("GamePlay", "GuiMain.onTableUpdated called ClientTableDescriptions.updateTableDescriptionAsync")
+    Utils.debugPrint("GamePlay", "GuiMain.onTableUpdated calling GuiMain.updateUI")
+    GuiMain.updateUI(previousTableDescription)
 end
 
 return GuiMain

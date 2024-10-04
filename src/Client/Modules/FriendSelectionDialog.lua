@@ -29,9 +29,10 @@ local UserGuiUtils = require(RobloxBoardGameClient.Modules.UserGuiUtils)
 
 local FriendSelectionDialog = {}
 
--- SnackFort: few friends.
--- local mockUserId = 5845980262
--- TheGamer101: many friends.
+-- For testing purposes it helps to have lots of friends in here.
+-- My account has few friends.
+-- TheGamer101 has many friends.
+-- If in Studio, when we do stuff related to friends, pretend we are that account.
 local mockUserId = 2231221
 
 local selectedUserIds: {CommonTypes.UserId} = {}
@@ -91,11 +92,11 @@ updateSelectedFriendsRowContent = function(justBuilt: boolean?)
         widgetCotainerNamesForSelectedUsers[widgetContainerName] = true
     end
 
-    Utils.debugPrint("InviteToTable", "Doug: gridRowContent = ", gridRowContent)
+    Utils.debugPrint("InviteToTable", "gridRowContent = ", gridRowContent)
     local childWidgetContainers = gridRowContent:GetChildren()
-    Utils.debugPrint("InviteToTable", "Doug: childWidgetContainers = ", childWidgetContainers)
+    Utils.debugPrint("InviteToTable", "childWidgetContainers = ", childWidgetContainers)
     for _, childWidgetContainer in childWidgetContainers do
-        Utils.debugPrint("InviteToTable", "Doug: childWidgetContainer = ", childWidgetContainer)
+        Utils.debugPrint("InviteToTable", "childWidgetContainer = ", childWidgetContainer)
         if GuiUtils.isAWidgetContainer(childWidgetContainer) then
             setChildButtonActive(childWidgetContainer, not widgetCotainerNamesForSelectedUsers[childWidgetContainer.Name])
         end
@@ -161,7 +162,7 @@ local function fillGridInRowContentWithFriends(config: FriendSelectionDialogConf
 
     -- Async so do in a task spawn.
     asyncFetchAllFriends(userId, function(friendsFromFriendPages: {FriendFromFriendPages})
-        Utils.debugPrint("Friends", "Doug: friendsFromFriendPages = ", friendsFromFriendPages)
+        Utils.debugPrint("Friends", "friendsFromFriendPages = ", friendsFromFriendPages)
         appendFriendsToGrid(friendsFromFriendPages, config)
     end)
 end
@@ -214,7 +215,7 @@ local function makeCustomDialogContent(parent:Frame, config: FriendSelectionDial
     addFilterTextBox(filterWidgetContent)
 
     -- Grid of friends.
-    Utils.debugPrint("User", "Doug: makeCustomDialogContent 001 GuiConstants.userWidgetSize = ", GuiConstants.userWidgetSize)
+    Utils.debugPrint("User", "makeCustomDialogContent 001 GuiConstants.userWidgetSize = ", GuiConstants.userWidgetSize)
     gridRowContent = GuiUtils.addRowWithItemGridAndReturnRowContent(parent, "Row_AvailableFriends", GuiConstants.userWidgetSize)
     fillGridInRowContentWithFriends(config)
 
@@ -224,7 +225,7 @@ local function makeCustomDialogContent(parent:Frame, config: FriendSelectionDial
 end
 
 FriendSelectionDialog.selectFriends = function(config: FriendSelectionDialogConfig): Frame?
-    Utils.debugPrint("Friends", "Doug: config = ", config)
+    Utils.debugPrint("Friends", "config = ", config)
 
     assert(config, "config must be provided")
     assert(config.title, "config.title must be provided")
@@ -232,7 +233,7 @@ FriendSelectionDialog.selectFriends = function(config: FriendSelectionDialogConf
     assert(config.callback, "config.callback must be provided")
 
     selectedUserIds = config.preselectedUserIds or {}
-    Utils.debugPrint("Friends", "Doug: selectedUserIds = ", selectedUserIds)
+    Utils.debugPrint("Friends", "selectedUserIds = ", selectedUserIds)
 
     local dialogConfig: DialogUtils.DialogConfig = {
         title = config.title,

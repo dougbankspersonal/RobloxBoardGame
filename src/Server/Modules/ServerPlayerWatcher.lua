@@ -12,10 +12,11 @@ function ServerPlayerWatcher.startWatchingPlayers()
         -- If he is a host at a table, that table is destroyed.
         local userId = player.UserId
 
-        local gameTable = GameTablesStorage.findTableWithHost(userId)
+        local gameTable = GameTablesStorage.getTableWithHost(userId)
         if gameTable then
+            assert(gameTable.tableDescription.hostUserId == userId, "Host user id should match")
             -- This is the equivalent of the host asking to destroy the table.
-            ServerEventManagement.handleDestroyTable(gameTable.tableDescription.tableId)
+            ServerEventManagement.handleDestroyTable(userId, gameTable)
         end
 
         player.Chatted:Connect(function(message)
