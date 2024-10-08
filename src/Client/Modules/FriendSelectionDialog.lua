@@ -24,7 +24,7 @@ local Cryo = require(ReplicatedStorage.Cryo)
 local RobloxBoardGameClient = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
 local DialogUtils = require(RobloxBoardGameClient.Modules.DialogUtils)
-local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local GuiConstants = require(RobloxBoardGameClient.Globals.GuiConstants)
 local UserGuiUtils = require(RobloxBoardGameClient.Modules.UserGuiUtils)
 
 local FriendSelectionDialog = {}
@@ -224,7 +224,7 @@ local function makeCustomDialogContent(parent:Frame, config: FriendSelectionDial
     end
 end
 
-FriendSelectionDialog.selectFriends = function(config: FriendSelectionDialogConfig): Frame?
+function FriendSelectionDialog.selectFriends(config: FriendSelectionDialogConfig)
     Utils.debugPrint("Friends", "config = ", config)
 
     assert(config, "config must be provided")
@@ -246,12 +246,12 @@ FriendSelectionDialog.selectFriends = function(config: FriendSelectionDialogConf
                 end
             } :: DialogUtils.DialogButtonConfig,
         } :: {DialogUtils.DialogConfig},
-        makeCustomDialogContent = function(parent: Frame)
+        makeCustomDialogContent = function(_: number, parent: Frame)
             makeCustomDialogContent(parent, config)
         end,
     }
 
-    return DialogUtils.makeDialog(dialogConfig)
+    DialogUtils.makeDialogAndReturnId(dialogConfig)
 end
 
 return FriendSelectionDialog

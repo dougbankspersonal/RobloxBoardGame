@@ -21,9 +21,10 @@ local RobloxBoardGameClient = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
 local ClientTableDescriptions = require(RobloxBoardGameClient.Modules.ClientTableDescriptions)
 local ClientEventManagement = require(RobloxBoardGameClient.Modules.ClientEventManagement)
-local TableConfigDialog = require(RobloxBoardGameClient.Modules.TableConfigDialog)
-local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local GuiConstants = require(RobloxBoardGameClient.Globals.GuiConstants)
 local TableGuiUtils= require(RobloxBoardGameClient.Modules.TableGuiUtils)
+local GameSelectionUI = require(RobloxBoardGameClient.Modules.GameSelectionUI)
+local PrivacySelectionUI = require(RobloxBoardGameClient.Modules.PrivacySelectionUI)
 
 local TableSelectionUI = {}
 
@@ -79,7 +80,7 @@ end
     We do create some tweens in this UI: we use the special cleanup function
     to kill those tweens.
 ]]
-TableSelectionUI.build = function()
+function TableSelectionUI.build()
     local mainFrame = GuiUtils.getMainFrame()
     assert(mainFrame, "MainFrame not found")
 
@@ -101,10 +102,15 @@ TableSelectionUI.build = function()
     }
     local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_TableSelectionControls", rowOptions)
     GuiUtils.addStandardTextButtonInContainer(rowContent, "Host a new Table", function()
-        -- user must select a game and whether it is public or invite-only.
-        TableConfigDialog.makeGameSelectionDialog(function(gameId, isPublic)
-            -- Send all this along to the server.
-            ClientEventManagement.createTable(gameId, isPublic)
+        -- Prompt to select a game.
+        GameSelectionUI.promptToSelectGameID("Select a game", "Click on the game you want to play.", function(gameId: CommonTypes.GameId)
+            -- Prompt to select public or private.
+            PrivacySelectionUI.promptToSelectPrivacy("Public or Private?",
+                "Anyone in the experience can join a Public game.  Only invited players can join a Private game.",
+                function(isPublic: boolean)
+                    -- Send all this along to the server.
+                    ClientEventManagement.createTable(gameId, isPublic)
+                end)
         end)
     end)
 
@@ -113,7 +119,7 @@ TableSelectionUI.build = function()
 end
 
 -- update ui elements for the table creation/selection ui.
-TableSelectionUI.update = function()
+function TableSelectionUI.update()
     local mainFrame = GuiUtils.getMainFrame()
     assert(mainFrame, "MainFrame not found")
 

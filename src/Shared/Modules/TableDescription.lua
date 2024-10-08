@@ -15,8 +15,36 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local GameTableStates = require(RobloxBoardGameShared.Globals.GameTableStates)
 local PlayerUtils = require(RobloxBoardGameShared.Modules.PlayerUtils)
+local Utils = require(RobloxBoardGameShared.Modules.Utils)
 
 local TableDescription = {}
+
+function TableDescription.getOptionValue(tableDescription: CommonTypes.TableDescription, optionId: string): any
+    assert(tableDescription, "tableDescription must be provided")
+    assert(optionId, "optionId must be provided")
+    Utils.debugPrint("Analytics", "tableDescription = ", tableDescription)
+    Utils.debugPrint("Analytics", "optionId = ", optionId)
+    if tableDescription.opt_nonDefaultGameOptions then
+        if tableDescription.opt_nonDefaultGameOptions[optionId] then
+            return tableDescription.opt_nonDefaultGameOptions[optionId]
+        end
+    end
+    local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
+    assert(gameDetails, "gameDetails must be provided")
+    local gameOptions = gameDetails.gameOptions
+    assert(gameOptions, "gameOptions must be provided")
+    Utils.debugPrint("Analytics", "gameDetails = ", gameDetails)
+    Utils.debugPrint("Analytics", "gameOptions = ", gameOptions)
+    for _, gameOption in ipairs(gameOptions) do
+        if gameOption.gameOptionId == optionId then
+            if gameOption.opt_variants then
+                return 1
+            else
+                return false
+            end
+        end
+    end
+end
 
 function TableDescription.fetchUserDataAsync(tableDescription: CommonTypes.TableDescription)
     -- For everyone I might care about, prefetch the user info.

@@ -10,13 +10,22 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 
 local EventUtils = {}
 
-EventUtils.FolderNameTableEvents = "TableEvents"
-EventUtils.FolderNameTableFunctions = "TableFunctions"
+EventUtils.FolderNamePublicEvents = "PublicEvents"
+EventUtils.FolderNamePublicFunctions = "PublicFunctions"
+
+--[[
+Client side bindable events.
+]]
+EventUtils.BindableEventNameAnalyticsRecordCount = "AnalyticsRecordCount"
+EventUtils.BindableEventNameAnalyticsHandful = "AnalyticsHandful"
 
 --[[
 Client -> Server event names.
 ]]
 -- External to game: these are about table creation, config, destruction.
+EventUtils.EventNameGetAnalyticsRecordCount = "GetAnalyticsRecordCount"
+EventUtils.EventNameGetAnalyticsRecords = "GetAnalyticsRecords"
+
 EventUtils.EventNameCreateNewTable  = "CreateNewTable"
 EventUtils.EventNameDestroyTable = "DestroyTable"
 
@@ -50,6 +59,10 @@ EventUtils.FunctionNameFetchTableDescriptionsByTableId = "FetchTableDescriptions
 --[[
 Server -> Client evnet names.
 ]]
+-- Player-specific: goes to one player.
+EventUtils.EventNameSendAnalyticsRecordCount = "SendAnalyticsRecordCount"
+EventUtils.EventNameSendAnalyticsRecordsHandful = "SendAnalyticsRecordsHandful"
+
 -- Universal: everyone gets these.
 EventUtils.EventNameTableUpdated = "TableUpdated"
 EventUtils.EventNameTableDestroyed = "TableDestroyed"
@@ -75,6 +88,15 @@ function EventUtils.getReplicatedStorageFolder(folderName: string): Folder?
         assert(folder:IsA("Folder"), "Expected folder, got " .. folder.ClassName)
     end
     return folder
+end
+
+function EventUtils.getPublicRemoteEvent(eventName: string): RemoteEvent
+    local folder = EventUtils.getReplicatedStorageFolder(EventUtils.FolderNamePublicEvents)
+    assert(folder, "Folder not found: " .. EventUtils.FolderNamePublicEvents)
+    local event = folder:FindFirstChild(eventName)
+    assert(event, "Event not found: " .. eventName)
+    assert(event:IsA("RemoteEvent"), "Expected RemoteEvent, got " .. event.ClassName)
+    return event
 end
 
 -- Get the folder holding remote events for a particular game instance.

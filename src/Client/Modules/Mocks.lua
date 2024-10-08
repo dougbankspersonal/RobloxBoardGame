@@ -19,7 +19,7 @@ local Mocks = {}
 local CrossTableHeading = "Cross-Table"
 local WaitingAtTableHeading = "Waiting At Table"
 
-local summonMocksDialog = function(): Frame?
+local summonMocksDialog = function()
     local dialogButtonConfigs = {
         {
             text = "3rd Party Public, unjoined",
@@ -136,30 +136,34 @@ local summonMocksDialog = function(): Frame?
         end
     end
 
+    Utils.debugPrint("Dialogs", "summonMocksDialog 001")
     local dialogConfig: DialogUtils.DialogConfig = {
         title = "Mocks",
         description = "Various debug options",
         dialogButtonConfigs = dialogButtonConfigs,
     }
-    return DialogUtils.makeDialog(dialogConfig)
+
+    Utils.debugPrint("Dialogs", "summonMocksDialog 002")
+    DialogUtils.makeDialogAndReturnId(dialogConfig)
 end
 
 
-Mocks.addMocksButton = function(screenGui: ScreenGui)
-    -- Throw on a button with a very high z index to summon mocks.
-    if RunService:IsStudio() then
-        -- I may be running a test with multiple clients.  I only want Mocks for the client that's the real
-        -- me.
-        if Players.LocalPlayer.UserId == Utils.StudioUserId then
-            GuiUtils.addStandardTextButtonInContainer(screenGui, "Mocks", summonMocksDialog, {
-                Name = "MocksButton",
-            }, {
-                AnchorPoint = Vector2.new(1, 1),
-                Position = UDim2.new(1, -10, 1, -10),
-                ZIndex = 1000,
-            })
-        end
+Mocks.addMocksButton = function(parent: GuiObject, layoutOrder: number): nil
+    if not RunService:IsStudio() then
+        return
     end
+
+    -- I may be running a test with multiple clients.  I only want Mocks for the client that's the real
+    -- me.
+    if Players.LocalPlayer.UserId ~= Utils.RealPlayerUserId then
+        return
+    end
+
+    GuiUtils.addStandardTextButtonInContainer(parent, "Mocks", summonMocksDialog, {
+        Name = "MocksButton",
+    }, {
+        LayoutOrder = layoutOrder,
+    })
 end
 
 return Mocks

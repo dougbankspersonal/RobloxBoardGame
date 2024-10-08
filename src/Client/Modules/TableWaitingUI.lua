@@ -28,10 +28,10 @@ local RobloxBoardGameClient = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
 local ClientEventManagement = require(RobloxBoardGameClient.Modules.ClientEventManagement)
 local DialogUtils = require(RobloxBoardGameClient.Modules.DialogUtils)
-local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local GuiConstants = require(RobloxBoardGameClient.Globals.GuiConstants)
 local ClientTableDescriptions = require(RobloxBoardGameClient.Modules.ClientTableDescriptions)
 local FriendSelectionDialog = require(RobloxBoardGameClient.Modules.FriendSelectionDialog)
-local GameConfigDialog = require(RobloxBoardGameClient.Modules.GameConfigDialog)
+local GameConfigSelectionUI = require(RobloxBoardGameClient.Modules.GameConfigSelectionUI)
 local UserGuiUtils = require(RobloxBoardGameClient.Modules.UserGuiUtils)
 
 local TableWaitingUI = {}
@@ -85,7 +85,7 @@ local addGameAndHostInfo = function(frame: Frame, gameDetails: CommonTypes.GameD
 
         rowContent = GuiUtils.addRowAndReturnRowContent(frame, "Row_GameOptions", rowOptions)
 
-        local selectedOptionsString = GuiUtils.getSelectedGameOptionsString(tableDescription)
+        local selectedOptionsString = GuiUtils.getGameOptionsString(tableDescription.gameId, tableDescription.opt_nonDefaultGameOptions, "\n")
         assert(selectedOptionsString, "selectedOptionsString should exist")
         selectedOptionsString = GuiUtils.italicize(selectedOptionsString)
 
@@ -127,7 +127,7 @@ local onConfigureGameClicked = function(tableId: CommonTypes.TableId)
 
     local tableDescription = ClientTableDescriptions.getTableDescription(tableId)
 
-    GameConfigDialog.setGameConfig(tableDescription, function(nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions)
+    GameConfigSelectionUI.promptToSelectGameConfig(tableDescription, function(nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions)
         ClientEventManagement.setTableGameOptions(tableId, nonDefaultGameOptions)
     end)
 end
@@ -247,7 +247,7 @@ local updateGameOptions = function(parentOfRow: Frame, tableDescription: CommonT
 
     assert(gameOptionsTextLabel, "Should have gameOptionsTextLabel")
 
-    local selectedOptionsString = GuiUtils.getSelectedGameOptionsString(tableDescription)
+    local selectedOptionsString = GuiUtils.getGameOptionsString(tableDescription.gameId, tableDescription.opt_nonDefaultGameOptions, "\n")
     assert(selectedOptionsString, "selectedOptionsString should exist")
     selectedOptionsString = GuiUtils.italicize(selectedOptionsString)
     GuiUtils.updateTextLabel(gameOptionsTextLabel, selectedOptionsString)

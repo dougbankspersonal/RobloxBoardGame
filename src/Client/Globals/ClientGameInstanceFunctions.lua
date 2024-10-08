@@ -21,11 +21,11 @@ local ClientGameInstanceFunctions = {}
 
 local clientGameInstanceFunctionsByGameId = {} :: CommonTypes.ClientGameInstanceFunctionsByGameId
 
-ClientGameInstanceFunctions.setAllClientGameInstanceFunctions = function(_clientGameInstanceFunctionsByGameId: CommonTypes.ClientGameInstanceFunctionsByGameId): nil
+function ClientGameInstanceFunctions.setAllClientGameInstanceFunctions(_clientGameInstanceFunctionsByGameId: CommonTypes.ClientGameInstanceFunctionsByGameId): nil
     clientGameInstanceFunctionsByGameId = _clientGameInstanceFunctionsByGameId
 end
 
-ClientGameInstanceFunctions.getClientGameInstanceFunctions = function(gameId: CommonTypes.GameId): CommonTypes.ClientGameInstanceFunctions?
+function ClientGameInstanceFunctions.getClientGameInstanceFunctions(gameId: CommonTypes.GameId): CommonTypes.ClientGameInstanceFunctions?
   return clientGameInstanceFunctionsByGameId[gameId]
 end
 

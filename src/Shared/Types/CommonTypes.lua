@@ -193,7 +193,7 @@ export type ClientGameInstance = {
     -- Note you do NOT need to worry about the following:
     --   * Connections to remote events.  If you used ClientEventUtils.connectToGameEvent to connect to the event, it
     --     will be disconnected automatically.
-    --   * Any GUI elements under the game instance's main frame (passed in through makeClientGameInstance): those are
+    --   * Any GUI elements under the game instance's main frame (passed in through makeClientGameInstanceAsync): those are
     --     automatically destroyed.
     destroy: (ClientGameInstance) -> nil,
 
@@ -219,15 +219,6 @@ export type ClientGameInstance = {
     notifyThatHostEndedGame: (ClientGameInstance, GameEndDetails) -> boolean,
 }
 
-export type ClientGameInstanceFunctions = {
-    makeClientGameInstance: (TableDescription, Frame) -> ClientGameInstance,
-    getClientGameInstance: () -> ClientGameInstance?,
-}
-
-export type ClientGameInstanceFunctionsByGameId = {
-    [GameId]: ClientGameInstanceFunctions,
-}
-
 export type DebugStateConfigs = {
     -- Required.  What game are we talking about.
     gameId: GameId,
@@ -239,6 +230,23 @@ export type DebugStateConfigs = {
     playerCount: number?,
     -- Optional.  If true, start the game.
     startGame: boolean?,
+}
+
+export type AnalyticsRecord = {
+    gameInstanceGUID: GameInstanceGUID,
+    recordType: string,
+    idAsString: string,
+    value: any,
+}
+
+export type ClientGameInstanceFunctions = {
+    makeClientGameInstanceAsync: (TableDescription, Frame) -> ClientGameInstance,
+    getClientGameInstance: () -> ClientGameInstance?,
+    renderAnalyticsRecords: (Frame, {AnalyticsRecord}) -> nil,
+}
+
+export type ClientGameInstanceFunctionsByGameId = {
+    [GameId]: ClientGameInstanceFunctions,
 }
 
 local CommonTypes = {

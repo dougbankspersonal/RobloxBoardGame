@@ -13,7 +13,7 @@ local GameDetails = require(RobloxBoardGameShared.Globals.GameDetails)
 local RobloxBoardGameClient = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
 local ClientTableDescriptions = require(RobloxBoardGameClient.Modules.ClientTableDescriptions)
-local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local GuiConstants = require(RobloxBoardGameClient.Globals.GuiConstants)
 local GameGuiUtils = require(RobloxBoardGameClient.Modules.GameGuiUtils)
 local UserGuiUtils = require(RobloxBoardGameClient.Modules.UserGuiUtils)
 

@@ -14,6 +14,8 @@ local ClientGameInstanceFunctions = require(RobloxBoardGameClient.Globals.Client
 local ClientTableDescriptions = require(RobloxBoardGameClient.Modules.ClientTableDescriptions)
 local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
 local Mocks = require(RobloxBoardGameClient.Modules.Mocks)
+local AnalyticsView = require(RobloxBoardGameClient.Modules.AnalyticsView)
+local GuiConstants = require(RobloxBoardGameClient.Globals.GuiConstants)
 
 -- 3d avatar is irrelevant for this game.
 local function turnOffPlayerControls()
@@ -45,13 +47,13 @@ local function sanityCheckClientGameInstanceFunctionsByGameId(clientGameInstance
     for gameId, clientGameInstanceFunctions in pairs(clientGameInstanceFunctionsByGameId) do
       assert(gameId, "gameId must be provided")
       assert(clientGameInstanceFunctions, "clientGameInstanceFunctions must be provided")
-      assert(clientGameInstanceFunctions.makeClientGameInstance, "makeClientGameInstance must be provided")
+      assert(clientGameInstanceFunctions.makeClientGameInstanceAsync, "makeClientGameInstanceAsync must be provided")
       assert(clientGameInstanceFunctions.getClientGameInstance, "getClientGameInstance must be provided")
     end
   end
 
 
-ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, clientGameInstanceFunctionsByGameId: CommonTypes.ClientGameInstanceFunctionsByGameId)
+function ClientStartUp.ClientStartUp(screenGui: ScreenGui, gameDetailsByGameId: CommonTypes.GameDetailsByGameId, clientGameInstanceFunctionsByGameId: CommonTypes.ClientGameInstanceFunctionsByGameId)
     -- Sanity check on tables coming in from client of RobloxBoardGame library.
     SanityChecks.sanityCheckGameDetailsByGameId(gameDetailsByGameId)
     sanityCheckClientGameInstanceFunctionsByGameId(clientGameInstanceFunctionsByGameId)
@@ -76,7 +78,21 @@ ClientStartUp.ClientStartUp = function(screenGui: ScreenGui, gameDetailsByGameId
 
     GuiUtils.setMainScreenGui(screenGui)
 
-    Mocks.addMocksButton(screenGui)
+    local adminControlsFrame = Instance.new("Frame")
+    adminControlsFrame.Name = "AdminControlsFrame"
+    adminControlsFrame.AnchorPoint = Vector2.new(1, 1)
+    adminControlsFrame.Position = UDim2.fromScale(1, 1)
+    adminControlsFrame.Size = UDim2.fromScale(0, 0)
+    adminControlsFrame.BackgroundTransparency = 1
+    adminControlsFrame.Parent = screenGui
+    adminControlsFrame.ZIndex = GuiConstants.adminControlFrameZIndex
+    adminControlsFrame.AutomaticSize = Enum.AutomaticSize.XY
+
+    GuiUtils.addUIPadding(adminControlsFrame)
+    GuiUtils.addUIListLayout(adminControlsFrame)
+
+    Mocks.addMocksButton(adminControlsFrame, 1)
+    AnalyticsView.addAnalyticsButton(adminControlsFrame, 2)
 
     GuiMain.makeContainingScrollingFrame()
     GuiMain.makeMainFrame()

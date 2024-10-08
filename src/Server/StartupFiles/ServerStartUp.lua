@@ -23,8 +23,8 @@ local ServerPlayerWatcher = require(RobloxBoardGameServer.Modules.ServerPlayerWa
 local ServerStartUp = {}
 
 local function setUpRemoteEventsAndFunctions()
-    local tableEventsFolder = ServerEventUtils.createFolder(EventUtils.FolderNameTableEvents)
-    local tableFunctionsFolder = ServerEventUtils.createFolder(EventUtils.FolderNameTableFunctions)
+    local tableEventsFolder = ServerEventUtils.createFolder(EventUtils.FolderNamePublicEvents)
+    local tableFunctionsFolder = ServerEventUtils.createFolder(EventUtils.FolderNamePublicFunctions)
 
     ServerEventManagement.setupRemoteCommunications(tableEventsFolder, tableFunctionsFolder)
 end
@@ -39,7 +39,7 @@ local function sanityCheckServerGameInstanceConstructorsByGameId(serverGameInsta
     end
 end
 
-ServerStartUp.ServerStartUp = function(gameDetailsByGameId: CommonTypes.GameDetailsByGameId, serverGameInstanceConstructorsByGameId: CommonTypes.ServerGameInstanceConstructorsByGameId): nil
+function ServerStartUp.ServerStartUp(gameDetailsByGameId: CommonTypes.GameDetailsByGameId, serverGameInstanceConstructorsByGameId: CommonTypes.ServerGameInstanceConstructorsByGameId): nil
     -- Sanity checks.
     SanityChecks.sanityCheckGameDetailsByGameId(gameDetailsByGameId)
     sanityCheckServerGameInstanceConstructorsByGameId(serverGameInstanceConstructorsByGameId)

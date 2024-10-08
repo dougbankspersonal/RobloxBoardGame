@@ -35,6 +35,10 @@ GuiConstants.dialogBackgroundName = "DialogBackground"
 GuiConstants.dialogContentFrameName = "DialogContentFrame"
 GuiConstants.dialogName = "Dialog"
 GuiConstants.inactiveOverlayName = "InactiveOverlay"
+GuiConstants.dialogDescriptionTextLabel = "DialogDescriptionTextLabel"
+
+-- Analytics
+GuiConstants.statusUpdateTextLabel = "StatusUpdateTextLabel"
 
 -- Generic button/widget names.
 GuiConstants.checkboxName = "Checkbox"
@@ -159,9 +163,10 @@ GuiConstants.userLabelSize = UDim2.fromOffset(GuiConstants.userLabelWidth, GuiCo
 Z indices
 ]]
 GuiConstants.mainFrameZIndex = 2
-GuiConstants.dialogBackgroundZIndex = 3
-GuiConstants.dialogInputSinkZIndex = 4
-GuiConstants.dialogZIndex = 5
+GuiConstants.adminControlFrameZIndex = 100
+GuiConstants.dialogBackgroundZIndex = GuiConstants.adminControlFrameZIndex + 10
+GuiConstants.dialogInputSinkZIndex = GuiConstants.dialogBackgroundZIndex + 10
+GuiConstants.dialogZIndex = GuiConstants.dialogInputSinkZIndex + 10
 
 -- itemWidget = a widget for a user, game, or user.  Has images, text, and possible button overlays.
 GuiConstants.itemLabelImageZIndex = 2

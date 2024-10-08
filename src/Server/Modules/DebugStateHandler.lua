@@ -18,6 +18,7 @@ local RobloxBoardGameServer = script.Parent.Parent
 local GameTable = require(RobloxBoardGameServer.Classes.GameTable)
 local ServerEventUtils = require(RobloxBoardGameServer.Modules.ServerEventUtils)
 local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
+local ServerGameAnalytics = require(RobloxBoardGameServer.Analytics.ServerGameAnalytics)
 
 local DebugStateHandler = {}
 
@@ -31,6 +32,8 @@ DebugStateHandler.Setting = DebugStateHandler.SettingPublicGameLocalHost
 -- Shortcut to jump into a game right away.
 function DebugStateHandler.enterDebugState(realPlayerUserId: CommonTypes.UserId, opt_configs: CommonTypes.DebugStateConfigs?): ServerTypes.GameTable?
     assert(RunService:IsStudio(), "Should be in studio")
+    ServerGameAnalytics.dumpBudget()
+    ServerGameAnalytics.useThrowawayDataStore()
 
     if not opt_configs then
         return nil

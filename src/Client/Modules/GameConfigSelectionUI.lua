@@ -16,7 +16,7 @@ local RobloxBoardGameClient = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
 local DialogUtils = require(RobloxBoardGameClient.Modules.DialogUtils)
 
-local GameConfigDialog = {}
+local GameConfigSelectionUI = {}
 
 local nonDefaultGameOptions = {} :: CommonTypes.NonDefaultGameOptions
 
@@ -55,16 +55,16 @@ local makeCustomDialogContent = function(parent: Frame, gameDetails: CommonTypes
             })
         else
             local currentValue = nonDefaultGameOptions[gameOption.gameOptionId] or 1
-                local optionStrings = {}
-                for _, variant in gameOption.opt_variants do
-                    local key = GuiUtils.bold(variant.name)
-                    local value = GuiUtils.italicize(variant.description)
-                    local optionString = key .. ": " .. value
-                    table.insert(optionStrings, optionString)
-                end
+            local optionStrings = {}
+            for _, variant in gameOption.opt_variants do
+                local key = GuiUtils.bold(variant.name)
+                local value = GuiUtils.italicize(variant.description)
+                local optionString = key .. ": " .. value
+                table.insert(optionStrings, optionString)
+            end
 
 
-                GuiUtils.addRadioButtonFamily(rowContent, optionStrings, currentValue, function(newValue: number)
+            GuiUtils.addRadioButtonFamily(rowContent, optionStrings, currentValue, function(newValue: number)
                 if newValue ~= 1 then -- 1 is the default value.
                     nonDefaultGameOptions[gameOption.gameOptionId] = newValue
                 else
@@ -75,7 +75,7 @@ local makeCustomDialogContent = function(parent: Frame, gameDetails: CommonTypes
     end
 end
 
-GameConfigDialog.setGameConfig = function(tableDescription: CommonTypes.TableDescription, callback: (CommonTypes.NonDefaultGameOptions))
+function GameConfigSelectionUI.promptToSelectGameConfig(tableDescription: CommonTypes.TableDescription, callback: (CommonTypes.NonDefaultGameOptions))
     assert(tableDescription, "tableDescription must be provided")
     local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
     assert(gameDetails, "gameDetails must be provided")
@@ -97,12 +97,12 @@ GameConfigDialog.setGameConfig = function(tableDescription: CommonTypes.TableDes
                 end
             } :: DialogUtils.DialogButtonConfig,
         } :: {DialogUtils.DialogConfig},
-        makeCustomDialogContent = function(parent: Frame)
+        makeCustomDialogContent = function(_: number, parent: Frame)
             makeCustomDialogContent(parent, gameDetails)
         end,
     }
 
-    return DialogUtils.makeDialog(dialogConfig)
+    DialogUtils.makeDialogAndReturnId(dialogConfig)
 end
 
-return GameConfigDialog
+return GameConfigSelectionUI

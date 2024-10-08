@@ -11,7 +11,7 @@ local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
 -- Client
 local RobloxBoardGameClient = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
-local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local GuiConstants = require(RobloxBoardGameClient.Globals.GuiConstants)
 
 local GameGuiUtils = {}
 

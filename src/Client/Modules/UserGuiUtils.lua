@@ -20,7 +20,7 @@ local Cryo = require(ReplicatedStorage.Cryo)
 -- Client
 local RobloxBoardGameClient = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
-local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local GuiConstants = require(RobloxBoardGameClient.Globals.GuiConstants)
 
 local addRedX = function(widgetContainer: Frame)
     -- Add a little x indicator on the button.
@@ -56,7 +56,7 @@ end
 
 -- Standard notion of displaying a user name in a label.
 -- Start with basic "item text", tweak the size, deal with async nature of loading the name.
-UserGuiUtils.configureUserTextLabel = function(textLabel:TextLabel, userId: CommonTypes.UserId, opt_formatString: string?)
+function UserGuiUtils.configureUserTextLabel(textLabel:TextLabel, userId: CommonTypes.UserId, opt_formatString: string?)
     assert(textLabel, "Should have textLabel")
     assert(userId, "Should have userId")
 
@@ -87,7 +87,7 @@ local function addUserImageOverTextLabel(frame: GuiObject, userId: CommonTypes.U
     return imageLabel, textLabel
 end
 
-UserGuiUtils.addUserButtonInContainer = function(parent: Instance, userId: CommonTypes.UserId, onButtonClicked: (CommonTypes.UserId) -> nil): (Frame, TextButton)
+function UserGuiUtils.addUserButtonInContainer(parent: Instance, userId: CommonTypes.UserId, onButtonClicked: (CommonTypes.UserId) -> nil): (Frame, TextButton)
     Utils.debugPrint("Layout", "addUserButtonInContainer 001")
 
     local container, textButton = GuiUtils.addTextButtonInContainer(parent, GuiConstants.userButtonName, {
@@ -108,7 +108,7 @@ UserGuiUtils.addUserButtonInContainer = function(parent: Instance, userId: Commo
     return container, textButton
 end
 
-UserGuiUtils.addUserStaticInContainer = function(parent: Instance, userId: CommonTypes.UserId, opt_frameOptions: any?): (Frame, Frame)
+function UserGuiUtils.addUserStaticInContainer(parent: Instance, userId: CommonTypes.UserId, opt_frameOptions: any?): (Frame, Frame)
     local frameOptions = {
         Size = GuiConstants.userWidgetSize,
         BackgroundTransparency = 1,
@@ -123,7 +123,7 @@ end
 
 -- Make a widgetContainer containing a user (name, thumbnail, etc).
 -- It's a label: no click functionality.
-UserGuiUtils.addUserStaticWidgetContainer = function(parent: Instance, userId: number): Frame
+function UserGuiUtils.addUserStaticWidgetContainer(parent: Instance, userId: number): Frame
     local userWidgetContainer = GuiUtils.makeWidgetContainer(parent, "User", userId)
     -- We return a user label with "loading" message.
     -- We fire off a fetch to get async info.
@@ -137,7 +137,7 @@ end
 
 -- Make a widgetContainer containing a user (name, thumbnail, etc).
 -- It's button.
-UserGuiUtils.addUserButtonWidgetContainer = function(parent: Instance, userId: number, callback: (CommonTypes.UserId) -> nil): Frame
+function UserGuiUtils.addUserButtonWidgetContainer(parent: Instance, userId: number, callback: (CommonTypes.UserId) -> nil): Frame
     -- We return a user button with "loading" message.
     -- We fire off a fetch to get async info.
     -- When that resolves we remove loading message and add the real info.
@@ -159,7 +159,7 @@ end
 -- If it's a button:
 --   * Make the widget a button.
 --   * Hit the callback when button is clicked
-UserGuiUtils.updateUserRowContent = function(rowContent: Frame, justBuilt: boolean, userIds: {CommonTypes.UserId}, isButton: (userId: CommonTypes.UserId) -> boolean,
+function UserGuiUtils.updateUserRowContent(rowContent: Frame, justBuilt: boolean, userIds: {CommonTypes.UserId}, isButton: (userId: CommonTypes.UserId) -> boolean,
     buttonCallback: (CommonTypes.UserId) -> nil, renderEmptyList: (Frame) -> nil, cleanupEmptyList: (Frame) -> nil)
     assert(rowContent,  "Should have a rowContent")
 
@@ -178,7 +178,7 @@ UserGuiUtils.updateUserRowContent = function(rowContent: Frame, justBuilt: boole
     GuiUtils.updateWidgetContainerChildren(rowContent, userIds, makeUserWidgetContainer, renderEmptyList, cleanupEmptyList, justBuilt)
 end
 
-UserGuiUtils.addMiniUserWidget = function(parent: Instance, userId: CommonTypes.UserId): GuiObject
+function UserGuiUtils.addMiniUserWidget(parent: Instance, userId: CommonTypes.UserId): GuiObject
     local _, widget = UserGuiUtils.addUserStaticInContainer(parent, userId)
 
     -- adjust sizes.

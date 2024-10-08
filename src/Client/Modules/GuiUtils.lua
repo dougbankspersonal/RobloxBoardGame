@@ -22,7 +22,7 @@ local Utils = require(RobloxBoardGameShared.Modules.Utils)
 -- Client
 local RobloxBoardGameClient = script.Parent.Parent
 local TweenHandling = require(RobloxBoardGameClient.Modules.TweenHandling)
-local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local GuiConstants = require(RobloxBoardGameClient.Globals.GuiConstants)
 
 local Cryo = require(ReplicatedStorage.Cryo)
 
@@ -892,10 +892,7 @@ end
             assert(itemWidgetContainer.ItemId, "WidgetContainer should have an ItemId")
             assert(itemWidgetContainer.ItemId.Value == itemId, "WidgetContainer.ItemId.Value should be itemId")
 
-            local uiScale = Instance.new("UIScale")
-            uiScale.Name = "UIScale"
-            uiScale.Parent = itemWidgetContainer
-            uiScale.Scale = 1
+            GuiUtils.addUIScale(itemWidgetContainer)
         end
 
         GuiUtils.updateNilWidgetContainer(parentFrame, renderEmptyList, cleanupEmptyList)
@@ -905,10 +902,7 @@ end
         for _, widgetContainer in widgetContainersOut do
             local uiScale = widgetContainer:FindFirstChild("UIScale")
             if not uiScale then
-                uiScale = Instance.new("UIScale")
-                uiScale.Name = "UIScale"
-                uiScale.Parent = widgetContainer
-                uiScale.Scale = 1
+                GuiUtils.addUIScale(widgetContainer)
             end
             local tween = TweenService:Create(uiScale, tweenInfo, {Scale = 0})
             local key = makeTweenKey(widgetContainer)
@@ -935,10 +929,7 @@ end
             assert(itemWidgetContainer.ItemId, "WidgetContainer should have an ItemId")
             assert(itemWidgetContainer.ItemId.Value == itemId, "WidgetContainer.ItemId.Value should be itemId")
 
-            local uiScale = Instance.new("UIScale")
-            uiScale.Name = "UIScale"
-            uiScale.Parent = itemWidgetContainer
-            uiScale.Scale = 0
+            GuiUtils.addUIScale(itemWidgetContainer)
 
             local tween = TweenService:Create(itemWidgetContainer.UIScale, tweenInfo, {Scale = 1})
             local key = makeTweenKey(itemWidgetContainer)
@@ -1077,8 +1068,8 @@ end
     return "No"
 end
 
- function GuiUtils.getSelectedGameOptionsString(tableDescription: CommonTypes.TableDescription): string?
-    local gameDetails = GameDetails.getGameDetails(tableDescription.gameId)
+ function GuiUtils.getGameOptionsString(gameId: CommonTypes.GameId, opt_nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions?, opt_separator: string?): string?
+    local gameDetails = GameDetails.getGameDetails(gameId)
 
     -- Game doesn't even have options: nothing to say.
     if not gameDetails.gameOptions then
@@ -1086,7 +1077,7 @@ end
     end
 
     local enabledOptionsStrings = {}
-    local nonDefaultGameOptions = tableDescription.opt_nonDefaultGameOptions or {}
+    local nonDefaultGameOptions = opt_nonDefaultGameOptions or {}
 
     for _, gameOption in gameDetails.gameOptions do
         local optionValue = GuiUtils.getOptionValue(gameOption, nonDefaultGameOptions)
@@ -1102,7 +1093,8 @@ end
         return "(None)"
     end
 
-    return table.concat(enabledOptionsStrings,"\n")
+    local separator = opt_separator or ", "
+    return table.concat(enabledOptionsStrings, separator)
 end
 
  function GuiUtils.getTableSizeString(gameDetails: CommonTypes.GameDetails): string
@@ -1364,6 +1356,23 @@ function GuiUtils.addSlideOutEffectToScrollingFrame(scrollingFrame:ScrollingFram
             maybeConsumeFromQueue()
         end)
     end)
+end
+
+
+function GuiUtils.destroyGuiObjectChildren(parent: Instance)
+    local children = parent:GetChildren()
+    for _, child in pairs(children) do
+        if child:IsA("GuiObject") then
+            child:Destroy()
+        end
+    end
+end
+
+function GuiUtils.addUIScale(parent: Instance)
+    local uiScale = Instance.new("UIScale")
+    uiScale.Name = "UIScale"
+    uiScale.Parent = parent
+    uiScale.Scale = 1
 end
 
 return GuiUtils

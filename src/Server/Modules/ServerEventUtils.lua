@@ -67,7 +67,6 @@ function ServerEventUtils.removeGameFunctionsFolder(gameInstanceGUID: CommonType
     end
 end
 
-
 -- Make a remote event with given name in given folder.
 -- If this event is fired on client sent to server, run the given callback.
 function ServerEventUtils.createRemoteEvent(folder: Folder, eventName: string, opt_onServerEvent): RBXScriptConnection?
@@ -149,10 +148,10 @@ function ServerEventUtils.createGameRemoteFunction(gameInstanceGUID: CommonTypes
 end
 
 --[[
-On server, fire this event for just these players.
+Send this event to listed players.
 ]]
-function ServerEventUtils.sendEventForPlayers(event: RemoteEvent, players: {Players}, ...)
-    assert(event, "Event not found")
+function ServerEventUtils.sendToPlayers(event:RemoteEvent, players: {Players}, ...)
+    assert(event, "event not found")
     for _, player in ipairs(players) do
         event:FireClient(player, ...)
     end
@@ -161,13 +160,27 @@ end
 --[[
 Server is sending an event only to players in this game.
 ]]
-function ServerEventUtils.sendEventForPlayersInGame(tableDescription: CommonTypes.TableDescription, eventName: string, ...)
+function ServerEventUtils.sendEventToPlayersInGame(tableDescription: CommonTypes.TableDescription, eventName: string, ...)
     TableDescripton.sanityCheck(tableDescription)
-    assert(eventName, "eventName not found")
-    local eventForGame = EventUtils.getRemoteEventForGame(tableDescription.gameInstanceGUID, eventName)
-    assert(eventForGame, "Event not found")
     local players = TableDescription.getPlayers(tableDescription)
-    ServerEventUtils.sendEventForPlayers(eventForGame, players, ...)
+    assert(players, "Players not found")
+    assert(typeof(players) == "table", "Players should be a table")
+
+    assert(tableDescription.gameInstanceGUID, "gameInstanceGUID not found")
+    local gameEvent = EventUtils.getRemoteEventForGame(tableDescription.gameInstanceGUID, eventName)
+    assert(gameEvent, "Game event folder not found")
+
+    ServerEventUtils.sendToPlayers(gameEvent, players, ...)
+end
+
+function ServerEventUtils.sendPublicEventToPlayers(eventName: string, players: {Players}, ...)
+    assert(players, "Players not found")
+    assert(typeof(players) == "table", "Players should be a table")
+
+    local gameEvent = EventUtils.getPublicRemoteEvent(eventName)
+    assert(gameEvent, "Game event folder not found")
+
+    ServerEventUtils.sendToPlayers(gameEvent, players, ...)
 end
 
 function ServerEventUtils.setupRemoteCommunicationsForGame(gameInstanceGUID: CommonTypes.GameInstanceGUID)

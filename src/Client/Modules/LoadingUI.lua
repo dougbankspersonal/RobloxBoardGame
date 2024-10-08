@@ -8,7 +8,7 @@ local TweenService = game:GetService("TweenService")
 -- Client
 local RobloxBoardGameClient = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
-local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local GuiConstants = require(RobloxBoardGameClient.Globals.GuiConstants)
 --[[
 Build ui elements for an inital "loading" screen while we fetch stuff from the server.
 

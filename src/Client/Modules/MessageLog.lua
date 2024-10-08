@@ -11,7 +11,7 @@ local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local RobloxBoardGameClient = script.Parent.Parent
 local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
 local TweenService = game:GetService("TweenService")
-local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local GuiConstants = require(RobloxBoardGameClient.Globals.GuiConstants)
 
 local MessageLog = {}
 MessageLog.__index = MessageLog

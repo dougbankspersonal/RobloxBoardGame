@@ -22,7 +22,7 @@ local GameDetails = {}
 local gameDetailsByGameId = {} :: CommonTypes.GameDetailsByGameId
 
 
-GameDetails.sanityCheck = function(gameDetails:CommonTypes.GameDetails)
+function GameDetails.sanityCheck(gameDetails:CommonTypes.GameDetails)
     assert(gameDetails, "gameDetails must be provided")
     assert(gameDetails.gameId, "gameId must be provided")
     assert(gameDetails.gameImage, "gameImage must be provided")
@@ -32,11 +32,11 @@ GameDetails.sanityCheck = function(gameDetails:CommonTypes.GameDetails)
     assert(gameDetails.maxPlayers, "maxPlayers must be provided")
 end
 
-GameDetails.setAllGameDetails = function(_gameDetailsByGameId: CommonTypes.GameDetailsByGameId): nil
+function GameDetails.setAllGameDetails(_gameDetailsByGameId: CommonTypes.GameDetailsByGameId): nil
     gameDetailsByGameId = _gameDetailsByGameId
 end
 
-GameDetails.getGameDetails = function(gameId: CommonTypes.GameId): CommonTypes.GameDetails?
+function GameDetails.getGameDetails(gameId: CommonTypes.GameId): CommonTypes.GameDetails?
     if gameDetailsByGameId[gameId] then
         return gameDetailsByGameId[gameId]
     else
@@ -44,11 +44,11 @@ GameDetails.getGameDetails = function(gameId: CommonTypes.GameId): CommonTypes.G
     end
 end
 
-GameDetails.getAllGameDetails = function(): CommonTypes.GameDetailsByGameId
+function GameDetails.getGameDetailsByGameId(): CommonTypes.GameDetailsByGameId
     return gameDetailsByGameId
 end
 
-GameDetails.getGameOptionById = function(gameDetails:CommonTypes.GameDetails, optionId: string): CommonTypes.GameOption?
+function GameDetails.getGameOptionById(gameDetails:CommonTypes.GameDetails, optionId: string): CommonTypes.GameOption?
     assert(gameDetails, "gameDetails must be provided")
     assert(optionId, "optionId must be provided")
     for _, option in gameDetails.gameOptions do

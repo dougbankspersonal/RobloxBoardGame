@@ -26,12 +26,13 @@ local ServerEventUtils = require(RobloxBoardGameServer.Modules.ServerEventUtils)
 local GameTablesStorage = require(RobloxBoardGameServer.Modules.GameTablesStorage)
 local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
 local GameTable = require(RobloxBoardGameServer.Classes.GameTable)
+local ServerGameAnalytics = require(RobloxBoardGameServer.Analytics.ServerGameAnalytics)
 
 local ServerEventManagement = {}
 
 -- Notify every player of an event.
-local function sendToAllPlayersInExperience(eventName, ...)
-    local tableEvents = ReplicatedStorage:FindFirstChild(EventUtils.FolderNameTableEvents)
+local function sendToAllPlayersInExperience(eventName: string, ...)
+    local tableEvents = ReplicatedStorage:FindFirstChild(EventUtils.FolderNamePublicEvents)
     assert(tableEvents, "TableEvents not found")
     local event = tableEvents:FindFirstChild(eventName)
     assert(event, "Event not found: " .. eventName)
@@ -72,7 +73,7 @@ local function handleUserLeavingTable(userId: CommonTypes.UserId, gameTable: Ser
         -- experience showing that the player left, and the host may get some controls to react
         -- somehow (maybe end the game or somehow adjust gameplay to account for missing player).
         if gameTable.tableDescription.gameInstanceGUID then
-            ServerEventUtils.sendEventForPlayersInGame(gameTable.tableDescription,
+            ServerEventUtils.sendEventToPlayersInGame(gameTable.tableDescription,
                 EventUtils.EventNamePlayerLeftTable,
                 userId)
         end
@@ -127,7 +128,7 @@ local function handleEndGame(actorUserId: CommonTypes.UserId, gameTable: ServerT
 
     Utils.debugPrint("GamePlay", "ServerEventManagement handleEndGame: sending NotifyThatHostEndedGame")
     -- First use non-modified game table to send events to members that this game is gonna die.
-    ServerEventUtils.sendEventForPlayersInGame(gameTable:getTableDescription(), EventUtils.EventNameNotifyThatHostEndedGame, gameEndDetails)
+    ServerEventUtils.sendEventToPlayersInGame(gameTable:getTableDescription(), EventUtils.EventNameNotifyThatHostEndedGame, gameEndDetails)
 
     Utils.debugPrint("GamePlay", "ServerEventManagement calling gameTable.endGame")
     -- Now end the game.
@@ -207,7 +208,7 @@ local function createGameTableMockRemoteEvent(tableEventsFolder: Folder, eventNa
     local adjustedCallback
     if opt_onServerEventForTable then
         adjustedCallback = function(player: Player, ...): nil
-            if player.UserId ~= Utils.StudioUserId then
+            if player.UserId ~= Utils.RealPlayerUserId then
                 return
             end
             opt_onServerEventForTable(...)
@@ -281,7 +282,7 @@ local function addMockEventHandlers(tableEventsFolder: Folder)
 
     -- Destroy all Mock Tables.
     ServerEventUtils.createRemoteEvent(tableEventsFolder, EventUtils.EventNameDestroyTablesWithMockHosts, function(player)
-        if player.UserId ~= Utils.StudioUserId then
+        if player.UserId ~= Utils.RealPlayerUserId then
             return
         end
         Utils.debugPrint("Mocks", "Doug; Destroying tables with mock hosts")
@@ -298,13 +299,13 @@ local function addMockEventHandlers(tableEventsFolder: Folder)
 
     -- Make a mock table.
     ServerEventUtils.createRemoteEvent(tableEventsFolder, EventUtils.EventNameCreateMockTable, function(player: Player, isPublic: boolean, shouldJoin: boolean, isHost: boolean)
-        if player.UserId ~= Utils.StudioUserId then
+        if player.UserId ~= Utils.RealPlayerUserId then
             return
         end
         Utils.debugPrint("Mocks", "Doug; Mocking Table")
         -- Make a random table.
         -- Get a random game id.
-        local gameDetailsByGameId = GameDetails.getAllGameDetails()
+        local gameDetailsByGameId = GameDetails.getGameDetailsByGameId()
         local gameId = Utils.getRandomKey(gameDetailsByGameId)
 
         local hostUserId
@@ -336,23 +337,41 @@ end
 
 local function setupClientToServerEvents(tableEventsFolder: Folder)
     -- Events sent from client to server.
+    ServerEventUtils.createRemoteEvent(tableEventsFolder, EventUtils.EventNameCreateNewTable, function(player: Player, gameId: CommonTypes.GameId)
+        handleCreateTable(player.UserId, gameId, false)
+    end)
+
     -- Event to create a new table.
-    ServerEventUtils.createRemoteEvent(tableEventsFolder, EventUtils.EventNameCreateNewTable, function(player, gameId, isPublic)
-        handleCreateTable(player.UserId, gameId, isPublic)
+    ServerEventUtils.createRemoteEvent(tableEventsFolder, EventUtils.EventNameGetAnalyticsRecordCount, function(player: Player, gameId: CommonTypes.GameId, conversationId: number)
+        assert(player, "player should be defined")
+        assert(gameId, "gameId should be defined")
+        assert(conversationId, "conversationId should be defined")
+        -- Async, use thread.
+        task.spawn(function()
+            local recordCount = ServerGameAnalytics.getRecordCountForGameAsync(gameId)
+            ServerEventUtils.sendPublicEventToPlayers(EventUtils.EventNameSendAnalyticsRecordCount, {player}, conversationId, recordCount)
+        end)
+    end)
+
+    ServerEventUtils.createRemoteEvent(tableEventsFolder, EventUtils.EventNameGetAnalyticsRecords, function(player: Player, gameId: CommonTypes.GameId, conversationId: number)
+        -- Grab handfuls and send back as we get them.
+        ServerGameAnalytics.fetchAllAnalyticsRecordsForGameByPages(gameId, function(records: {CommonTypes.AnalyticsRecord}, isFinished: boolean)
+            ServerEventUtils.sendPublicEventToPlayers(EventUtils.EventNameSendAnalyticsRecordsHandful, {player}, conversationId, records, isFinished)
+        end)
     end)
 
     -- Event to destroy a table.
-    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameDestroyTable, function(player, gameTable)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameDestroyTable, function(player: Player, gameTable: ServerTypes.GameTable)
         ServerEventManagement.handleDestroyTable(player.UserId, gameTable)
     end)
 
     -- Event to join a table.
-    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameJoinTable, function(player, gameTable)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameJoinTable, function(player: Player, gameTable: ServerTypes.GameTable)
         handleJoinTable(player.UserId, gameTable)
     end)
 
     -- Event to invite someone to table.
-    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameInvitePlayerToTable, function(player, gameTable, inviteeId)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameInvitePlayerToTable, function(player: Player, gameTable: ServerTypes.GameTable, inviteeId: CommonTypes.UserId)
         handleAddInvite(player.UserId, inviteeId, gameTable)
     end)
 
@@ -373,26 +392,26 @@ local function setupClientToServerEvents(tableEventsFolder: Folder)
     end)
 
     -- Event to remove an invite from a table.
-    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameRemoveInviteForTable, function(player, gameTable, userId)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameRemoveInviteForTable, function(player: Player, gameTable: ServerTypes.GameTable, userId: CommonTypes.UserId)
         if gameTable:removeInviteForTable(player.UserId, userId) then
             sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
         end
     end)
 
     -- Event to update game options.
-    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameSetTableGameOptions, function(player, gameTable, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameSetTableGameOptions, function(player: Player, gameTable: ServerTypes.GameTable, nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions)
         if gameTable:updateGameOptions(player.UserId, nonDefaultGameOptions) then
             sendToAllPlayersInExperience(EventUtils.EventNameTableUpdated, gameTable:getTableDescription())
         end
     end)
 
     -- Event to leave a table.
-    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameLeaveTable, function(player, gameTable)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameLeaveTable, function(player: Player, gameTable: ServerTypes.GameTable)
         handleUserLeavingTable(player.UserId, gameTable)
     end)
 
     -- Start playing the game.
-    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameStartGame, function(player, gameTable)
+    createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameStartGame, function(player: Player, gameTable: ServerTypes.GameTable)
         handleStartGame(player.UserId, gameTable)
     end)
 
@@ -418,12 +437,16 @@ local function setupServerToClientEvents(tableEventsFolder: Folder)
     createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameTableDestroyed)
     -- Notification that something about this table has changed.
     createGameTableRemoteEvent(tableEventsFolder, EventUtils.EventNameTableUpdated)
+
+    ServerEventUtils.createRemoteEvent(tableEventsFolder, EventUtils.EventNameSendAnalyticsRecordCount)
+
+    ServerEventUtils.createRemoteEvent(tableEventsFolder, EventUtils.EventNameSendAnalyticsRecordsHandful)
 end
 
 --[[
 Startup Function making all the events where client sends to server.
 ]]
-ServerEventManagement.setupRemoteCommunications = function(tableEventsFolder: Folder, tableFunctionsFolder: Folder)
+function ServerEventManagement.setupRemoteCommunications(tableEventsFolder: Folder, tableFunctionsFolder: Folder)
     assert(tableEventsFolder, "tableEventsFolder should be defined")
     assert(tableFunctionsFolder, "tableFunctionsFolder should be defined")
 

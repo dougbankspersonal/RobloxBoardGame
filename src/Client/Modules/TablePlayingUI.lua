@@ -22,7 +22,7 @@ local SanityChecks = require(RobloxBoardGameShared.Modules.SanityChecks)
 local RobloxBoardGameClient = script.Parent.Parent
 local ClientTableDescriptions = require(RobloxBoardGameClient.Modules.ClientTableDescriptions)
 local GuiUtils = require(RobloxBoardGameClient.Modules.GuiUtils)
-local GuiConstants = require(RobloxBoardGameClient.Modules.GuiConstants)
+local GuiConstants = require(RobloxBoardGameClient.Globals.GuiConstants)
 local ClientEventManagement = require(RobloxBoardGameClient.Modules.ClientEventManagement)
 local ClientGameInstanceFunctions = require(RobloxBoardGameClient.Globals.ClientGameInstanceFunctions)
 
@@ -180,19 +180,19 @@ local makeClientGameFrame = function(mainFrame: GuiObject)
     return contentFrame
 end
 
-local makeClientGameInstance = function(tableDescription: CommonTypes.TableDescription, frame: Frame): CommonTypes.ClientGameInstance
+local makeClientGameInstanceAsync = function(tableDescription: CommonTypes.TableDescription, frame: Frame): CommonTypes.ClientGameInstance
     -- Let game build its UI in here.
     local clientGameInstanceFunctions = ClientGameInstanceFunctions.getClientGameInstanceFunctions(tableDescription.gameId)
     assert(clientGameInstanceFunctions, "Should have gameInstanceFunctions")
-    assert(clientGameInstanceFunctions.makeClientGameInstance, "Should have gameInstanceFunctions.makeClientGameInstance")
-    local clientGameInstance = clientGameInstanceFunctions.makeClientGameInstance(tableDescription, frame)
+    assert(clientGameInstanceFunctions.makeClientGameInstanceAsync, "Should have gameInstanceFunctions.makeClientGameInstanceAsync")
+    local clientGameInstance = clientGameInstanceFunctions.makeClientGameInstanceAsync(tableDescription, frame)
     SanityChecks.sanityCheckClientGameInstance(clientGameInstance)
     return clientGameInstance
 end
 
 -- Create barebones structure for this UI,
 -- Do not bother filling in anything that might change over time: this comes with update.
-TablePlayingUI.build = function(tableId: CommonTypes.TableId)
+function TablePlayingUI.build(tableId: CommonTypes.TableId)
     -- Sanity check arguments, get all the other stuff we need.
     assert(tableId, "Should have a tableId")
 
@@ -213,12 +213,13 @@ TablePlayingUI.build = function(tableId: CommonTypes.TableId)
 
     addSidebar(mainFrame, tableDescription)
     local gameFrame = makeClientGameFrame(mainFrame)
-    local gameInstance = makeClientGameInstance(tableDescription, gameFrame)
-
-    SanityChecks.sanityCheckClientGameInstance(gameInstance)
+    task.spawn(function()
+        local gameInstance = makeClientGameInstanceAsync(tableDescription, gameFrame)
+        SanityChecks.sanityCheckClientGameInstance(gameInstance)
+    end)
 end
 
-TablePlayingUI.update = function()
+function TablePlayingUI.update()
 end
 
 return TablePlayingUI

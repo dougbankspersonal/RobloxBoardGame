@@ -16,17 +16,18 @@ local Utils = {}
 
 if RunService:IsStudio() then
     -- FIXME(dbanks)
-    -- I don't know a way around this.  StudioService has what I want but can only be used in
-    -- Plugin.
-    -- If running in Studio, I want user ID of the person logged in to Studio: he is allowed to
-    -- play as a mock user.
-    -- Seems like i just have to hard wire my user id?
-    Utils.StudioUserId = 5845980262
+    -- There should be some better way to do this.
+    -- If you're in a plugin you can ask for the id of the user logged in to Studio, but
+    -- this is not a plugin.
+    -- Hardwiring to my account id.
+    Utils.RealPlayerUserId = 5845980262
 end
 
 local debugPrintEnabledLabels = {
+    Analytics = false,
     Buttons = false,
     ClientTableDescriptions = false,
+    Dialogs = false,
     Friends = false,
     GameConfig = false,
     GameMetadata = false,
@@ -45,8 +46,9 @@ local debugPrintEnabledLabels = {
     UserLayout = false,
 }
 
-debugPrintEnabledLabels.GamePlay = true
+debugPrintEnabledLabels.Dialogs = true
 
+-- Split a string into a list of strings based on delimited.
 function Utils.splitString(str: string, delimiter: string): {string}
     local result = {}
     for match in (str .. delimiter):gmatch("(.-)" .. delimiter) do
@@ -174,8 +176,8 @@ function Utils.firstUserCanPlayAsSecondUser(tableDescription: CommonTypes.TableD
 
     Utils.debugPrint("Mocks", "firstUserCanPlayAsSecondUser: tableDescription = ", tableDescription)
     -- If current player is mock and attempted actor is host, fine.
-    if Utils.StudioUserId  == firstUserId and tableDescription.mockUserIds[secondUserId] then
-        Utils.debugPrint("Mocks", "firstUserCanPlayAsSecondUser: firstUserId is Utils.StudioUserId and secondUserId is mock")
+    if Utils.RealPlayerUserId == firstUserId and tableDescription.mockUserIds[secondUserId] then
+        Utils.debugPrint("Mocks", "firstUserCanPlayAsSecondUser: firstUserId is Utils.RealPlayerUserId and secondUserId is mock")
         return true
     end
 
