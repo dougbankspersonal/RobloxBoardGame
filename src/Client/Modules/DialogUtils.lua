@@ -20,12 +20,17 @@ local DialogUtils = {}
 local dialogIdGen = 0
 local backgroundTransparencyWhenVisible = 0.5
 
+local currentBackgroundTweenOut = nil
+local currentBackgroundTweenIn = nil
+
+export type DialogId = number
+
 export type DialogFrameWithId = {
     frame: Frame,
-    dialogId: number,
+    dialogId: DialogId,
 }
 
-local dialogStack = {} :: {DialogFrameWithId}
+local dialogFrameWithIdStack = {} :: {DialogFrameWithId}
 
 export type DialogButtonConfig = {
     text: string,
@@ -48,27 +53,46 @@ end
 local function hideDialogBackground()
     local dialogBackground = DialogUtils.getDialogBackground()
     assert(dialogBackground, "DialogBackground not found")
+
+    -- If we are already tweening out: done.
+    if currentBackgroundTweenOut then
+        return
+    end
+
+    -- If we are tweening background in, allow that to proceed: some new dialog needs it.
+    if currentBackgroundTweenIn then
+        return
+    end
+
     local tweenInfo = TweenInfo.new(GuiConstants.standardTweenTime, Enum.EasingStyle.Circular)
     local tweenOut = TweenService:Create(dialogBackground, tweenInfo, {BackgroundTransparency = 1})
+    currentBackgroundTweenOut = tweenOut
     tweenOut.Completed:Connect(function()
         local db = DialogUtils.getDialogBackground()
         if db then
             db.Visible = false
         end
+
+        if currentBackgroundTweenOut == tweenOut then
+            currentBackgroundTweenOut = nil
+        end
     end)
+
     tweenOut:Play()
 end
 
-function DialogUtils.cleanupDialog(dialogId: number)
+function DialogUtils.cleanupDialog(dialogId: DialogId)
+    Utils.debugPrint("Analytics", "cleanupDialog called, stack trace = ", debug.traceback())
+
     assert(dialogId, "dialogId should be provided")
     -- Already gone, forget it.
-    local dialog = DialogUtils.getDialogById(dialogId)
-    if not dialog then
+    local dialogFrame = DialogUtils.getDialogById(dialogId)
+    if not dialogFrame then
         return
     end
 
     -- Remove from stack.
-    dialogStack = Cryo.List.map(dialogStack, function(dfwi: DialogFrameWithId)
+    dialogFrameWithIdStack = Cryo.List.map(dialogFrameWithIdStack, function(dfwi: DialogFrameWithId)
         if dfwi.dialogId ~= dialogId then
             return dfwi
         end
@@ -76,29 +100,30 @@ function DialogUtils.cleanupDialog(dialogId: number)
     end)
 
     -- Tween it out then destroy it.
-    local uiScale = dialog:FindFirstChild("UIScale")
+    local uiScale = dialogFrame:FindFirstChild("UIScale")
     local tweenInfo = TweenInfo.new(GuiConstants.standardTweenTime, Enum.EasingStyle.Circular)
     local tweenOut = TweenService:Create(uiScale, tweenInfo, {Scale = 0})
     tweenOut.Completed:Connect(function()
-        dialog:Destroy()
+        dialogFrame:Destroy()
     end)
     tweenOut:Play()
 
     -- if stack is now empty, hide the background.
-    if #dialogStack == 0 then
+    if #dialogFrameWithIdStack == 0 then
         hideDialogBackground()
     else
         -- Top item in the stack is now visible.
-        dialogStack[#dialogStack].frame.Visible = true
+        dialogFrameWithIdStack[#dialogFrameWithIdStack].frame.Visible = true
     end
 end
 
-local function addCancelButton(dialog: Frame, dialogId: number)
-    assert(dialog, "dialog should be provided")
+local function addCancelButton(dialogFrame: Frame, dialogId: DialogId)
+    assert(dialogFrame, "dialogFrame should be provided")
     assert(dialogId, "dialogId should be provided")
 
     local cancelButton = Instance.new("ImageButton")
-    cancelButton.Parent = dialog
+    cancelButton.Parent = dialogFrame
+    cancelButton.ZIndex = 2
     cancelButton.Size = UDim2.fromOffset(GuiConstants.redXSize, GuiConstants.redXSize)
     cancelButton.Position = UDim2.new(1, -GuiConstants.redXSize - GuiConstants.redXMargin, 0, GuiConstants.redXMargin)
     cancelButton.Image = GuiConstants.redXImage
@@ -114,19 +139,16 @@ Get or make the dialog background. It is a big translucent square covering
 the whole screen.  It soaks up clicks so you can't click on anything else.
 ]]
 local function getOrMakeDialogBackground()
-    Utils.debugPrint("Dialogs", "getOrMakeDialogBackground 001")
     local dialogBackground = DialogUtils.getDialogBackground()
     if dialogBackground then
-        Utils.debugPrint("Dialogs", "getOrMakeDialogBackground 002")
         return dialogBackground
     end
 
-    Utils.debugPrint("Dialogs", "getOrMakeDialogBackground 003")
     local mainScreenGui = GuiUtils.getMainScreenGui()
     -- Dialog background is a button so it soaks up clicks.
     dialogBackground = Instance.new("TextButton")
-    dialogBackground.Position = UDim2.fromOffset(0, GuiConstants.robloxTopBarBottomPadding)
-    dialogBackground.Size = UDim2.new(1, 0, 1, -GuiConstants.robloxTopBarBottomPadding)
+    dialogBackground.Position = UDim2.fromOffset(0, GuiConstants.robloxTopBarBottomPaddingPx)
+    dialogBackground.Size = UDim2.new(1, 0, 1, -GuiConstants.robloxTopBarBottomPaddingPx)
     dialogBackground.BackgroundColor3 = Color3.new(0, 0, 0)
     dialogBackground.BackgroundTransparency = backgroundTransparencyWhenVisible
     dialogBackground.Parent = mainScreenGui
@@ -139,60 +161,72 @@ local function getOrMakeDialogBackground()
 end
 
 --[[
-Make the dialog itself.  Just the frame.
+Make the dialogFrame itself.
 ]]
-local function makeDialogFrame(dialogBackground: Frame, dialogId: number): Frame
+local function makeDialogFrame(dialogBackground: Frame, dialogId: DialogId): Frame
     assert(dialogBackground, "dialogBackground should be provided")
-    local dialog = Instance.new("Frame")
-    dialog.Size = UDim2.new(1, -GuiConstants.screenToDialogPadding, 1, -GuiConstants.screenToDialogPadding)
-    dialog.Position = UDim2.fromScale(0.5, 0.5)
-    dialog.AnchorPoint = Vector2.new(0.5, 0.5)
-    dialog.BackgroundColor3 = Color3.new(1, 1, 1)
-    dialog.Parent = dialogBackground
-    dialog.Name = GuiConstants.dialogName
-    dialog.BorderSizePixel = 0
-    dialog.ZIndex = GuiConstants.dialogZIndex + dialogId
-    GuiUtils.addUIGradient(dialog, GuiConstants.standardMainScreenColorSequence)
-    GuiUtils.addCorner(dialog)
+    local dialogFrame = Instance.new("Frame")
+    dialogFrame.Size = UDim2.fromScale(0, 0)
+    dialogFrame.AutomaticSize = Enum.AutomaticSize.XY
+    dialogFrame.Position = UDim2.fromScale(0.5, 0.5)
+    dialogFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    dialogFrame.BackgroundColor3 = Color3.new(1, 1, 1)
+    dialogFrame.Parent = dialogBackground
+    dialogFrame.Name = GuiConstants.dialogName
+    dialogFrame.BorderSizePixel = 0
+    dialogFrame.ZIndex = GuiConstants.dialogZIndex + dialogId
+    GuiUtils.addCorner(dialogFrame)
 
     -- Add a ui scale underneath.
-    GuiUtils.addUIScale(dialog)
+    GuiUtils.addUIScale(dialogFrame)
 
-    return dialog
+    return dialogFrame
 end
 
 --[[
 Almost everything in dialog should be laid out top to bottom with a UI List layout.
 But there's the red cancel button in upper right corner, not part of layout flow.
-So children of main dialog are that button and a content widget, which holds the
+So children of dialogFrame are that button and a dialogContentFrame, which holds the
 meat of the dialog.
-This makes the content widget.
+This makes the dialogContentFrame.
 ]]
-local function makeDialogContentFrame(dialog: Frame): ScrollingFrame
-    assert(dialog, "dialog should be provided")
-    local dialogContentFrame = Instance.new("ScrollingFrame")
-    GuiUtils.setScrollingFrameColors(dialogContentFrame)
+local function makeDialogContentFrame(dialogFrame: Frame): ScrollingFrame
+    assert(dialogFrame, "dialogFrame should be provided")
+    local dialogContentFrame = GuiUtils.addStandardScrollingFrame(dialogFrame)
     dialogContentFrame.Name = GuiConstants.dialogContentFrameName
-    dialogContentFrame.Parent = dialog
-    dialogContentFrame.Size = UDim2.fromScale(1, 1)
     dialogContentFrame.Position = UDim2.fromScale(0, 0)
-    dialogContentFrame.BackgroundTransparency = 1
     dialogContentFrame.BorderSizePixel = 0
     dialogContentFrame.ScrollingDirection = Enum.ScrollingDirection.Y
     dialogContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     dialogContentFrame.CanvasSize = UDim2.fromScale(0, 0)
+    dialogContentFrame.ZIndex = 0
+    dialogContentFrame.BackgroundColor3 = Color3.new(0.9, 0.9, 1)
+
+    -- By default dialog is sized to be a little smaller than screen.
+    -- If a dialog has makeCustomDialogContent, that function can re-size dialogContentFrame as needed.
+    -- If there's just buttons, we resize after buttons have been added.
+    -- Note we can't use a UDim2 with scale because this is a child of dialogFrame, which is
+    -- Autosized: scale children of autosize parents don't work.
+    dialogContentFrame.AutomaticSize = Enum.AutomaticSize.None
+    local mainScreenGui = GuiUtils.getMainScreenGui()
+    local mainScreenGuiWidth = mainScreenGui.AbsoluteSize.X
+    local mainScreenGuiHeight = mainScreenGui.AbsoluteSize.Y
+    dialogContentFrame.Size = UDim2.fromOffset(mainScreenGuiWidth - 2 * GuiConstants.screenToDialogPaddingPx,
+        mainScreenGuiHeight - 2 * GuiConstants.screenToDialogPaddingPx)
+
+    GuiUtils.addLayoutOrderGenerator(dialogContentFrame)
 
     GuiUtils.addUIPadding(dialogContentFrame, {
-        PaddingLeft = UDim.new(0, GuiConstants.dialogToContentPadding),
-        PaddingRight = UDim.new(0, GuiConstants.dialogToContentPadding),
-        PaddingTop = UDim.new(0, GuiConstants.dialogToContentPadding),
-        PaddingBottom = UDim.new(0, GuiConstants.dialogToContentPadding),
+        PaddingLeft = GuiConstants.dialogToContentPadding,
+        PaddingRight = GuiConstants.dialogToContentPadding,
+        PaddingTop = GuiConstants.dialogToContentPadding,
+        PaddingBottom = GuiConstants.dialogToContentPadding,
     })
 
     GuiUtils.addUIListLayout(dialogContentFrame, {
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
         VerticalAlignment = Enum.VerticalAlignment.Top,
-        Padding = UDim.new(0, GuiConstants.paddingBetweenRows),
+        Padding = GuiConstants.betweenRowPadding,
     })
     return dialogContentFrame
 end
@@ -210,29 +244,38 @@ local function getConfigsByHeading(dialogButtonConfigs: {DialogButtonConfig}): {
 end
 
 
-local function applyConfigsWithHeading(dialogId: number, parent: Frame, heading: string, dialogButtonConfigs: {DialogButtonConfig}, isFirst: boolean)
-    local rowOptions : GuiUtils.RowOptions = {
-        horizontalAlignment = Enum.HorizontalAlignment.Center,
-        wraps = true,
-        uiListLayoutPadding = UDim.new(0, GuiConstants.buttonsUIListLayoutPadding),
-        labelText = if heading == "" then nil else heading,
-        useGridLayout = true,
-        gridCellSize = UDim2.fromOffset(GuiConstants.dialogButtonWidth, GuiConstants.dialogButtonHeight),
-    }
+local function applyConfigsWithHeading(dialogId: DialogId, dialogContentFrame: Frame, heading: string, dialogButtonConfigs: {DialogButtonConfig}, isFirst: boolean)
+    -- For each config-with-heading:
 
-    local controlsContent = GuiUtils.addRowAndReturnRowContent(parent, "Row_DialogControls", rowOptions)
-    local gridLayout = controlsContent:FindFirstChildOfClass("UIGridLayout")
-    assert(gridLayout, "Should have gridLayout")
-    if heading == "" then
-        gridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    -- First, if heading is non-empty, add a heading.
+    assert(heading, "heading should be provided")
+    if heading ~= "" then
+        GuiUtils.addTextLabel(dialogContentFrame, GuiUtils.bold(heading), {
+            RichText = true,
+            AutomaticSize = Enum.AutomaticSize.XY,
+            LayoutOrder = GuiUtils.getNextLayoutOrder(dialogContentFrame),
+            Name = GuiConstants.dialogHeadingTextLabel,
+        })
     end
+
+    -- Then a row that will contain the buttons.
+    local dialogControlsRow = GuiUtils.addRow(dialogContentFrame, GuiConstants.dialogControlsName)
+    -- button lay out left to right, wrapping if needed.
+    GuiUtils.addUIListLayout(dialogControlsRow, {
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        VerticalAlignment = Enum.VerticalAlignment.Top,
+        Padding = GuiConstants.betweenButtonPadding,
+        FillDirection = Enum.FillDirection.Horizontal,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Wraps = true,
+    })
 
     Utils.debugPrint("Layout", "configsForHeading = ", dialogButtonConfigs)
     for _, dialogButtonConfig in ipairs(dialogButtonConfigs) do
         -- Should be properly configured.
         assert(dialogButtonConfig.text, "Should have text")
 
-        local _, button = GuiUtils.addStandardTextButtonInContainer(controlsContent, dialogButtonConfig.text, function()
+        local _, button = GuiUtils.addStandardTextButtonInContainer(dialogControlsRow, dialogButtonConfig.text, function()
             Utils.debugPrint("Mocks", "button clicked")
             -- Destroy the dialog.
             DialogUtils.cleanupDialog(dialogId)
@@ -252,13 +295,16 @@ local function applyConfigsWithHeading(dialogId: number, parent: Frame, heading:
     end
 
     if not isFirst then
-        GuiUtils.addUIPadding(controlsContent, {
-            PaddingTop = UDim.new(0, GuiConstants.paddingBetweenRows),
+        GuiUtils.addUIPadding(dialogControlsRow, {
+            PaddingTop = GuiConstants.betweenRowPadding,
+            PaddingBottom = GuiConstants.noPadding,
+            PaddingLeft = GuiConstants.noPadding,
+            PaddingRight = GuiConstants.noPadding,
         })
     end
 end
 
-local function applyDialogButtonConfigs(dialogId: number, dialogContentFrame: Frame, dialogButtonConfigs: {DialogButtonConfig})
+local function applyDialogButtonConfigs(dialogId: DialogId, dialogContentFrame: Frame, dialogButtonConfigs: {DialogButtonConfig})
     assert(dialogContentFrame, "dialogContentFrame should be provided")
     assert(dialogButtonConfigs, "dialogButtonConfigs should be provided")
 
@@ -271,52 +317,142 @@ local function applyDialogButtonConfigs(dialogId: number, dialogContentFrame: Fr
     end
 end
 
--- Throw up a dialog using the given config.
--- Clicking any button in the config will kill the dialog and hit the associated callback.
-function DialogUtils.makeDialogAndReturnId(dialogConfig: DialogConfig): number
-    local dialogId = dialogIdGen
-    dialogIdGen = dialogIdGen + 1
-
-    -- Get the parent we drop the dialog into.
-    local dialogBackground = getOrMakeDialogBackground()
-
-    -- If background is not currently visible, tween it in.
-    if not dialogBackground.Visible then
-        -- Tween it in.
-        dialogBackground.BackgroundTransparency = 1
-        dialogBackground.Visible = true
-        local tweenInfo = TweenInfo.new(GuiConstants.standardTweenTime, Enum.EasingStyle.Circular)
-        local tweenIn = TweenService:Create(dialogBackground, tweenInfo, {BackgroundTransparency = backgroundTransparencyWhenVisible})
-        tweenIn:Play()
+--[[
+Have dialog background appear with a tweening effect.
+Cancel any existing 'tween out' that might be going on.
+]]
+local function tweenInDialogBackground(dialogBackground: Frame)
+    -- If we are tweening it out, kill that.
+    if currentBackgroundTweenOut then
+        currentBackgroundTweenOut:Cancel()
+        currentBackgroundTweenOut = nil
     end
 
-    -- Background is now visible.
-    dialogBackground.Visible = true
+        -- If background is not currently visible, tween it in.
+    if not dialogBackground.Visible then
+        -- If we are already tweening it in, don't add another one.
+        if not currentBackgroundTweenIn then
+            dialogBackground.BackgroundTransparency = 1
 
-    -- One way to make this nicer, a
-    -- FIXME(dbanks)
-    -- 1. Add some kinda cool tweening effect for dialog going up/down.
-    -- 2. I want the dialog to scale to content, but if it's too big, stop at certain
-    --    max and add scroll.  Docs suggest using UISizeConstraint but experience
-    --    shows this does not work:
-    --    https://devforum.roblox.com/t/automaticsize-doesnt-respect-uisizeconstraint-constraints/1391918/10
-    --    So we are going with a fixed size, which will look bad with small content and large screen.
-    local dialog = makeDialogFrame(dialogBackground, dialogId)
+            dialogBackground.Visible = true
+            local tweenInfo = TweenInfo.new(GuiConstants.standardTweenTime, Enum.EasingStyle.Circular)
+            local tweenIn = TweenService:Create(dialogBackground, tweenInfo, {BackgroundTransparency = backgroundTransparencyWhenVisible})
+            currentBackgroundTweenIn = tweenIn
+            tweenIn.Completed:Connect(function()
+                if currentBackgroundTweenIn == tweenIn then
+                    currentBackgroundTweenIn = nil
+                end
+            end)
+            tweenIn:Play()
+        end
+    end
+end
 
-    -- A separate frame for content since the cancel button ignores UIListLayout.
-    local dialogContentFrame = makeDialogContentFrame(dialog)
+local function addTitleAndDescription(dialogContentFrame: Frame, dialogConfig: DialogConfig)
+    assert(dialogContentFrame, "dialogContentFrame should be provided")
+    assert(dialogConfig, "dialogConfig should be provided")
 
-    local titleContent = GuiUtils.addRowAndReturnRowContent(dialogContentFrame, "Row_Title")
-
-    local title = GuiUtils.addTextLabel(titleContent, GuiUtils.bold(dialogConfig.title), {RichText = true})
+    local title = GuiUtils.addTextLabel(dialogContentFrame, GuiUtils.bold(dialogConfig.title), {
+        RichText = true,
+        AutomaticSize = Enum.AutomaticSize.X,
+        Size = UDim2.fromOffset(0, GuiConstants.dialogTitleHeight),
+        Name = GuiConstants.dialogTitleTextLabel,
+    })
     title.TextSize = GuiConstants.dialogTitleFontSize
 
-    local descriptionContent = GuiUtils.addRowAndReturnRowContent(dialogContentFrame, "Row_Description")
-    GuiUtils.addTextLabel(descriptionContent, GuiUtils.italicize(dialogConfig.description), {
+    GuiUtils.addTextLabel(dialogContentFrame, GuiUtils.italicize(dialogConfig.description), {
         RichText = true,
         TextWrapped = true,
         Name = GuiConstants.dialogDescriptionTextLabel,
     })
+end
+
+local function updateStackAndTweenIn(dialogFrame:Frame, dialogId: DialogId)
+    -- Anyone already in the stack is now invisible.
+    for _, dialogFrameWithId in ipairs(dialogFrameWithIdStack) do
+        dialogFrameWithId.frame.Visible = false
+    end
+
+    -- Add it to the stack.
+    local dialogFrameWithId = {
+        frame = dialogFrame,
+        dialogId = dialogId,
+    } :: DialogFrameWithId
+    table.insert(dialogFrameWithIdStack, dialogFrameWithId)
+
+    -- Tween it in.
+    local uiScale = dialogFrame:FindFirstChild("UIScale")
+    uiScale.Scale = 0
+    local tweenInfo = TweenInfo.new(GuiConstants.standardTweenTime, Enum.EasingStyle.Circular)
+    local tweenIn = TweenService:Create(uiScale, tweenInfo, {Scale = 1})
+    tweenIn:Play()
+end
+
+--[[
+Dialog is currently scaled to flood fill the screen, mod some padding.
+In X: Dialog should expand to fit content, but no wider than the screen.
+In Y: Dialog should expand to fit content, but no taller than the screen.
+In either case we can't use autosize because the children may be scaled to
+parent size, that doesn't work well.
+]]
+function DialogUtils.adjustSizeForContentAndScreenFit(dialogContentFrame: Frame)
+    -- Dialog children are all rows.
+    -- Get the max width.
+    -- Also sum up all the heights.
+    local totalHeight = 0
+    local uiListLayout = dialogContentFrame:FindFirstChildOfClass("UIListLayout")
+    local verticalPadding = uiListLayout.Padding.Offset
+
+    local children = dialogContentFrame:GetChildren()
+    local maxChildWidth = 0
+    for _, child in children do
+        if child:IsA("GuiObject") then
+            Utils.debugPrint("Dialogs", "adjustWidth with child = ", child.Name)
+            Utils.debugPrint("Dialogs", "child.AbsoluteSize = ", child.AbsoluteSize)
+
+            maxChildWidth = math.max(maxChildWidth, child.AbsoluteSize.X)
+            if totalHeight ~= 0 then
+                totalHeight = totalHeight + verticalPadding
+            end
+            totalHeight = totalHeight + child.AbsoluteSize.Y
+            Utils.debugPrint("Dialogs", "adjustWidth maxChildWidth is now = ", maxChildWidth)
+            Utils.debugPrint("Dialogs", "adjustWidth totalHeight is now = ", totalHeight)
+        end
+    end
+
+    -- Just resize to that.
+    local finalWidth = maxChildWidth + 2 * GuiConstants.dialogToContentPaddingPx
+    local finalHeight = totalHeight + 2 * GuiConstants.dialogToContentPaddingPx
+    -- Note: finalHeight might be bigger than original height.  Original height was a
+    -- max so we clamp to that.
+    finalHeight = math.min(finalHeight, dialogContentFrame.AbsoluteSize.Y)
+    local newSize = UDim2.fromOffset(finalWidth, finalHeight)
+    Utils.debugPrint("Dialogs", "adjustWidth original size = ", dialogContentFrame.Size, " new size = ", newSize)
+    dialogContentFrame.Size = newSize
+end
+
+-- Throw up a dialog using the given config.
+-- Clicking any button in the config will kill the dialog and hit the associated callback.
+function DialogUtils.makeDialogAndReturnId(dialogConfig: DialogConfig): DialogId
+    local dialogId = dialogIdGen
+    dialogIdGen = dialogIdGen + 1
+
+    -- Get or make the parent we drop the dialog into.
+    local dialogBackground = getOrMakeDialogBackground()
+
+    -- Have it show up with a tweening effect.
+    tweenInDialogBackground(dialogBackground)
+
+    local dialogFrame = makeDialogFrame(dialogBackground, dialogId)
+
+    -- Put a cancel button in upper right corner.
+    -- Note this is not in "dialogContent" to avoid the UIListLayout.
+    addCancelButton(dialogFrame, dialogId)
+
+    -- A separate frame for content since the cancel button ignores UIListLayout.
+    local dialogContentFrame = makeDialogContentFrame(dialogFrame)
+
+    addTitleAndDescription(dialogContentFrame, dialogConfig)
 
     -- There should be at least one of dialogButtonConfigs or makeCustomDialogContent
     local hasDialogButtonConfigs = dialogConfig.dialogButtonConfigs and #dialogConfig.dialogButtonConfigs > 0
@@ -329,30 +465,14 @@ function DialogUtils.makeDialogAndReturnId(dialogConfig: DialogConfig): number
 
     if hasDialogButtonConfigs then
         applyDialogButtonConfigs(dialogId, dialogContentFrame, dialogConfig.dialogButtonConfigs)
+        if not hasMakeCustomDialogContent then
+            -- Dialog is currently sized to scale to screen.
+            -- We want it to shrink to fit contents if possible.
+            DialogUtils.adjustSizeForContentAndScreenFit(dialogContentFrame)
+        end
     end
 
-    -- Put a cancel button in upper right corner.
-    -- Note this is not in "dialogContent" to avoid the UIListLayout.
-    addCancelButton(dialog, dialogId)
-
-    -- Anyone already in the stack is now invisible.
-    for _, dialogFrameWithId in ipairs(dialogStack) do
-        dialogFrameWithId.frame.Visible = false
-    end
-
-    -- Add it to the stack.
-    local dialogFrameWithId = {
-        frame = dialog,
-        dialogId = dialogId,
-    } :: DialogFrameWithId
-    table.insert(dialogStack, dialogFrameWithId)
-
-    -- Tween it in.
-    local uiScale = dialog:FindFirstChild("UIScale")
-    uiScale.Scale = 0
-    local tweenInfo = TweenInfo.new(GuiConstants.standardTweenTime, Enum.EasingStyle.Circular)
-    local tweenIn = TweenService:Create(uiScale, tweenInfo, {Scale = 1})
-    tweenIn:Play()
+    updateStackAndTweenIn(dialogFrame, dialogId)
 
     return dialogId
 end
@@ -391,8 +511,8 @@ function DialogUtils.showAckDialog(title: string, description: string)
     DialogUtils.makeDialogAndReturnId(dialogConfig)
 end
 
-function DialogUtils.getDialogById(dialogId: number): Frame?
-    for _, dialogFrameWithId in ipairs(dialogStack) do
+function DialogUtils.getDialogById(dialogId: DialogId): Frame?
+    for _, dialogFrameWithId in ipairs(dialogFrameWithIdStack) do
         if dialogFrameWithId.dialogId == dialogId then
             return dialogFrameWithId.frame
         end

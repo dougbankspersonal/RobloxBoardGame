@@ -10,6 +10,7 @@
 
 local GuiUtils = {}
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
@@ -26,19 +27,7 @@ local GuiConstants = require(RobloxBoardGameClient.Globals.GuiConstants)
 
 local Cryo = require(ReplicatedStorage.Cryo)
 
-local mainScreenGui: ScreenGui = nil
-
 local globalLayoutOrder = 0
-
-export type RowOptions = {
-    isScrolling: boolean?,
-    scrollingDirection: Enum.ScrollingDirection?,
-    useGridLayout: boolean?,
-    labelText: string?,
-    gridCellSize: UDim2?,
-    horizontalAlignment: Enum.HorizontalAlignment?,
-    uiListLayoutPadding: UDim?,
-}
 
 export type InstanceOptions = {
     [string]: any,
@@ -127,27 +116,29 @@ end
     return container, frame
 end
 
- function GuiUtils.getMainScreenGui (): ScreenGui
+ function GuiUtils.getMainScreenGui(): ScreenGui
+    local localPlayer = Players.LocalPlayer
+    local mainScreenGui = localPlayer:FindFirstChild("MainScreenGui", true)
     assert(mainScreenGui, "Should have a mainScreenGui")
     return mainScreenGui
 end
 
  function GuiUtils.getUberBackground (): Frame
-    assert(mainScreenGui, "Should have a mainScreenGui")
+    local mainScreenGui = GuiUtils.getMainScreenGui()
     local uberBackground = mainScreenGui:FindFirstChild(GuiConstants.uberBackgroundName, true)
     assert(uberBackground, "Should have a uberBackground")
     return uberBackground
 end
 
  function GuiUtils.getMainFrame (): Frame?
-    assert(mainScreenGui, "Should have a mainScreenGui")
+    local mainScreenGui = GuiUtils.getMainScreenGui()
     local mainFrame = mainScreenGui:FindFirstChild(GuiConstants.mainFrameName, true)
     assert(mainFrame, "Should have a mainFrame")
     return mainFrame
 end
 
  function GuiUtils.getContainingScrollingFrame (): Frame?
-    assert(mainScreenGui, "Should have a mainScreenGui")
+    local mainScreenGui = GuiUtils.getMainScreenGui()
     local containingScrollingFrameName = mainScreenGui:FindFirstChild(GuiConstants.containingScrollingFrameName, true)
     assert(containingScrollingFrameName, "Should have a containingScrollingFrameName")
     return containingScrollingFrameName
@@ -161,36 +152,27 @@ end
     return "<b>" .. text .. "</b>"
 end
 
- function GuiUtils.setMainScreenGui (msg: ScreenGui)
-    assert(msg, "Should have a mainScreenGui")
-    mainScreenGui = msg
-    mainScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-end
-
- function GuiUtils.addUIPadding(guiObject: GuiObject, opt_instanceOptions: InstanceOptions?): UIPadding
+function GuiUtils.addUIPadding(guiObject: GuiObject, opt_instanceOptions: InstanceOptions?): UIPadding
     local uiPadding = Instance.new("UIPadding")
-    local defaultPadding = UDim.new(0, GuiConstants.standardPadding)
 
-    local instanceOptions = {
+    applyInstanceOptions(uiPadding, {
         Parent = guiObject,
         Name = "UniformPadding",
-        PaddingLeft = defaultPadding,
-        PaddingRight = defaultPadding,
-        PaddingTop = defaultPadding,
-        PaddingBottom = defaultPadding,
-    }
-
-    applyInstanceOptions(uiPadding, instanceOptions, opt_instanceOptions)
+        PaddingLeft = GuiConstants.standardPadding,
+        PaddingRight = GuiConstants.standardPadding,
+        PaddingTop = GuiConstants.standardPadding,
+        PaddingBottom = GuiConstants.standardPadding,
+    }, opt_instanceOptions)
 
     return uiPadding
 end
 
  function GuiUtils.addStandardMainFramePadding(frame: Frame): UIPadding
     return GuiUtils.addUIPadding(frame, {
-        PaddingLeft = UDim.new(0, GuiConstants.mainFramePadding),
-        PaddingRight = UDim.new(0, GuiConstants.mainFramePadding),
-        PaddingTop = UDim.new(0, GuiConstants.mainFramePadding),
-        PaddingBottom = UDim.new(0, GuiConstants.mainFramePadding),
+        PaddingLeft = GuiConstants.mainFrameToContentPadding,
+        PaddingRight = GuiConstants.mainFrameToContentPadding,
+        PaddingTop = GuiConstants.mainFrameToContentPadding,
+        PaddingBottom = GuiConstants.mainFrameToContentPadding,
     })
 end
 
@@ -281,6 +263,7 @@ end
         Font = GuiConstants.defaultFont,
         BorderSizePixel = 0,
         BackgroundTransparency = 1,
+        LayoutOrder = GuiUtils.getNextLayoutOrder(parent),
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Center,
     }, opt_instanceOptions)
@@ -459,7 +442,7 @@ end
         Name = "UIListLayout",
         SortOrder = Enum.SortOrder.LayoutOrder,
         Parent = frame,
-        Padding = UDim.new(0, GuiConstants.defaultUIListLayoutPadding),
+        Padding = GuiConstants.defaultUIListLayoutPadding,
         FillDirection = Enum.FillDirection.Vertical,
         VerticalAlignment = Enum.VerticalAlignment.Center,
         HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -470,113 +453,54 @@ end
 
 -- Make a row spanning the screen left to right.
 -- Give it a layout order so it sorts properly with other rows.
--- If label text is given in options, add a label as first rightmost child.
--- Add "rowContent" as the second child of the row.
--- Return this "rowContent": this is where we stick the useful widgets for this row.
---
---  +---------------row--------------------------
---  |               |  row content
---  |   text label  |
---  |   with title  |  +--------+--------
---  |   of row      |  | widget | widget
---  |               |  +--------+--------
---  +--------------------------------------------
- function GuiUtils.addRowAndReturnRowContent(parent:Instance, rowName: string, opt_rowOptions: RowOptions?, opt_contentOptions: InstanceOptions?): GuiObject
+-- Also has layout order generator so kids naturally sort properly.
+ function GuiUtils.addRow(parent:Instance,
+        rowName: string): GuiObject
     assert(parent, "Should have a parent")
     assert(rowName, "Should have a rowName")
 
-    local rowOptions = opt_rowOptions or {}
+    -- Row uses scale for width.  That's a problem if ancecstor is autosized x and everyone in between in scale sizing.
+    local walker = parent
+    local nameHistory = {}
+    while true do
+        if walker == nil then
+            break
+        end
+        if walker.ClassName == "ScreenGui" then
+            break
+        end
+        table.insert(nameHistory, walker.Name)
+        if GuiUtils.isAutosizingInX(walker) then
+            -- bad
+            local badNameHistory = table.concat(nameHistory, " -> ")
+            assert(false, "Row has ancestor with autosize X and all scale in between: " .. badNameHistory)
+        end
+        if walker.Size.X.Scale == 0 then
+            -- Things are good.
+            break
+        end
+        -- Check the parent.
+        walker = walker.Parent
+    end
 
     local row = Instance.new("Frame")
     row.Name = rowName
     row.Parent = parent
-    row.Size = UDim2.new(1, -2 * GuiConstants.dialogToContentPadding, 0, 0)
+    row.Size = UDim2.new(1, 0, 0, 0)
     row.Position = UDim2.fromScale(0, 0)
     row.BorderSizePixel = 0
     row.LayoutOrder = GuiUtils.getNextLayoutOrder(parent)
     row.AutomaticSize = Enum.AutomaticSize.Y
     row.BackgroundTransparency = 1.0
 
-    local usedRowWidth = 0
-
-    if rowOptions.labelText then
-        GuiUtils.addUIListLayout(row, {
-            FillDirection = Enum.FillDirection.Horizontal,
-            HorizontalAlignment = rowOptions.horizontalAlignment or Enum.HorizontalAlignment.Left,
-        })
-
-        local labelText =  GuiUtils.bold(rowOptions.labelText)
-        GuiUtils.addTextLabel(row, labelText, {
-            RichText = true,
-            TextSize = GuiConstants.rowHeaderFontSize,
-            AutomaticSize = Enum.AutomaticSize.Y,
-            Size = UDim2.fromOffset(GuiConstants.rowLabelWidth, 0),
-            TextXAlignment = Enum.TextXAlignment.Right,
-        })
-        usedRowWidth = GuiConstants.rowLabelWidth
-    end
-
-    local rowContent
-    if rowOptions.isScrolling then
-        rowContent = Instance.new("ScrollingFrame")
-        GuiUtils.setScrollingFrameColors(rowContent)
-        if rowOptions.scrollingDirection == Enum.ScrollingDirection.X then
-            rowContent.AutomaticCanvasSize = Enum.AutomaticSize.XY
-            rowContent.CanvasSize = UDim2.fromScale(0, 0)
-            rowContent.ScrollingDirection = Enum.ScrollingDirection.X
-        else
-            assert(rowOptions.scrollingDirection == Enum.ScrollingDirection.Y or rowOptions.scrollingDirection == nil, "Unexpected Scrolling Direction")
-            rowContent.AutomaticCanvasSize = Enum.AutomaticSize.Y
-            rowContent.CanvasSize = UDim2.fromScale(1, 0)
-            rowContent.ScrollingDirection = Enum.ScrollingDirection.Y
-        end
-        rowContent.ScrollingDirection = Enum.ScrollingDirection.Y
-    else
-        rowContent = Instance.new("Frame")
-    end
-
-    applyInstanceOptions(rowContent, {
-        Name = GuiConstants.rowContentName,
-        Size = UDim2.new(1, -usedRowWidth, 0, 0),
-        Parent = row,
-        AutomaticSize = Enum.AutomaticSize.Y,
-        Position = UDim2.fromScale(0, 0),
-        LayoutOrder = 2,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-    }, opt_contentOptions)
-
-
     -- Rows usually contain ordered list of widgets, add a layout order generator.
-    GuiUtils.addLayoutOrderGenerator(rowContent)
+    GuiUtils.addLayoutOrderGenerator(row)
 
-    Utils.debugPrint("Layout", "rowName = ", rowName)
-    Utils.debugPrint("Layout", "rowOptions = ", rowOptions)
-
-    if rowOptions.useGridLayout then
-        local uiGridLayout = Instance.new("UIGridLayout")
-        uiGridLayout.Parent = rowContent
-        uiGridLayout.FillDirection = Enum.FillDirection.Horizontal
-        uiGridLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-        uiGridLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-        uiGridLayout.Name = GuiConstants.rowUIGridLayoutName
-        uiGridLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        if rowOptions.gridCellSize then
-            uiGridLayout.CellSize = rowOptions.gridCellSize
-        end
-    else
-        GuiUtils.addUIListLayout(rowContent, {
-            FillDirection = rowOptions.fillDirection or Enum.FillDirection.Horizontal,
-            Wraps = rowOptions.wraps or false,
-            HorizontalAlignment = rowOptions.horizontalAlignment or Enum.HorizontalAlignment.Center,
-            Padding = rowOptions.uiListLayoutPadding,
-        })
-    end
-
-    return rowContent
+    return row
 end
 
- function GuiUtils.addCorner(parent: Frame, opt_instanceOptions: InstanceOptions?): UICorner
+
+function GuiUtils.addCorner(parent: Frame, opt_instanceOptions: InstanceOptions?): UICorner
     local uiCorner = Instance.new("UICorner")
 
     applyInstanceOptions(uiCorner, {
@@ -587,18 +511,7 @@ end
     return uiCorner
 end
 
--- Parent contains rows.
--- Find row with given name, return the rowContent frame for that row.
- function GuiUtils.getRowContent(parent: GuiObject, rowName: string): Frame
-    Utils.debugPrint("Layout", "getRowContent rowName = ", rowName)
-    local row = parent:FindFirstChild(rowName)
-    assert(row, "row should exist")
-    local rowContent = row:FindFirstChild(GuiConstants.rowContentName)
-    assert(rowContent, "rowContent should exist")
-    return rowContent
-end
-
- function GuiUtils.addTextButtonInContainer(parent: Frame, name: string, opt_buttonOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, TextButton)
+function GuiUtils.addTextButtonInContainer(parent: Frame, name: string, opt_buttonOptions: InstanceOptions?, opt_containerOptions: InstanceOptions?): (Frame, TextButton)
     local container = Instance.new("Frame")
     applyInstanceOptions(container, {
         Parent = parent,
@@ -606,6 +519,7 @@ end
         AutomaticSize = Enum.AutomaticSize.XY,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
+        LayoutOrder = GuiUtils.getNextLayoutOrder(parent),
     }, opt_containerOptions)
 
     local textButton = Instance.new("TextButton")
@@ -654,8 +568,10 @@ end
     end)
 
     GuiUtils.addUIPadding(textButton, {
-        PaddingRight = UDim.new(0, GuiConstants.buttonInternalSidePadding),
-        PaddingLeft = UDim.new(0, GuiConstants.buttonInternalSidePadding),
+        PaddingRight = GuiConstants.buttonInternalSidePadding,
+        PaddingLeft = GuiConstants.buttonInternalSidePadding,
+        PaddingTop = GuiConstants.noPadding,
+        PaddingBottom = GuiConstants.noPadding,
     })
 
     return container, textButton
@@ -969,8 +885,8 @@ end
  function GuiUtils.addNullStaticWidget(parent: Instance, message: string, opt_instanceOptions: InstanceOptions?): Frame
     -- Make sure old label is gone.
     GuiUtils.removeNullStaticWidget(parent)
-    local instanceOptions = opt_instanceOptions or {}
-    instanceOptions = Cryo.Dictionary.join({
+
+    local instanceOptions = {
         TextXAlignment = Enum.TextXAlignment.Center,
         TextYAlignment = Enum.TextYAlignment.Center,
         RichText = true,
@@ -979,9 +895,10 @@ end
         AutomaticSize = Enum.AutomaticSize.None,
         TextColor3 = GuiConstants.widgetTextColor,
         Name = GuiConstants.nullStaticWidgetName,
-    },
-    instanceOptions)
-    local textLabel = GuiUtils.addTextLabel(parent, message, instanceOptions)
+    }
+
+    local textLabel = GuiUtils.addTextLabel(parent, message)
+    applyInstanceOptions(textLabel, instanceOptions, opt_instanceOptions)
     GuiUtils.addCorner(textLabel)
     GuiUtils.addUIPadding(textLabel)
 
@@ -1068,15 +985,16 @@ end
     return "No"
 end
 
- function GuiUtils.getGameOptionsString(gameId: CommonTypes.GameId, opt_nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions?, opt_separator: string?): string?
+ function GuiUtils.getGameOptionsStrings(gameId: CommonTypes.GameId, opt_nonDefaultGameOptions: CommonTypes.NonDefaultGameOptions?): {string}
     local gameDetails = GameDetails.getGameDetails(gameId)
+
+    local retVal = {}
 
     -- Game doesn't even have options: nothing to say.
     if not gameDetails.gameOptions then
-        return nil
+        return retVal
     end
 
-    local enabledOptionsStrings = {}
     local nonDefaultGameOptions = opt_nonDefaultGameOptions or {}
 
     for _, gameOption in gameDetails.gameOptions do
@@ -1087,116 +1005,182 @@ end
         assert(optionName, "Should have an optionName")
         local optionString = optionName .. ": " .. optionValue
 
-        table.insert(enabledOptionsStrings, optionString)
-    end
-    if #enabledOptionsStrings == 0 then
-        return "(None)"
+        table.insert(retVal, optionString)
     end
 
-    local separator = opt_separator or ", "
-    return table.concat(enabledOptionsStrings, separator)
+    return retVal
 end
 
- function GuiUtils.getTableSizeString(gameDetails: CommonTypes.GameDetails): string
+function GuiUtils.getTableSizeString(gameDetails: CommonTypes.GameDetails): string
     return tostring(gameDetails.minPlayers) .. " - " .. tostring(gameDetails.maxPlayers) .. " players"
 end
 
--- A row with a text label and a row of same-size items.
--- Row is just one item high. Will add scrollbar if needed.
- function GuiUtils.addRowOfUniformItemsAndReturnRowContent(frame: Frame, name: string, labelText: string, itemHeight: number): Frame
-    assert(frame, "Should have frame")
-    assert(name, "Should have name")
-    assert(labelText, "Should have labelText")
-    assert(itemHeight, "Should have itemHeight")
-
-    local instanceOptions = {
-        AutomaticSize = Enum.AutomaticSize.None,
-        Size = UDim2.new(1, -GuiConstants.rowLabelWidth - GuiConstants.standardPadding, 0, itemHeight + 2 * GuiConstants.standardPadding),
-        BorderSizePixel = 1,
-        BorderColor3 = GuiConstants.rowOfItemsBorderColor,
-        BorderMode = Enum.BorderMode.Outline,
-        BackgroundColor3 = GuiConstants.rowOfItemsBackgroundColor,
-        BackgroundTransparency = 0,
-        ScrollingDirection = Enum.ScrollingDirection.X,
-    }
-
-    local rowOptions = {
-        isScrolling = true,
-        scrollingDirection = Enum.ScrollingDirection.X,
-        horizontalAlignment = Enum.HorizontalAlignment.Left,
-        labelText = labelText,
-    }
-
-    local rowContent = GuiUtils.addRowAndReturnRowContent(frame, name, rowOptions, instanceOptions)
-    GuiUtils.addUIPadding(rowContent, {
-        PaddingTop = UDim.new(0, 0),
-        PaddingBottom = UDim.new(0, 0),
-    })
-    return rowContent
+function GuiUtils.isAutosizingInX(guiObject: GuiObject): boolean
+    assert(guiObject, "Should have a guiObject")
+    return guiObject.AutomaticSize == Enum.AutomaticSize.XY or guiObject.AutomaticSize == Enum.AutomaticSize.X
 end
 
- function GuiUtils.addRowWithItemGridAndReturnRowContent(parent:GuiObject, rowName: string, itemSize: UDim2)
-    assert(parent, "Should have parent")
-    assert(rowName, "Should have rowName")
-    assert(itemSize,  "Should have itemSize")
-    local rowOptions = {
-        isScrolling = true,
-        useGridLayout = true,
-        gridCellSize = itemSize,
-    }
+function GuiUtils.autoSizeXUpToLimit(guiObject: GuiObject, limit: number)
+    assert(guiObject, "Should have a guiObject")
+    assert(limit, "Should have a limit")
+    assert(GuiUtils.isAutosizingInX(guiObject), "Should have an automatic size of XY or X")
 
-    local rowContent = GuiUtils.addRowAndReturnRowContent(parent, rowName, rowOptions, {
-        AutomaticSize = Enum.AutomaticSize.None,
-        BorderSizePixel = 0,
-        BorderColor3 = Color3.new(0.5, 0.5, 0.5),
-        BorderMode = Enum.BorderMode.Outline,
-        BackgroundColor3 = GuiConstants.scrollBackgroundColor,
-        BackgroundTransparency = 0,
-    })
-
-    GuiUtils.addUIGradient(rowContent, GuiConstants.scrollBackgroundGradient)
-    GuiUtils.addUIPadding(rowContent, {
-        PaddingLeft = UDim.new(0, 0),
-        PaddingRight = UDim.new(0, 0),
-    })
-
-    local gridLayout = rowContent:FindFirstChildWhichIsA("UIGridLayout", true)
-    assert(gridLayout, "Should have gridLayout")
-    local cellHeight = gridLayout.CellSize.Y.Offset
-    local totalHeight = 2 * cellHeight + 3 * GuiConstants.standardPadding
-    rowContent.Size = UDim2.new(1, 0, 0, totalHeight)
-
-    return rowContent
+    guiObject.PropertyChanged:Connect(function(propertyName)
+        if not propertyName == "AbsoluteSize" then
+            return
+        end
+        if not GuiUtils.isAutosizingInX(guiObject) then
+            return
+        end
+        local width = guiObject.AbsoluteSize.X
+        if width > limit then
+            if guiObject.AutomaticSize == Enum.AutomaticSize.XY then
+                guiObject.AutomaticSize = Enum.AutomaticSize.Y
+            else
+                guiObject.AutomaticSize = Enum.AutomaticSize.None
+            end
+            local size = guiObject.Size
+            local newSize = UDim2.fromOffset(limit, size.Y.Offset)
+            guiObject.Size = newSize
+        end
+    end)
 end
 
---[[
+function GuiUtils.addGridLayout(parent:Frame, opt_instanceOptions: InstanceOptions?): UIGridLayout
+    local uiGridLayout = Instance.new("UIGridLayout")
+    GuiUtils.applyInstanceOptions(uiGridLayout, {
+        Parent = parent,
+        FillDirection = Enum.FillDirection.Horizontal,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
+        VerticalAlignment = Enum.VerticalAlignment.Top,
+        Name = GuiConstants.uiGridLayoutName,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        CellPadding = GuiConstants.cellPadding,
+    }, opt_instanceOptions)
+end
 
-local didVerticalScrollToggle = function()
- function GuiUtils.sanitizeScrollingFrame(scrollingFrame: ScrollingFrame)
-
-    if scrollingFrame.ScrollBarThickness == 0 then
-        return
+function GuiUtils.addScrollingItemGrid(parent:GuiObject, scrollingFrameName: string, itemSize: UDim2, numRows: number): ScrollingFrame
+    local scrollingDirection
+    local automaticCanvasSize
+    if numRows > 1 then
+        scrollingDirection = Enum.ScrollingDirection.Y
+        automaticCanvasSize = Enum.AutomaticSize.Y
+    else
+        scrollingDirection = Enum.ScrollingDirection.X
+        automaticCanvasSize = Enum.AutomaticSize.X
     end
 
-    local canvasSize = scrollingFrame.CanvasSize
-    if scrollingFrame.ScrollingDirection == Enum.ScrollingDirection.Y then
-        if canvasSize.X.Offset == 0 and canvasSize.X.Scale == 1 then
-            scrollingFrame.AttrubuteChanged:Connect(function(attributeName)
-                if attributeName == ""
-            end)
+    local scrollingFrame = GuiUtils.addStandardScrollingFrame(parent)
+    scrollingFrame.ScrollingDirection = scrollingDirection
+    scrollingFrame.AutomaticCanvasSize = automaticCanvasSize
+    scrollingFrame.Name = scrollingFrameName
+    scrollingFrame.AutomaticSize = Enum.AutomaticSize.None
+    scrollingFrame.LayoutOrder = GuiUtils.getNextLayoutOrder(parent)
+
+    GuiUtils.addUIPadding(scrollingFrame)
+
+    local cellHeight = itemSize.Y.Offset
+    Utils.debugPrint("Layout", "scrollingFrame = " , scrollingFrame)
+    Utils.debugPrint("Layout", "parent = " , parent)
+    Utils.debugPrint("Layout", "cellHeight = " , cellHeight)
+    local totalHeight = numRows * cellHeight
+    Utils.debugPrint("Layout", "totalHeight = " , totalHeight)
+
+    if numRows > 1 then
+        GuiUtils.addGridLayout(scrollingFrame, {
+            CellSize = itemSize,
+        })
+    else
+        totalHeight += GuiConstants.scrollBarThickness
+        GuiUtils.addUIListLayout(scrollingFrame, {
+            FillDirection = Enum.FillDirection.Horizontal,
+            Wraps = false,
+            HorizontalAlignment = Enum.HorizontalAlignment.Left,
+        })
+    end
+
+    scrollingFrame.Size = UDim2.new(1, 0, 0, totalHeight)
+    Utils.debugPrint("Layout", "scrollingFrame.Size = " , scrollingFrame.Size)
+
+    if numRows > 1 then
+        -- Fixed width, autosize height.
+        scrollingFrame.CanvasSize = UDim2.new(1, 0, 0, 0)
+    else
+        -- Fixed height, autosize width.
+        scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
+    end
+
+    return scrollingFrame
+end
+
+function GuiUtils.getRightHandContentOffset(labelWidth: number): number
+    return GuiConstants.labelToRightSideContentPaddingPx + labelWidth
+end
+
+-- Make a row.
+-- On the left row has a text label.
+-- On the right, row has whatever was handed in as rightHandContent.
+function GuiUtils.addLabeledRow(parent: GuiObject, rowName: string, labelText: string, rightHandContentMaker: (GuiObject) -> GuiObject): GuiObject
+    local row = GuiUtils.addRow(parent, rowName)
+    GuiUtils.addUIListLayout(row, {
+        FillDirection = Enum.FillDirection.Horizontal,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        Padding = GuiConstants.labelToRightSideContentPadding,
+    })
+
+    local textLabel = GuiUtils.addTextLabel(row, labelText, {
+        TextXAlignment = Enum.TextXAlignment.Right,
+        Size = UDim2.fromScale(0, 0),
+        AutomaticSize = Enum.AutomaticSize.XY,
+        LayoutOrder = 1,
+        Name = GuiConstants.labeledRowTextLabelName,
+    })
+
+    local rightHandContentOffset = GuiUtils.getRightHandContentOffset(textLabel.AbsoluteSize.X)
+    local rightHandContent = rightHandContentMaker(row)
+    assert(rightHandContent.Name == GuiConstants.rightHandContentName, "Should have rightHandContentName")
+    rightHandContent.LayoutOrder = 2
+    rightHandContent.Size = UDim2.new(1, -rightHandContentOffset, rightHandContent.Size.Y.Scale, rightHandContent.Size.Y.Offset)
+
+    return row
+end
+
+function GuiUtils.alignLabeledRows(rows: {GuiObject})
+    local maxWidth = 0
+    for _, row in rows do
+        local textLabel = row:FindFirstChild(GuiConstants.labeledRowTextLabelName)
+        assert(textLabel, "Should have a textLabel")
+        local width = textLabel.AbsoluteSize.X
+        if width > maxWidth then
+            maxWidth = width
         end
     end
-    if scrollingFrame.ScrollingDirection == Enum.ScrollingDirection.X then
-        if canvasSize.Y.Offset == 0 and canvasSize.Y.Scale == 1 then
-            scrollingFrame.AttrubuteChanged:Connect(didHorizontalScrollToggle)
-        end
+
+    -- Set them all to max width and adjust the row content accordingly.
+    for _, row in rows do
+        local textLabel = row:FindFirstChild(GuiConstants.labeledRowTextLabelName)
+        assert(textLabel, "Should have a textLabel")
+        textLabel.Size = UDim2.fromOffset(maxWidth, textLabel.AbsoluteSize.Y)
+        textLabel.AutomaticSize = Enum.AutomaticSize.None
+        local rightHandContent = row:FindFirstChild(GuiConstants.rightHandContentName)
+        assert(rightHandContent, "Should have a rightHandContent")
+        assert(rightHandContent.AutomaticSize == Enum.AutomaticSize.None, "Should have Enum.AutomaticSize.None")
+        local rightHandContentOffset = GuiUtils.getRightHandContentOffset(maxWidth)
+        rightHandContent.Size = UDim2.new(1, -rightHandContentOffset, 0, rightHandContent.AbsoluteSize.Y)
     end
 end
-]]
 
-function GuiUtils.setScrollingFrameColors(scrollingFrame: ScrollingFrame)
+function GuiUtils.addStandardScrollingFrame(parent: Frame): ScrollingFrame
+    local scrollingFrame = Instance.new("ScrollingFrame")
+    scrollingFrame.Parent = parent
     scrollingFrame.ScrollBarImageColor3 = GuiConstants.scrollBarColor
     scrollingFrame.ScrollBarImageTransparency = GuiConstants.scrollBarTransparency
+    scrollingFrame.BackgroundColor3 = GuiConstants.scrollBackgroundColor
+    scrollingFrame.BackgroundTransparency = 0
+    scrollingFrame.ScrollBarThickness = GuiConstants.scrollBarThickness
+
+    return scrollingFrame
 end
 
 function setBooleanValue(parent:Instance, name: string, value: boolean)

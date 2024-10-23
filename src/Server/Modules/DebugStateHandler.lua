@@ -19,6 +19,7 @@ local GameTable = require(RobloxBoardGameServer.Classes.GameTable)
 local ServerEventUtils = require(RobloxBoardGameServer.Modules.ServerEventUtils)
 local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
 local ServerGameAnalytics = require(RobloxBoardGameServer.Analytics.ServerGameAnalytics)
+local WrappedDataStoreService = require(RobloxBoardGameServer.Analytics.WrappedDataStoreService)
 
 local DebugStateHandler = {}
 
@@ -34,6 +35,7 @@ function DebugStateHandler.enterDebugState(realPlayerUserId: CommonTypes.UserId,
     assert(RunService:IsStudio(), "Should be in studio")
     ServerGameAnalytics.dumpBudget()
     ServerGameAnalytics.useThrowawayDataStore()
+    WrappedDataStoreService.setUseDebug(false)
 
     if not opt_configs then
         return nil

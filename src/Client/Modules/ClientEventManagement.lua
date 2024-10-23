@@ -115,9 +115,9 @@ function ClientEventManagement.listenToServerEvents(onTableCreated: (tableDescri
 
     event = publicEvents:WaitForChild(EventUtils.EventNameSendAnalyticsRecordsHandful)
     assert(event, "SendAnalyticsRecordsHandful event missing")
-    event.OnClientEvent:Connect(function(conversationId: number, records: {CommonTypes.AnalyticsRecord}, isFinal: number)
+    event.OnClientEvent:Connect(function(conversationId: number, gameRecords: {CommonTypes.AnalyticsGameRecord}, isFinal: number)
         local bindableEvent = ClientEventManagement.getOrMakeBindableEvent(EventUtils.BindableEventNameAnalyticsHandful)
-        bindableEvent:Fire(conversationId, records, isFinal)
+        bindableEvent:Fire(conversationId, gameRecords, isFinal)
     end)
 
     event = publicEvents:WaitForChild(EventUtils.EventNameTableCreated)

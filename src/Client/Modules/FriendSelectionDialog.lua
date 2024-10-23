@@ -38,7 +38,7 @@ local mockUserId = 2231221
 local selectedUserIds: {CommonTypes.UserId} = {}
 
 local selectedFriendsRowContent
-local gridRowContent
+local friendsScrollingFrame
 local filterWidgetContent
 
 export type FriendSelectionDialogConfig = {
@@ -65,7 +65,7 @@ end
 local updateSelectedFriendsRowContent
 updateSelectedFriendsRowContent = function(justBuilt: boolean?)
     assert(selectedFriendsRowContent, "Should have a rowContent")
-    assert(selectedFriendsRowContent.Parent.Name == "Row_SelectedFriends", "Should have a rowContent with parent Row_SelectedFriends")
+    assert(selectedFriendsRowContent.Parent.Name == GuiConstants.selectedFriendsName, "Should have a rowContent with parent " .. GuiConstants.selectedFriendsName)
 
     local function canDeselectFriend(): boolean
         return true
@@ -92,8 +92,8 @@ updateSelectedFriendsRowContent = function(justBuilt: boolean?)
         widgetCotainerNamesForSelectedUsers[widgetContainerName] = true
     end
 
-    Utils.debugPrint("InviteToTable", "gridRowContent = ", gridRowContent)
-    local childWidgetContainers = gridRowContent:GetChildren()
+    Utils.debugPrint("InviteToTable", "gridRowContent = ", friendsScrollingFrame)
+    local childWidgetContainers = friendsScrollingFrame:GetChildren()
     Utils.debugPrint("InviteToTable", "childWidgetContainers = ", childWidgetContainers)
     for _, childWidgetContainer in childWidgetContainers do
         Utils.debugPrint("InviteToTable", "childWidgetContainer = ", childWidgetContainer)
@@ -123,7 +123,7 @@ local function appendFriendsToGrid(friendsFromFriendPages: {FriendFromFriendPage
                 end
             end
 
-            local userWidgetContainer = UserGuiUtils.addUserButtonWidgetContainer(gridRowContent, userId, onFriendSelected)
+            local userWidgetContainer = UserGuiUtils.addUserButtonWidgetContainer(friendsScrollingFrame, userId, onFriendSelected)
 
             if config.isMultiSelect then
                 -- If this is multi-select, we want to disable the button if it's already selected.
@@ -152,7 +152,7 @@ local function asyncFetchAllFriends(userId: number, callback: ({FriendFromFriend
     end)
 end
 
-local function fillGridInRowContentWithFriends(config: FriendSelectionDialogConfig)
+local function fillFriendsScrollingFrametWithFriends(config: FriendSelectionDialogConfig)
     -- Grab handfuls. If we scroll down grab more handfuls.
     local userId = Players.LocalPlayer.UserId
     if RunService:IsStudio() then
@@ -175,8 +175,8 @@ local filterMatchesUserName = function(filterText: string?, userName: string): b
     return string.find(string.lower(userName), string.lower(filterText), 1, true) ~= nil
 end
 
-local addFilterTextBox = function(rowContent:Frame): Frame
-    local textBox = GuiUtils.addTextBox(rowContent, {
+local addFilterTextBox = function(parent:Frame): Frame
+    local textBox = GuiUtils.addTextBox(parent, {
         PlaceholderText = "Filter friends by name...",
         Size = UDim2.fromScale(0.75, 0),
         Text = "",
@@ -185,7 +185,7 @@ local addFilterTextBox = function(rowContent:Frame): Frame
     -- When the text box changes we are going to filter the grid.
     textBox:GetPropertyChangedSignal("Text"):Connect(function()
         local filterText = textBox.Text
-        local childWidgetContainers = gridRowContent:GetChildren()
+        local childWidgetContainers = friendsScrollingFrame:GetChildren()
         for _, childWidgetContainer in childWidgetContainers do
             if GuiUtils.isAWidgetContainer(childWidgetContainer) then
                 local userName = GuiUtils.getNameFromUserWidgetContainer(childWidgetContainer)
@@ -204,20 +204,20 @@ end
 local function makeCustomDialogContent(parent:Frame, config: FriendSelectionDialogConfig): GuiObject
     -- If this is multi-select, we want a row to show all currently selected friends.
     if config.isMultiSelect then
-        selectedFriendsRowContent = GuiUtils.addRowOfUniformItemsAndReturnRowContent(parent,
-        "Row_SelectedFriends",
-        "Selected Friends: ",
-        GuiConstants.userWidgetHeight)
+        local function rightHandContentMaker(_parent: Frame)
+            local itemGrid = GuiUtils.addScrollingItemGrid(_parent, GuiConstants.rightHandContentName, GuiConstants.userWidgetSize, 1)
+            return itemGrid
+        end
+        GuiUtils.addLabeledRow(parent, GuiConstants.SelectedFriendsName, "Selected Friends: ",rightHandContentMaker)
     end
 
     -- Add the filter widget.
-    filterWidgetContent = GuiUtils.addRowAndReturnRowContent(parent, "Row_Filter")
-    addFilterTextBox(filterWidgetContent)
+    addFilterTextBox(parent)
 
     -- Grid of friends.
     Utils.debugPrint("User", "makeCustomDialogContent 001 GuiConstants.userWidgetSize = ", GuiConstants.userWidgetSize)
-    gridRowContent = GuiUtils.addRowWithItemGridAndReturnRowContent(parent, "Row_AvailableFriends", GuiConstants.userWidgetSize)
-    fillGridInRowContentWithFriends(config)
+    friendsScrollingFrame = GuiUtils.addScrollingItemGrid(parent, "AvailableFriendsScroll", GuiConstants.userWidgetSize, 3)
+    fillFriendsScrollingFrametWithFriends(config)
 
     if config.isMultiSelect then
         updateSelectedFriendsRowContent(true)

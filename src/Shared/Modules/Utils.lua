@@ -46,7 +46,7 @@ local debugPrintEnabledLabels = {
     UserLayout = false,
 }
 
-debugPrintEnabledLabels.Dialogs = true
+debugPrintEnabledLabels.Layout = true
 
 -- Split a string into a list of strings based on delimited.
 function Utils.splitString(str: string, delimiter: string): {string}
@@ -75,6 +75,13 @@ function Utils.tablesHaveSameKeys(table1: {[any]: any}, table2: {[any]: any}): b
         end
     end
     return true
+end
+
+function Utils.tablesMatch(opt_table1: CommonTypes.NonDefaultGameOptions?, opt_table2: CommonTypes.NonDefaultGameOptions?): boolean
+    local table1 = opt_table1 or {}
+    local table2 = opt_table2 or {}
+
+    return Cryo.Dictionary.equals(table1, table2)
 end
 
 -- is a value in a number-indexed array?

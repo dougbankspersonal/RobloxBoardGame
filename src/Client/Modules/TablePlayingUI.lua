@@ -35,7 +35,7 @@ local addMetadataElement = function(parent: GuiObject, text: string, fontSize: n
     label.Text = text
     label.TextSize = fontSize
     label.TextWrapped = true
-    label.Size = UDim2.new(1, -2 * GuiConstants.standardPadding, 0, 0)
+    label.Size = UDim2.new(1, 0, 0, 0)
     label.LayoutOrder = metadataLayoutOrder
     label.AutomaticSize = Enum.AutomaticSize.Y
     label.RichText = true
@@ -122,16 +122,13 @@ local addSidebar = function(mainFrame: GuiObject, tableDescription: CommonTypes.
     GuiUtils.addUIPadding(sideBarFrame)
 
     -- top section with metadata.
-    local tableMetadataFrame = Instance.new("ScrollingFrame")
-    GuiUtils.setScrollingFrameColors(tableMetadataFrame)
+    local tableMetadataFrame = GuiUtils.addStandardScrollingFrame(sideBarFrame)
     tableMetadataFrame.Name = GuiConstants.gamePlayingTableMetadataName
-    tableMetadataFrame.Parent = sideBarFrame
     tableMetadataFrame.Position = UDim2.new(0, 0, 0, 0)
-    tableMetadataFrame.Size = UDim2.new(1, 0, 1, -GuiConstants.gamePlayingSidebarControlsHeight - GuiConstants.standardPadding)
+    tableMetadataFrame.Size = UDim2.new(1, 0, 1, -GuiConstants.gamePlayingSidebarControlsHeight)
     tableMetadataFrame.ScrollingDirection = Enum.ScrollingDirection.Y
     tableMetadataFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     tableMetadataFrame.CanvasSize = UDim2.new(1, 0, 0, 0)
-    tableMetadataFrame.BackgroundColor3 = GuiConstants.scrollBackgroundColor
     tableMetadataFrame.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
 --     GuiUtils.sanitizeScrollingFrame(tableMetadataFrame)
     GuiUtils.addUIGradient(tableMetadataFrame, GuiConstants.scrollBackgroundGradient)

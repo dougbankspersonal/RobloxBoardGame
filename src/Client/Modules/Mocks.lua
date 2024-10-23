@@ -136,14 +136,12 @@ local summonMocksDialog = function()
         end
     end
 
-    Utils.debugPrint("Dialogs", "summonMocksDialog 001")
     local dialogConfig: DialogUtils.DialogConfig = {
         title = "Mocks",
         description = "Various debug options",
         dialogButtonConfigs = dialogButtonConfigs,
     }
 
-    Utils.debugPrint("Dialogs", "summonMocksDialog 002")
     DialogUtils.makeDialogAndReturnId(dialogConfig)
 end
 

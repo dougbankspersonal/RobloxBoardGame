@@ -55,17 +55,14 @@ function GuiMain.makeContainingScrollingFrame()
     local mainScreenGui = GuiUtils.getMainScreenGui()
     assert(mainScreenGui, "Should have a mainScreenGui")
 
-    local containingScrollingFrame = Instance.new("ScrollingFrame")
-    containingScrollingFrame.BackgroundColor3 = Color3.new(1, 1, 1)
-    containingScrollingFrame.Parent = mainScreenGui
+    local containingScrollingFrame = GuiUtils.addStandardScrollingFrame(mainScreenGui)
     containingScrollingFrame.Name = GuiConstants.containingScrollingFrameName
     containingScrollingFrame.BorderSizePixel= 0
     containingScrollingFrame.CanvasSize = UDim2.fromScale(1, 0)
     containingScrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     containingScrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-    containingScrollingFrame.Position = UDim2.fromOffset(0, GuiConstants.robloxTopBarBottomPadding)
-    containingScrollingFrame.Size = UDim2.new(1, 0, 1, -GuiConstants.robloxTopBarBottomPadding)
-    GuiUtils.setScrollingFrameColors(containingScrollingFrame)
+    containingScrollingFrame.Position = UDim2.fromOffset(0, GuiConstants.robloxTopBarBottomPaddingPx)
+    containingScrollingFrame.Size = UDim2.new(1, 0, 1, -GuiConstants.robloxTopBarBottomPaddingPx)
 
     return containingScrollingFrame
 end

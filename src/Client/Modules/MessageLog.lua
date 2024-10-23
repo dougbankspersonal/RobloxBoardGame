@@ -43,18 +43,15 @@ MessageLog.new = function(parent:Frame): MessageLog
     self.textLabelsWithCallbacks = {}
 
     self.parent = parent
-    self.scrollingFrame = Instance.new("ScrollingFrame")
+    self.scrollingFrame = GuiUtils.addStandardScrollingFrame(parent)
     self.scrollingFrame.Name = "MessageLog"
     self.scrollingFrame.Size = UDim2.new(1, 0, 0, GuiConstants.messageLogHeight)
     self.scrollingFrame.Position = UDim2.new(0, 0, 0, 0)
-    self.scrollingFrame.BackgroundColor3 = Color3.fromRGB(230, 210, 200)
-    self.scrollingFrame.ScrollBarThickness = 8
+    self.scrollingFrame.ScrollBarThickness = GuiConstants.scrollBarThickness
     self.scrollingFrame.ScrollingEnabled = true
-    self.scrollingFrame.Parent = parent
     self.scrollingFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
     self.scrollingFrame.CanvasSize = UDim2.new(1, 0, 0, 0)
     self.scrollingFrame.ScrollingDirection = Enum.ScrollingDirection.Y
-    self.scrollingFrame.ScrollBarImageColor3 = Color3.new(0, 0, 0)
     self.messageLayoutOrder = 1
 
     -- Adapt scrolling frame with "slide out" effect.

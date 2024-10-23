@@ -23,7 +23,7 @@ local ClientTableDescriptions = require(RobloxBoardGameClient.Modules.ClientTabl
 local ClientEventManagement = require(RobloxBoardGameClient.Modules.ClientEventManagement)
 local GuiConstants = require(RobloxBoardGameClient.Globals.GuiConstants)
 local TableGuiUtils= require(RobloxBoardGameClient.Modules.TableGuiUtils)
-local GameSelectionUI = require(RobloxBoardGameClient.Modules.GameSelectionUI)
+local GamePicker = require(RobloxBoardGameClient.Modules.GamePicker)
 local PrivacySelectionUI = require(RobloxBoardGameClient.Modules.PrivacySelectionUI)
 
 local TableSelectionUI = {}
@@ -50,22 +50,26 @@ local function updateInvitedTables(mainFrame: GuiObject)
     local localUserId = game.Players.LocalPlayer.UserId
     assert(localUserId, "Should have a localUserId")
 
-    local invitedRowContent = GuiUtils.getRowContent(mainFrame, "Row_InvitedTables")
-    assert(invitedRowContent, "Should have an invitedRowContent")
-    local tableIdsForInvitedWaitingTables = ClientTableDescriptions.getTableIdsForInvitedWaitingTables(localUserId)
+    local invitedRow = mainFrame:FindFirstChild(GuiConstants.invitedTablesName)
+    assert(invitedRow, "Should have an invitedRowContent")
+    local invitedRowScroll = invitedRow:FindFirstChild(GuiConstants.rightHandContentName)
+    assert(invitedRowScroll, "Should have an invitedRowScroll")
 
-    GuiUtils.updateWidgetContainerChildren(invitedRowContent, tableIdsForInvitedWaitingTables, makeWidgetContainerForTable, addInviteTableNullStaticWidget, GuiUtils.removeNullStaticWidget)
+    local tableIdsForInvitedWaitingTables = ClientTableDescriptions.getTableIdsForInvitedWaitingTables(localUserId)
+    GuiUtils.updateWidgetContainerChildren(invitedRowScroll, tableIdsForInvitedWaitingTables, makeWidgetContainerForTable, addInviteTableNullStaticWidget, GuiUtils.removeNullStaticWidget)
 end
 
 local function updatePublicTables(mainFrame: GuiObject)
     local localUserId = game.Players.LocalPlayer.UserId
     assert(localUserId, "Should have a localUserId")
 
-    local publicRowContent = GuiUtils.getRowContent(mainFrame, "Row_PublicTables")
-    assert(publicRowContent, "Should have an publicRowContent")
-    local tableIdsForPublicWaitingTables = ClientTableDescriptions.getTableIdsForPublicWaitingTables(localUserId)
+    local publicRow = mainFrame:FindFirstChild(GuiConstants.publicTablesName)
+    assert(publicRow, "Should have a publicRow")
+    local publicRowScroll = publicRow:FindFirstChild(GuiConstants.rightHandContentName)
+    assert(publicRowScroll, "Should have a publicRowScroll")
 
-    GuiUtils.updateWidgetContainerChildren(publicRowContent, tableIdsForPublicWaitingTables, makeWidgetContainerForTable, addPublicTableNullStaticWidget, GuiUtils.removeNullStaticWidget)
+    local tableIdsForPublicWaitingTables = ClientTableDescriptions.getTableIdsForPublicWaitingTables(localUserId)
+    GuiUtils.updateWidgetContainerChildren(publicRowScroll, tableIdsForPublicWaitingTables, makeWidgetContainerForTable, addPublicTableNullStaticWidget, GuiUtils.removeNullStaticWidget)
 end
 
 --[[
@@ -86,24 +90,17 @@ function TableSelectionUI.build()
 
     mainFrame.BackgroundColor3 = GuiConstants.tableSelectionBackgroundColor
     GuiUtils.addUIGradient(mainFrame, GuiConstants.standardMainScreenColorSequence)
-
     GuiUtils.addStandardMainFramePadding(mainFrame)
     GuiUtils.addLayoutOrderGenerator(mainFrame)
-
     GuiUtils.addUIListLayout(mainFrame, {
         VerticalAlignment = Enum.VerticalAlignment.Top,
-        Padding = UDim.new(0, GuiConstants.paddingBetweenRows),
+        Padding = GuiConstants.betweenRowPadding,
     })
 
     -- Row to add a new table.
-    local rowOptions : GuiUtils.RowOptions = {
-        horizontalAlignment = Enum.HorizontalAlignment.Center,
-        uiListLayoutPadding = UDim.new(0, GuiConstants.buttonsUIListLayoutPadding),
-    }
-    local rowContent = GuiUtils.addRowAndReturnRowContent(mainFrame, "Row_TableSelectionControls", rowOptions)
-    GuiUtils.addStandardTextButtonInContainer(rowContent, "Host a new Table", function()
+    GuiUtils.addStandardTextButtonInContainer(mainFrame, "Host a new Table", function()
         -- Prompt to select a game.
-        GameSelectionUI.promptToSelectGameID("Select a game", "Click on the game you want to play.", function(gameId: CommonTypes.GameId)
+        GamePicker.promptToSelectGameID("Select a game", "Click on the game you want to play.", function(gameId: CommonTypes.GameId)
             -- Prompt to select public or private.
             PrivacySelectionUI.promptToSelectPrivacy("Public or Private?",
                 "Anyone in the experience can join a Public game.  Only invited players can join a Private game.",
@@ -114,8 +111,20 @@ function TableSelectionUI.build()
         end)
     end)
 
-    GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_InvitedTables", "Private Tables:", GuiConstants.tableWidgetHeight)
-    GuiUtils.addRowOfUniformItemsAndReturnRowContent(mainFrame, "Row_PublicTables", "Public Tables:", GuiConstants.tableWidgetHeight)
+    local function rightHandContentMaker(_parent: Frame)
+        local itemGrid = GuiUtils.addScrollingItemGrid(_parent, GuiConstants.rightHandContentName, GuiConstants.tableWidgetSize, 1)
+        return itemGrid
+    end
+
+    local privateRow = GuiUtils.addLabeledRow(mainFrame, GuiConstants.invitedTablesName, "Private Tables:", rightHandContentMaker)
+    local publicRow = GuiUtils.addLabeledRow(mainFrame, GuiConstants.publicTablesName, "Public Tables:", rightHandContentMaker)
+
+    local rows = {
+        privateRow,
+        publicRow,
+    }
+
+    GuiUtils.alignLabeledRows(rows)
 end
 
 -- update ui elements for the table creation/selection ui.

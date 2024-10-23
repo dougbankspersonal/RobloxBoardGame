@@ -341,7 +341,7 @@ local function setupClientToServerEvents(tableEventsFolder: Folder)
         handleCreateTable(player.UserId, gameId, false)
     end)
 
-    -- Event to create a new table.
+    -- Event to fetch analytics record count.
     ServerEventUtils.createRemoteEvent(tableEventsFolder, EventUtils.EventNameGetAnalyticsRecordCount, function(player: Player, gameId: CommonTypes.GameId, conversationId: number)
         assert(player, "player should be defined")
         assert(gameId, "gameId should be defined")
@@ -355,8 +355,8 @@ local function setupClientToServerEvents(tableEventsFolder: Folder)
 
     ServerEventUtils.createRemoteEvent(tableEventsFolder, EventUtils.EventNameGetAnalyticsRecords, function(player: Player, gameId: CommonTypes.GameId, conversationId: number)
         -- Grab handfuls and send back as we get them.
-        ServerGameAnalytics.fetchAllAnalyticsRecordsForGameByPages(gameId, function(records: {CommonTypes.AnalyticsRecord}, isFinished: boolean)
-            ServerEventUtils.sendPublicEventToPlayers(EventUtils.EventNameSendAnalyticsRecordsHandful, {player}, conversationId, records, isFinished)
+        ServerGameAnalytics.getAllRecordsForGameByHandfuls(gameId, function(gameRecords: {CommonTypes.AnalyticsGameRecord}, isFinished: boolean)
+            ServerEventUtils.sendPublicEventToPlayers(EventUtils.EventNameSendAnalyticsRecordsHandful, {player}, conversationId, gameRecords, isFinished)
         end)
     end)
 

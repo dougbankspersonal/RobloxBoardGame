@@ -23,7 +23,7 @@ export type TableId = number
 
 -- A game is one of the board games that can be played in this experience.
 -- You might have an experience with a single board game.
--- Or you might have a "board game night" experience where people can choose from a variety of games.
+-- Or you might have a "board game night" experience where people can choose fgamedem a variety of games.
 -- This id uniquely identifies a game within the experience.
 export type GameId = number
 
@@ -114,8 +114,8 @@ export type GameOptionVariant = {
 
 export type GameOption = {
     name: string,
+    description: string,
     gameOptionId: GameOptionId,
-    details: string,
     opt_variants: {GameOptionVariant}?
 }
 
@@ -232,17 +232,28 @@ export type DebugStateConfigs = {
     startGame: boolean?,
 }
 
-export type AnalyticsRecord = {
+export type AnalyticsGameDescription = {
+    gameId: GameId,
     gameInstanceGUID: GameInstanceGUID,
-    recordType: string,
-    idAsString: string,
-    value: any,
+    memberUserIds: {UserId},
+    hostUserId: UserId,
+    isPublic: boolean,
+    nonDefaultGameOptions: NonDefaultGameOptions,
+}
+
+export type AnalyticsGameEvent = {
+    eventType: string,
+    details: any,
+}
+export type AnalyticsGameRecord = {
+    description: AnalyticsGameDescription,
+    events: {AnalyticsGameEvent},
 }
 
 export type ClientGameInstanceFunctions = {
     makeClientGameInstanceAsync: (TableDescription, Frame) -> ClientGameInstance,
     getClientGameInstance: () -> ClientGameInstance?,
-    renderAnalyticsRecords: (Frame, {AnalyticsRecord}) -> nil,
+    renderAnalyticsRecords: (Frame, NonDefaultGameOptions, {AnalyticsGameRecord}) -> nil,
 }
 
 export type ClientGameInstanceFunctionsByGameId = {

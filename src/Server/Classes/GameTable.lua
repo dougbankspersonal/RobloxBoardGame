@@ -25,6 +25,7 @@ local ServerGameInstances = require(RobloxBoardGameServer.Modules.ServerGameInst
 local ServerTypes = require(RobloxBoardGameServer.Types.ServerTypes)
 local GameTablesStorage = require(RobloxBoardGameServer.Modules.GameTablesStorage)
 local ServerEventUtils = require(RobloxBoardGameServer.Modules.ServerEventUtils)
+local ServerGameAnalytics = require(RobloxBoardGameServer.Analytics.ServerGameAnalytics)
 
 local GameTable = {}
 GameTable.__index = GameTable
@@ -426,9 +427,13 @@ function GameTable:startGame(userId: CommonTypes.UserId): boolean
     ServerEventUtils.setupRemoteCommunicationsForGame(self.tableDescription.gameInstanceGUID)
     -- Make the instance and start the game playing.
     local serverGameInstanceConstructor = self:getServerGameInstanceConstructor()
+
     -- _After this an instance for the game exists on the server, game is playing.
     local serverGameInstance = serverGameInstanceConstructor(self.tableDescription)
     ServerGameInstances.addServerGameInstance(serverGameInstance)
+
+    -- Tell analytics about this game.
+    ServerGameAnalytics.startGameRecord(self.tableDescription)
 
     self:sanityCheck()
 
@@ -439,11 +444,15 @@ function GameTable:endGame(): boolean
     -- Clean up the server game instance.
     local serverGameInstance = self:getServerGameInstance()
     assert(serverGameInstance, "should have gameInstance")
-    ServerGameInstances.removeServerGameInstance(self.tableDescription.gameInstanceGUID)
+    local gameInstanceGUID = self.tableDescription.gameInstanceGUID
+    ServerGameInstances.removeServerGameInstance(gameInstanceGUID)
     assert(serverGameInstance, "should have gameInstance")
     serverGameInstance:destroy()
 
-    local gameInstanceGUID = self.tableDescription.gameInstanceGUID
+    -- Tell analytics the game is over, send the record.
+    task.spawn(function()
+        ServerGameAnalytics.sendGameRecordAsync(gameInstanceGUID)
+    end)
 
     -- Remove all communication channels for game.
     ServerEventUtils.removeGameEventsFolder(gameInstanceGUID)

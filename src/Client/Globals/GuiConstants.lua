@@ -10,18 +10,36 @@ Common names
 GuiConstants.uberBackgroundName = "UberBackground"
 GuiConstants.containingScrollingFrameName = "ContainingScrollingFrame"
 GuiConstants.mainFrameName = "MainFrame"
-
 GuiConstants.layoutOrderGeneratorName = "LayoutOrderGenerator"
 GuiConstants.rowContentName = "RowContent"
-GuiConstants.rowUIGridLayoutName = "Row_UIGridLayout"
-GuiConstants.widgetLoadingName = "WidgetLoading"
+GuiConstants.uiGridLayoutName = "_UIGridLayout"
+GuiConstants.labeledRowTextLabelName = "LabeledRowTextLabel"
+GuiConstants.rightHandContentName = "RightHandContent"
 
-
+-- Common widgets.
 GuiConstants.itemImageName = "ItemImage"
 GuiConstants.itemTextName = "ItemText"
-
 GuiConstants.nullStaticWidgetName = "NullStaticWidget"
 GuiConstants.deadMeatTweeningOutName = "DeadMeatTweeningOut"
+
+-- Loading page.
+GuiConstants.widgetLoadingName = "WidgetLoading"
+
+-- Dialog
+GuiConstants.dialogControlsName = "DialogControls"
+
+-- Friend selection dialog.
+GuiConstants.selectedFriendsName = "SelectedFriends"
+
+-- Table selection UI.
+GuiConstants.publicTablesName = "PublicTables"
+GuiConstants.invitedTablesName = "InvitedTables"
+
+-- Table waiting UI.
+GuiConstants.startButtonName = "StartButton"
+GuiConstants.tableWaitingControlsName = "TableWaitingControls"
+GuiConstants.membersName = "Members"
+GuiConstants.invitesName = "Invites"
 
 GuiConstants.persistentNameStart = "Persistent_"
 
@@ -36,6 +54,8 @@ GuiConstants.dialogContentFrameName = "DialogContentFrame"
 GuiConstants.dialogName = "Dialog"
 GuiConstants.inactiveOverlayName = "InactiveOverlay"
 GuiConstants.dialogDescriptionTextLabel = "DialogDescriptionTextLabel"
+GuiConstants.dialogTitleTextLabel = "DialogTitleTextLabel"
+GuiConstants.dialogHeadingTextLabel = "DialogHeadingTextLabel"
 
 -- Analytics
 GuiConstants.statusUpdateTextLabel = "StatusUpdateTextLabel"
@@ -85,67 +105,87 @@ Measurements in Pixels.
 ]]
 GuiConstants.messageLogHeight = 200
 
+-- Paddings.
+GuiConstants.defaultUIListLayoutPaddingPx = 5
+GuiConstants.buttonInternalSidePaddingPx = 20
+GuiConstants.robloxTopBarBottomPaddingPx = 10
+GuiConstants.labelToRightSideContentPaddingPx = 10
+GuiConstants.cellPaddingPx = 5
+GuiConstants.screenToDialogPaddingPx = 50
+GuiConstants.dialogToContentPaddingPx = 20
+GuiConstants.standardPaddingPx = 10
+GuiConstants.betweenRowPaddingPx = 14
+
+GuiConstants.mainFrameToContentPaddingPx = 20
+GuiConstants.betweenButtonPaddingPx = 10
+
+
+GuiConstants.betweenButtonPadding = UDim.new(0, GuiConstants.betweenButtonPaddingPx)
+GuiConstants.mainFrameToContentPadding = UDim.new(0, GuiConstants.mainFrameToContentPaddingPx)
+GuiConstants.defaultUIListLayoutPadding = UDim.new(0, GuiConstants.defaultUIListLayoutPaddingPx)
+GuiConstants.buttonInternalSidePadding = UDim.new(0, GuiConstants.buttonInternalSidePaddingPx)
+GuiConstants.standardPadding = UDim.new(0, GuiConstants.standardPaddingPx)
+GuiConstants.cellPadding = UDim2.fromOffset(GuiConstants.cellPaddingPx)
+GuiConstants.dialogToContentPadding = UDim.new(0, GuiConstants.dialogToContentPaddingPx)
+GuiConstants.betweenRowPadding = UDim.new(0, GuiConstants.betweenRowPaddingPx)
+GuiConstants.noPadding = UDim.new(0, 0)
+GuiConstants.labelToRightSideContentPadding = UDim.new(0, GuiConstants.labelToRightSideContentPaddingPx)
+
+-- Dialog stuff.
+GuiConstants.dialogTitleHeight = 26
+GuiConstants.dialogDescriptionHeight = 16
 
 GuiConstants.dialogButtonWidth = 150
 GuiConstants.dialogButtonHeight = 40
+GuiConstants.gameConfigPickerMinWidth = 400
+GuiConstants.gamePickerDialogMinWidth = 400
 
 GuiConstants.standardCornerSize = 4
 GuiConstants.textButtonHeight = 40
 
 GuiConstants.rowLabelWidth = 200
-GuiConstants.standardPadding = 10
-GuiConstants.mainFramePadding = 20
-GuiConstants.paddingBetweenRows = 14
 
 -- User widget details.
 GuiConstants.userImageWidth = 80
 GuiConstants.userImageHeight = 80
 GuiConstants.userLabelWidth = 130
 GuiConstants.userLabelHeight = 25
-GuiConstants.userWidgetWidth = math.max(GuiConstants.userImageWidth, GuiConstants.userLabelWidth) + 2 * GuiConstants.standardPadding
-GuiConstants.userWidgetHeight = GuiConstants.userImageHeight + GuiConstants.userLabelHeight + 2 * GuiConstants.standardPadding
+GuiConstants.userWidgetWidth = math.max(GuiConstants.userImageWidth, GuiConstants.userLabelWidth) + 2 * GuiConstants.standardPaddingPx
+
+GuiConstants.userWidgetHeight = GuiConstants.userImageHeight + GuiConstants.userLabelHeight + 2 * GuiConstants.standardPaddingPx
 GuiConstants.redXSize = 20
 GuiConstants.redXMargin = 5
 
 -- Mini user widget details.
 GuiConstants.miniUserImageWidth = 30
 GuiConstants.miniUserImageHeight = 30
-GuiConstants.miniUserWidgetWidth = math.max(GuiConstants.miniUserImageWidth, GuiConstants.userLabelWidth) + 2 * GuiConstants.standardPadding
-GuiConstants.miniUserWidgetHeight = GuiConstants.miniUserImageHeight + GuiConstants.userLabelHeight + 2 * GuiConstants.standardPadding
+GuiConstants.miniUserWidgetWidth = math.max(GuiConstants.miniUserImageWidth, GuiConstants.userLabelWidth) + 2 * GuiConstants.standardPaddingPx
+GuiConstants.miniUserWidgetHeight = GuiConstants.miniUserImageHeight + GuiConstants.userLabelHeight + 2 * GuiConstants.standardPaddingPx
 
 -- Game widget details.
 GuiConstants.gameImageWidth = 60
 GuiConstants.gameImageHeight = 60
 GuiConstants.gameLabelWidth = 130
 GuiConstants.gameLabelHeight = 25
-GuiConstants.gameWidgetWidth = math.max(GuiConstants.gameImageWidth, GuiConstants.gameLabelWidth) + 2 * GuiConstants.standardPadding
-GuiConstants.gameWidgetHeight = GuiConstants.gameImageHeight + GuiConstants.gameLabelHeight + 3 * GuiConstants.standardPadding
+GuiConstants.gameWidgetWidth = math.max(GuiConstants.gameImageWidth, GuiConstants.gameLabelWidth) + 2 * GuiConstants.standardPaddingPx
+GuiConstants.gameWidgetHeight = GuiConstants.gameImageHeight + GuiConstants.gameLabelHeight + 2 * GuiConstants.standardPaddingPx
 
 -- Table widget details.
 local userInTableWidth = GuiConstants.userLabelWidth
 local gameInTableWidth = math.max(GuiConstants.gameLabelWidth, GuiConstants.gameImageWidth)
-GuiConstants.tableWidgetWidth = math.max(userInTableWidth, gameInTableWidth) + 2 * GuiConstants.standardPadding
-GuiConstants.tableWidgetHeight = GuiConstants.gameImageHeight + GuiConstants.gameLabelHeight + GuiConstants.userLabelHeight + 4 * GuiConstants.standardPadding
+GuiConstants.tableWidgetWidth = math.max(userInTableWidth, gameInTableWidth) + 2 * GuiConstants.standardPaddingPx
+GuiConstants.tableWidgetHeight = GuiConstants.gameImageHeight + GuiConstants.gameLabelHeight + GuiConstants.userLabelHeight + 2 * GuiConstants.standardPaddingPx
 
 GuiConstants.gamePlayingSidebarWidth = 250
 GuiConstants.gamePlayingSidebarMetadataValueIndent = 10
 GuiConstants.gamePlayingSidebarH2Separation = 10
 GuiConstants.gamePlayingSidebarH3Separation = 5
-GuiConstants.gamePlayingSidebarControlsHeight = GuiConstants.textButtonHeight + 2 * GuiConstants.standardPadding
-
--- Paddings.
-GuiConstants.screenToDialogPadding = 50
-GuiConstants.dialogToContentPadding = 20
-GuiConstants.gamePlayingTopBarPadding = 40
-GuiConstants.defaultUIListLayoutPadding = 5
-GuiConstants.buttonsUIListLayoutPadding = 20
-GuiConstants.buttonInternalSidePadding = 20
-GuiConstants.noPadding = UDim.new(0, 0)
-GuiConstants.robloxTopBarBottomPadding = 10
+GuiConstants.gamePlayingSidebarControlsHeight = GuiConstants.textButtonHeight
 
 GuiConstants.checkboxSize = 30
 
-GuiConstants.TablePlayingTopBarHeight = 50
+-- Scroll stuff
+GuiConstants.scrollBarThickness = 8
 
 --[[
 UDim2s

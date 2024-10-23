@@ -109,12 +109,11 @@ function UserGuiUtils.addUserButtonInContainer(parent: Instance, userId: CommonT
 end
 
 function UserGuiUtils.addUserStaticInContainer(parent: Instance, userId: CommonTypes.UserId, opt_frameOptions: any?): (Frame, Frame)
-    local frameOptions = {
+    local container, frame = GuiUtils.addFrameInContainer(parent, GuiConstants.userStaticName)
+    GuiUtils.applyInstanceOptions(frame, {
         Size = GuiConstants.userWidgetSize,
         BackgroundTransparency = 1,
-    }
-    local finalOptions = Cryo.Dictionary.join(frameOptions, opt_frameOptions or {})
-    local container, frame = GuiUtils.addFrameInContainer(parent, GuiConstants.userStaticName, finalOptions)
+    }, opt_frameOptions)
 
     addUserImageOverTextLabel(frame, userId)
 

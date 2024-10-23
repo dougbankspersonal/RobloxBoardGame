@@ -73,10 +73,9 @@ function ClientStartUp.ClientStartUp(screenGui: ScreenGui, gameDetailsByGameId: 
 
     screenGui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
     screenGui.DisplayOrder = 1
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
     configureForBoardGames()
-
-    GuiUtils.setMainScreenGui(screenGui)
 
     local adminControlsFrame = Instance.new("Frame")
     adminControlsFrame.Name = "AdminControlsFrame"

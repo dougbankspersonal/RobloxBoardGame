@@ -1,17 +1,23 @@
 --[[
-DataStore for game analytics.
+Interface to write and read analytics to some store.
+
+Currently build on DataStores:
 
 More on data stores:
 https://create.roblox.com/docs/cloud-services/data-stores
 
 Overall structure:
 * One data store per game.  So if your experience has Monopoly, Checkers, and Bridge, there's 3 stores, one for each game.
-* Within each store, keys will have the following structure:
-  {gameInstanceGUID}/{one or more game-specific keys}
-* Values are user-defined.
+* Within each store, there is one big fat record for each game instance, with key
+  {gameInstanceGUID}
+* To use this module:
+  * When game starts, call startGameRecord
+  * When add an action, call appendToGameRecord
+  * When game is over, call sendGameRecordAsync
+  * To get total record count for a game, call getRecordCountForGameAsync
+  * To get all records for a game, call getAllRecordsForGameByHandfuls
 ]]
 
-local DataStoreService = game:GetService("DataStoreService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Cryo = require(ReplicatedStorage.Cryo)
 
@@ -19,6 +25,10 @@ local Cryo = require(ReplicatedStorage.Cryo)
 local RobloxBoardGameShared = ReplicatedStorage.RobloxBoardGameShared
 local Utils = require(RobloxBoardGameShared.Modules.Utils)
 local CommonTypes = require(RobloxBoardGameShared.Types.CommonTypes)
+
+-- Server
+local RobloxBoardGameServer = game:GetService("ServerScriptService").RobloxBoardGameServer
+local WrappedDataStoreService = require(RobloxBoardGameServer.Analytics.WrappedDataStoreService)
 
 local ServerGameAnalytics = {}
 
@@ -36,10 +46,26 @@ local keysPerHandlful = 20
 local artificialWaitBetweenPagesSeconds = 0.1
 
 local dataStoreNameTwiddle = nil
+
+local recordsByGameInstanceGUID = {} :: {[CommonTypes.GameInstanceGUID]: {CommonTypes.AnalyticsGameRecord}}
+
 function ServerGameAnalytics.useThrowawayDataStore()
     -- We will use a temporaty data store for this run of the game.
     -- Just change the name of the store.
     dataStoreNameTwiddle = tostring(os.time())
+end
+
+function getDataStoreByName(dataStoreName: string): DataStore
+    if dataStoreNameTwiddle then
+        dataStoreName = dataStoreName .. "_" .. dataStoreNameTwiddle
+    end
+    Utils.debugPrint("Analytics", "dataStoreName = ", dataStoreName)
+    local dataStore = WrappedDataStoreService.getDataStore(dataStoreName)
+    return dataStore
+end
+
+function ServerGameAnalytics.getRecordCountByGameIdDataStore()
+    return getDataStoreByName(DataStoreNameRecordCountByGameID)
 end
 
 -- Make (if not made) and then get the data store containing all records of all plays through a particular
@@ -47,85 +73,64 @@ end
 function ServerGameAnalytics.getDataStoreForGame(gameId: CommonTypes.GameId): DataStore
     assert(gameId, "gameId must be provided")
     local dataStoreName = DataStorePrefixEventsForGameId .. tostring(gameId)
-    if dataStoreNameTwiddle then
-        dataStoreName = dataStoreName .. "_" .. dataStoreNameTwiddle
-    end
-    Utils.debugPrint("Analytics", "dataStoreName = ", dataStoreName)
-    local dataStore = DataStoreService:GetDataStore(dataStoreName)
-    return dataStore
+    return getDataStoreByName(dataStoreName)
 end
 
--- For any record type, we may add multiple records of that type (e.g. recording a die roll: during a
--- game there will be many die rolls).
--- Since the store is per game (not game instance), the key must include:
--- gameInstanceGUID
--- recordType
--- some final factor to keep the keys unique: we will just use a type count.
--- So for each game instance we need to track the type counts.
-export type TypeNameToCount = {
-    [string]: number,
-}
+function ServerGameAnalytics.startGameRecord(tableDescription: CommonTypes.TableId)
+    -- Should have a playing game.
+    assert(tableDescription, "tableDescription must be provided")
+    assert(tableDescription.gameInstanceGUID, "gameInstanceGUID must be provided")
 
-export type TypeNameToCountsByGameInstanceGUID = {
-    [CommonTypes.GameInstanceGUID]: TypeNameToCount,
-}
+    local gameDescription: CommonTypes.AnalyticsGameDescription = {
+        gameId = tableDescription.gameId,
+        gameInstanceGUID = tableDescription.gameInstanceGUID,
+        memberUserIds = Cryo.Dictionary.keys(tableDescription.memberUserIds),
+        hostUserId =  tableDescription.hostUserId,
+        isPublic = tableDescription.isPublic,
+        nonDefaultGameOptions = tableDescription.opt_nonDefaultGameOptions or {},
+    }
 
-local typeNameToCountsByGameInstanceGUID: TypeNameToCountsByGameInstanceGUID = {}
-
-local function getCountForRecordOfType(gameInstanceGUIID: CommonTypes.GameInstanceGUID, recordType: string)
-    if typeNameToCountsByGameInstanceGUID[gameInstanceGUIID] == nil then
-        typeNameToCountsByGameInstanceGUID[gameInstanceGUIID] = {}
-    end
-
-    if typeNameToCountsByGameInstanceGUID[gameInstanceGUIID][recordType] == nil then
-        typeNameToCountsByGameInstanceGUID[gameInstanceGUIID][recordType] = 0
-    end
-
-    local retVal = typeNameToCountsByGameInstanceGUID[gameInstanceGUIID][recordType]
-    typeNameToCountsByGameInstanceGUID[gameInstanceGUIID][recordType] = retVal + 1
-
-    return retVal
+    -- Should be no record for this game instance.
+    assert(not recordsByGameInstanceGUID[gameDescription.gameInstanceGUID], "Already have a record for this game instance")
+    local recordForGameInstance = {
+        gameDescription = gameDescription,
+        events = {}
+    } :: CommonTypes.AnalyticsGameRecord
+    recordsByGameInstanceGUID[gameDescription.gameInstanceGUID] = recordForGameInstance
 end
 
-local function getKeyForRecordOfType(gameInstanceGUID: CommonTypes.GameInstanceGUID, recordType: string): string
-    local count = getCountForRecordOfType(gameInstanceGUID, recordType)
-    local key = gameInstanceGUID .. "/" .. recordType .. "/" .. tostring(count)
-    return key
+function ServerGameAnalytics.appendToGameRecord(gameInstanceGUID: CommonTypes.GameInstanceGUID, eventType: string, details: any)
+    assert(gameInstanceGUID, "gameInstanceGUID must be provided")
+    assert(eventType, "eventType must be provided")
+    local analyticsGameEvent = {
+        eventType = eventType,
+        details = details,
+    }
+    local recordForGameInstance = recordsByGameInstanceGUID[gameInstanceGUID]
+    assert(recordForGameInstance , "No record for this game instance")
+    assert(recordForGameInstance.events, "No events for this game instance")
+    table.insert(recordForGameInstance.events, analyticsGameEvent)
 end
 
-local getRecordCountDataStore = function()
-    local dataStoreName = DataStoreNameRecordCountByGameID
-    if dataStoreNameTwiddle then
-        dataStoreName = dataStoreName .. "_" .. dataStoreNameTwiddle
-    end
-    -- Keep a separate count of the number of non-count records in the store.
-    local recordCountDataStore = DataStoreService:GetDataStore(dataStoreName)
-    return recordCountDataStore
+function ServerGameAnalytics.sendGameRecordAsync(gameInstanceGUID: CommonTypes.GameInstanceGUID): boolean
+    assert(gameInstanceGUID, "gameInstanceGUID must be provided")
+    local recordForGameInstance = recordsByGameInstanceGUID[gameInstanceGUID]
+    assert(recordForGameInstance, "No record for this game instance")
+    assert(recordForGameInstance.gameDescription, "No gameDescription for this game instance")
+    assert(recordForGameInstance.gameDescription.gameId, "No gameId for this game instance")
+    local gameId = recordForGameInstance.gameDescription.gameId
+    local dataStore = ServerGameAnalytics.getDataStoreForGame(gameId)
+    assert(dataStore, "No data store for this game instance")
+    dataStore:SetAsync(tostring(gameInstanceGUID), recordForGameInstance)
+    -- increment count.
+    local recordCountDataStore = ServerGameAnalytics.getRecordCountByGameIdDataStore()
+    recordCountDataStore:IncrementAsync(tostring(gameId), 1)
 end
 
-function ServerGameAnalytics.addRecordOfType(gameId: CommonTypes.GameId, gameInstanceGUID: CommonTypes.GameInstanceGUID, recordType: string, value: any): nil
-    assert(gameId, "gameId must be provided")
-    -- Use a thread because it's async.
-    -- FIXME(dbanks)
-    -- We may also want to consider batching these somehow.
-    task.spawn(function()
-        -- Keep a separate count of the number of non-count records in the store.
-        local recordCountDataStore = getRecordCountDataStore()
-        recordCountDataStore:IncrementAsync(tostring(gameId), 1)
-
-        local dataStore = ServerGameAnalytics.getDataStoreForGame(gameId)
-        local recordKey = getKeyForRecordOfType(gameInstanceGUID, recordType)
-        Utils.debugPrint("Analytics", "Adding record with gameId = ", gameId)
-        Utils.debugPrint("Analytics", "  recordKey = ", recordKey)
-        Utils.debugPrint("Analytics", "  record with value = ", value)
-        dataStore:SetAsync(recordKey, value)
-    end)
-end
 
 function ServerGameAnalytics.getRecordCountForGameAsync(gameId: CommonTypes.GameId): number
     assert(gameId, "gameId must be provided")
-    assert(gameId, "callback must be provided")
-    local recordCountDataStore = getRecordCountDataStore()
+    local recordCountDataStore = ServerGameAnalytics.getRecordCountByGameIdDataStore()
     local gameKey = tostring(gameId)
     local success, record = pcall(function()
         return recordCountDataStore:GetAsync(gameKey)
@@ -142,20 +147,11 @@ function ServerGameAnalytics.getRecordCountForGameAsync(gameId: CommonTypes.Game
     return 0
 end
 
-function ServerGameAnalytics.dumpBudget()
-    local getAsyncBudget = DataStoreService:GetRequestBudgetForRequestType(Enum.DataStoreRequestType.GetAsync)
-    Utils.debugPrint("Analytics", "ServerGameAnalytics.GetAsync budget = ", getAsyncBudget)
-    local listAsyncBudget = DataStoreService:GetRequestBudgetForRequestType(Enum.DataStoreRequestType.ListAsync)
-    Utils.debugPrint("Analytics", "ServerGameAnalytics.ListAsync budget = ", listAsyncBudget)
-end
-
--- Get all records for game.
--- Note this is for the GAME, not a game INSTANCE: we are getting all records from all instances of this game.
--- Does it in handfuls to deliberately avoid any thrashing.
-function ServerGameAnalytics.fetchAllAnalyticsRecordsForGameByPages(gameId: CommonTypes.GameId, singlePageCallback: (records: {CommonTypes.AnalyticsRecord}, isFinished: boolean) -> nil): nil
+function ServerGameAnalytics.getAllRecordsForGameByHandfuls(gameId: CommonTypes.GameId, singlePageCallback: (gameRecords: {CommonTypes.AnalyticsGameRecord}, isFinished: boolean) -> nil): nil
     assert(gameId, "gameId must be provided")
     assert(singlePageCallback, "gameId must be provided")
-    -- Async, do in thread.
+
+    -- Reading from data store is async, do it in thread.
     task.spawn(function()
         local dataStore = ServerGameAnalytics.getDataStoreForGame(gameId)
         Utils.debugPrint("Analytics", "Calling list keys async for gameId = ", gameId)
@@ -163,7 +159,7 @@ function ServerGameAnalytics.fetchAllAnalyticsRecordsForGameByPages(gameId: Comm
         while true do
             -- Grab a handful of keys.
             local keys = dataStoreKeyPages:GetCurrentPage()
-            local analyticsRecords = {} :: {CommonTypes.AnalyticsRecord}
+            local gameRecords = {} :: {CommonTypes.AnalyticsGameRecord}
 
             Utils.debugPrint("Analytics", "Getting keys = ", keys)
             local keyNames = Cryo.List.map(keys, function(key)
@@ -175,28 +171,12 @@ function ServerGameAnalytics.fetchAllAnalyticsRecordsForGameByPages(gameId: Comm
                 Utils.debugPrint("Analytics", "Getting record with keyName = ", keyName.Name)
                 local value = dataStore:GetAsync(keyName)
                 Utils.debugPrint("Analytics", "Got record value = ", value)
-                local orderedKeyComponents = Utils.splitString(keyName, "/")
-                -- There should be 3 components:
-                -- * The gameInstanceGUID
-                -- * The record type.
-                -- * The count.
-                -- The count we don't really care about, it's just an artifact of how we need to interact with
-                -- the data store.
-                assert(#orderedKeyComponents == 3, "Unexpected key format")
-                local gameInstanceGUID = orderedKeyComponents[1]
-                local recordType = orderedKeyComponents[2]
 
-                local analyticsRecord = {
-                    gameInstanceGUID = gameInstanceGUID,
-                    recordType = recordType,
-                    value = value,
-                }
-
-                table.insert(analyticsRecords, analyticsRecord)
+                table.insert(gameRecords, value)
             end
 
             -- Hit the callback with this group.
-            singlePageCallback(analyticsRecords, dataStoreKeyPages.IsFinished)
+            singlePageCallback(gameRecords, dataStoreKeyPages.IsFinished)
 
             -- Maybe exit, maybe keep going.
             if dataStoreKeyPages.IsFinished then
@@ -207,6 +187,13 @@ function ServerGameAnalytics.fetchAllAnalyticsRecordsForGameByPages(gameId: Comm
             end
         end
     end)
+end
+
+function ServerGameAnalytics.dumpBudget()
+    local getAsyncBudget = WrappedDataStoreService.getRequestBudgetForRequestType(Enum.DataStoreRequestType.GetAsync)
+    Utils.debugPrint("Analytics", "ServerGameAnalytics.GetAsync budget = ", getAsyncBudget)
+    local listAsyncBudget = WrappedDataStoreService.getRequestBudgetForRequestType(Enum.DataStoreRequestType.ListAsync)
+    Utils.debugPrint("Analytics", "ServerGameAnalytics.ListAsync budget = ", listAsyncBudget)
 end
 
 return ServerGameAnalytics
